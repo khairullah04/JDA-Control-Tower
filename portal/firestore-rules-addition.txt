@@ -1,0 +1,22 @@
+Add this match block alongside your existing ones in Firestore Rules
+(Firebase console -> Firestore Database -> Rules), then Publish:
+
+    match /jdaReports/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+This covers JDA 1, 2 and 4. JDA 3 reads and writes report/current in the
+original JDA3 Firebase project (jda3-9c0c5), which needs its own block there:
+
+    match /report/{doc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+Same open-write trade-off as the JDA3 reference file: anyone with the link
+can edit a report, not just view it - there's no login and no record of who
+changed what. Reasonable for an internal, no-sensitive-data tool; revisit
+with Firebase Auth if that changes. The Invoice Tracker's own rules
+(projects/scope/invoices/activity/jdas/processedFiles) are untouched - this
+portal uses a separate `jdaReports` collection in the same Firebase project.

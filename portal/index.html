@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>JDA Programme Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+<div id="scrollProgress"></div>
+
+<div class="app">
+<div class="topbar">
+ <div class="topbar-inner">
+  <div class="brand">
+    <a href="index.html" aria-label="JDA Programme Portal"><img class="brand-logo" src="assets/carigali-logo.png" alt="Petronas Carigali"></a>
+    <div><div class="mark">Petronas Carigali</div><h1>JDA Programme Portal</h1></div>
+  </div>
+
+  <nav class="pagenav" aria-label="Portal sections">
+    <div class="pagenav-scroll">
+      <div class="pagenav-inner" id="portalNav">
+        <a class="pagenav-tab active" href="#jdas">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          JDAs
+        </a>
+        <span class="pagenav-sep">›</span>
+        <a class="pagenav-tab" href="#administration">Administration</a>
+      </div>
+    </div>
+  </nav>
+ </div>
+</div>
+
+<div class="page-wrap">
+  <section class="screen active">
+    <div class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow">Petronas Carigali · Joint Development Agreements</div>
+        <h2>JDA Programme Portal</h2>
+        <p class="sub">Overall progress across every JDA, each with its own report of projects, tasks, weekly updates and challenges.</p>
+      </div>
+    </div>
+
+    <div class="block reveal" style="margin-top:36px;" id="jdas">
+      <h3>JDAs</h3>
+      <p class="block-intro">Open a JDA for its overview, overall progress and weekly progress.</p>
+      <div class="jda-grid" id="jdaGrid"></div>
+    </div>
+
+    <div class="block reveal" id="administration">
+      <h3>Administration</h3>
+      <p class="block-intro">Internal tools — not part of the JDA reports above.</p>
+      <div class="arch-teaser admin-card">
+        <div class="arch-teaser-top">
+          <div class="arch-teaser-head">
+            <span class="arch-teaser-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+            <div>
+              <h4 class="arch-teaser-title">Invoice Tracker</h4>
+              <p class="arch-teaser-sub">Budgets, WBS items and invoices for every JDA's projects.</p>
+            </div>
+          </div>
+          <span class="arch-teaser-badge">Passkey required</span>
+        </div>
+        <div class="admin-row" id="adminLocked">
+          <input id="adminPasskey" type="text" class="passkey-input" spellcheck="false" data-lpignore="true" autocomplete="off" placeholder="Passkey" aria-label="Passkey">
+          <button type="button" class="arch-view-btn" id="adminUnlock">Unlock <span class="go">&#8250;</span></button>
+        </div>
+        <div class="admin-row" id="adminOpen" hidden>
+          <a class="arch-view-btn" id="adminLink" href="http://localhost:8080">Open Invoice Tracker <span class="go">&#8250;</span></a>
+        </div>
+        <div class="save-msg" id="adminMsg"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer class="site-footer">
+  <div class="foot-inner">
+    <div>
+      <div class="foot-brand">
+        <img src="assets/carigali-logo.png" alt="Petronas Carigali">
+        <span>JDA Programme Portal</span>
+      </div>
+    </div>
+    <div class="foot-note">Overall progress across every Joint Development Agreement.</div>
+  </div>
+</footer>
+
+<footer>
+  <span class="footer-left"><span class="live-dot"></span>Live data, backed by Firestore</span>
+</footer>
+</div>
+
+<script type="module" src="js/portal.js"></script>
+</body>
+</html>

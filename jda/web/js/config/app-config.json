@@ -1,0 +1,24 @@
+{
+  "demoMode": false,
+  "requireLogin": true,
+  "apiBase": "",
+  "portalUrl": "/",
+  "usernameDomain": "jda.app",
+  "baseCurrency": "MYR",
+  "fxToMYR": { "MYR": 1, "USD": 4.7, "SGD": 3.5, "EUR": 5.1, "JPY": 0.031, "GBP": 6.0 },
+  "defaultJdas": [
+    { "name": "JDA 1", "subProjects": ["AA", "AB", "AC"] },
+    { "name": "JDA 2", "subProjects": ["BA", "BB"] },
+    { "name": "JDA 3", "subProjects": ["CA", "CB", "CC", "CD", "CE", "CF", "CG"] },
+    { "name": "JDA 4", "subProjects": ["DA", "DB", "DC"] },
+    { "name": "Unsorted", "subProjects": ["UNSORTED"] }
+  ],
+  "defaultSubProjectBudget": 2000000,
+  "defaultJdaStart": "2025-01-01",
+  "defaultJdaEnd": "2026-12-31",
+  "copilotChips": {
+    "dashboard": ["Summarise all JDAs", "Which JDA is most over budget?"],
+    "jda": ["Summarise this JDA", "Which of its projects needs review?"],
+    "project": ["Summarise this project", "Are we over budget?", "Which invoices need review?", "Forecast at completion?"]
+  }
+}
