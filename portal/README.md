@@ -15,6 +15,8 @@ portal/
     portal.js                Portal main page: JDA cards, Administration passkey gate
     report.js                 JDA report page: the reference's script, ported
     editor.js                 The Editor Page: in-place editing of a Master Page
+    block-editor.js           The full-page block editor for a solution's detail page
+    blocks.js                 Block types, the HTML clean-up and how a block is drawn (shared by both)
     config/
       app-config.js           JDA list (name, edit icon, where its data lives), Invoice Tracker link
       firebase.js              Both Firebase projects' configs
@@ -70,6 +72,14 @@ screens, drawn by the same code. On the Master Page it has
 - drag handles (the dotted grip): drag an aspiration, solution, collaborator or card to reorder it
   (solutions can be dragged between groups), and drag **Move section** to move a whole section up
   or down the page. With the keyboard, focus a handle and use the arrow keys;
+- **Edit detail page** on a solution card opens a full-page block editor for that solution's
+  detail page. The page is a list of blocks: Header, Sub Header, Sub Sub Header, Body, or a Box
+  row (boxes side by side, each a title and an optional explanation). Add a block between any two,
+  drag the grip to reorder (mouse or touch; SortableJS, loaded from cdnjs), or use the up/down
+  buttons; change a block's type, duplicate or delete it; format text with bold, italic, underline,
+  lists and links. Its Save publishes straight away, together with any other unsaved Master Page
+  edits. Detail pages saved in the older shape load as blocks automatically, and the first save
+  over one keeps the old version in the record as `overviewBackup`;
 - **Update from Google Drive** at the top, which reads the JDA's Master File folder into the page
   as an unsaved draft, and **Open Master File folder**, which opens that folder in Drive;
 - **Save changes** in the bottom bar. Nothing changes on the live pages until then.

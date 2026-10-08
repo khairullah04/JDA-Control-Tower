@@ -456,22 +456,48 @@
             <h2 id="solDetailTitle">—</h2>
           </div>
         </div>
-        <p class="sol-detail-vision" id="solDetailVision">—</p>
+        <!-- one box per entry in the solution's `boxes`: a header and a body -->
+        <div id="solDetailBoxes" class="blk-grid"></div>
+      </div>
+    </div>
+  </section>
 
-        <div class="detail-section" id="solDetailTargetsWrap" style="display:none;">
-          <div class="detail-label">Target outcomes</div>
-          <div class="sol-targets-row" id="solDetailTargets"></div>
-        </div>
+    <!-- Editor Page only: the full-page block editor for one solution's detail page (js/block-editor.js) -->
+  <section class="screen" id="screen-blocks">
+    <div class="blk-toolbar" id="blkToolbar">
+      <div class="blk-toolbar-row">
+        <button type="button" class="blk-link" id="blkBack">← Back to Editor Page</button>
+        <span class="blk-status" id="blkStatus" role="status" aria-live="polite"></span>
+        <button type="button" class="add-row" id="blkCancel">Cancel</button>
+        <button type="button" class="save" id="blkSave" disabled>Save</button>
+      </div>
+      <div class="blk-toolbar-row blk-format" id="blkFormat" role="toolbar" aria-label="Text formatting">
+        <button type="button" class="blk-btn" data-cmd="bold" title="Bold" aria-label="Bold"><b>B</b></button>
+        <button type="button" class="blk-btn" data-cmd="italic" title="Italic" aria-label="Italic"><i>I</i></button>
+        <button type="button" class="blk-btn" data-cmd="underline" title="Underline" aria-label="Underline"><u>U</u></button>
+        <button type="button" class="blk-btn" data-cmd="insertUnorderedList" title="Bullet list" aria-label="Bullet list">• List</button>
+        <button type="button" class="blk-btn" data-cmd="insertOrderedList" title="Numbered list" aria-label="Numbered list">1. List</button>
+        <button type="button" class="blk-btn" id="blkLinkBtn" title="Link the selected words" aria-label="Add link">Link</button>
+        <button type="button" class="blk-btn" id="blkUnlinkBtn" title="Remove the link" aria-label="Remove link">Unlink</button>
+        <span class="blk-link-row" id="blkLinkRow" hidden>
+          <input id="blkLinkInput" type="url" placeholder="https://…" aria-label="Link address">
+          <button type="button" class="blk-btn" id="blkLinkApply">Apply</button>
+        </span>
+      </div>
+    </div>
 
-        <div class="detail-section">
-          <div class="detail-label">What this delivers</div>
-          <ul class="sol-detail-list" id="solDetailScope"></ul>
+    <div class="block" style="margin-top:0;">
+      <div class="sol-detail-card">
+        <div class="sol-detail-head">
+          <span class="sol-detail-icon" id="blkIcon"></span>
+          <div class="sol-detail-headtext">
+            <span class="sol-tier" id="blkTier">—</span>
+            <h2 class="ed-text" id="blkTitle" contenteditable="true" data-ph="Solution name" role="textbox" aria-label="Solution name"></h2>
+          </div>
         </div>
-
-        <div class="detail-section" id="solDetailLeadWrap" style="display:none;">
-          <div class="detail-label">Delivery lead</div>
-          <p id="solDetailLead">—</p>
-        </div>
+        <div id="blkTop"></div>
+        <div id="blkCanvas" class="blk-grid"></div>
+        <p class="detail-tasks-empty" id="blkEmpty" hidden>No blocks yet. Use “+ Add block” above to start the page.</p>
       </div>
     </div>
   </section>

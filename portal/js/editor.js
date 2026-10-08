@@ -2,16 +2,18 @@
 // code (report.js), with every piece of text editable in place and controls to add or remove
 // blocks. Edits live in two drafts (the Master Page's `overview`, and the progress fields) until
 // "Save changes"; the "Update from Google Drive" buttons load the Drive folders into those drafts.
+import { setupBlockEditor } from './block-editor.js';
+import { starterBlocks, cleanBlocks } from './blocks.js';
+
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-const lines = text => text.split('\n').map(s => s.trim()).filter(Boolean);
+const newSolution = () => ({ title: '', tier: 'Tier 1', art: null, tags: [], blocks: starterBlocks() });
 const NEW_PRESS = { text: '', more: '', url: '', linkText: 'Read the full release →', img: '' };
 
-export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today }){
+export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today }){
   let d = draft, p = progress;
   const dirty = { master: false, progress: false };
   let part = 'master'; // which draft the controls being built right now belong to
-  const openDetails = new Set(); // solution cards whose details panel is open, kept across re-renders
   const openDescriptions = new Set(); // likewise for project descriptions
 
   /* ---------- small builders ---------- */
@@ -84,7 +86,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft
     const [item] = fromList.splice(from, 1);
     if (fromList === toList && from < to) to--;
     toList.splice(Math.max(0, Math.min(to, toList.length)), 0, item);
-    openDetails.clear(); touched(); show(d);
+    touched(); show(d);
   }
   // While something is being dragged, the page scrolls by itself when the pointer nears the top or
   // bottom of the window - faster the closer it gets - so a drop target off screen can be reached.
@@ -199,10 +201,10 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft
       [...grids[gi].children].forEach((card, si) => { decorateSolution(card, g, gi, si); sortable(card, 'solution', g.solutions, si); });
       if (!g.solutions.length) dropZone(grids[gi], 'solution', g.solutions);
       grids[gi].after(bar(
-        button('+ Add solution', change(() => g.solutions.push({ title: '', tier: 'Tier 1', art: null, tags: [], vision: '', scope: [], targets: [], lead: '' }))),
+        button('+ Add solution', change(() => g.solutions.push(newSolution()))),
         button('Remove this group', change(() => d.solutionGroups.splice(gi, 1)), 'danger')));
     });
-    body.append(bar(button('+ Add solution group', change(() => d.solutionGroups.push({ label: '', solutions: [{ title: '', tier: 'Tier 1', art: null, tags: [], vision: '', scope: [], targets: [], lead: '' }] })))));
+    body.append(bar(button('+ Add solution group', change(() => d.solutionGroups.push({ label: '', solutions: [newSolution()] })))));
 
     // Collaborators
     $('collabBody').querySelectorAll('.collab-card').forEach((card, i) => {
@@ -255,6 +257,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft
       button('+ Add section', change(() => d.extraSections.push({ id: Date.now().toString(36), title: '', intro: '', cards: [{ title: '', sub: '', text: '' }] })), 'ed-add-section'));
   }
 
+  const cardIndex = (g, si) => d.solutionGroups.slice(0, d.solutionGroups.indexOf(g)).reduce((n, x) => n + x.solutions.length, 0) + si;
   function decorateSolution(card, g, gi, si){
     const sol = g.solutions[si], id = `${gi}-${si}`;
     text(card.querySelector('h4'), v => sol.title = v, 'Solution name');
@@ -279,20 +282,24 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft
     art.lastChild.value = sol.art || '';
     art.lastChild.onchange = e => change(() => sol.art = e.target.value || null)();
 
-    const details = document.createElement('div');
-    details.hidden = !openDetails.has(id);
-    details.append(
-      field('Vision', sol.vision, v => sol.vision = v.trim(), { area: true }),
-      field('Scope — one point per line', sol.scope.join('\n'), v => sol.scope = lines(v), { area: true }),
-      field('Targets — one per line', sol.targets.join('\n'), v => sol.targets = lines(v), { area: true }),
-      field('Led by', sol.lead, v => sol.lead = v.trim()));
-    const toggle = button(details.hidden ? 'Edit detail page' : 'Hide detail page', () => {
-      details.hidden = !details.hidden;
-      details.hidden ? openDetails.delete(id) : openDetails.add(id);
-      toggle.textContent = details.hidden ? 'Edit detail page' : 'Hide detail page';
-    });
+    // The detail page has its own full-page editor; it works on a copy and hands the result back on Save.
+    const edit = button('Edit detail page', () => { blockEditor.open({
+      title: sol.title, tier: sol.tier, tierClass: sol.tier === 'Tier 1' ? 'tier1' : 'edge',
+      iconHtml: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${iconFor(sol.art)}</svg>`,
+      blocks: sol.blocks,
+      async save(title, blocks){
+        sol.title = title; sol.blocks = blocks;
+        dirty.master = true;
+        await saveAll();
+      },
+      close(){
+        show(d);
+        showScreen('screen-overview');
+        setTimeout(() => document.querySelectorAll('.sol-card')[cardIndex(g, si)]?.scrollIntoView({ block: 'center' }));
+      }
+    }); showScreen('screen-blocks'); });
 
-    card.append(tools(art, bar(toggle, button('Remove', change(() => { openDetails.clear(); g.solutions.splice(si, 1); }), 'danger')), details));
+    card.append(tools(art, bar(edit, button('Remove', change(() => g.solutions.splice(si, 1)), 'danger'))));
   }
 
   /* ---------- Overall progress and Weekly progress ---------- */
@@ -440,7 +447,9 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft
         // Each part the files cover replaces that part of the draft; parts they say nothing about stay as they are.
         for (const k of ['eyebrow', 'tagline', 'summary', 'more']) if (ov[k]) d[k] = ov[k];
         if (ov.aspiration.length) d.aspiration = ov.aspiration;
-        if (ov.solutionGroups.length){ d.solutionGroups = ov.solutionGroups; openDetails.clear(); }
+        if (ov.solutionGroups.length){
+          d.solutionGroups = ov.solutionGroups.map(g => ({ label: g.label, solutions: g.solutions.map(x => ({ title: x.title, tier: x.tier, art: x.art, tags: x.tags, blocks: blocksOf(x) })) }));
+        }
         if (ov.collaborators.length) d.collaborators = ov.collaborators.map(p => ({ ...p, logo: d.collaborators.find(old => old.name === p.name)?.logo || logoFor(p.name) }));
         if (ov.press) d.press = { ...ov.press, img: d.press?.img || '' };
         touched(); show(d);
@@ -465,7 +474,13 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft
   function cleaned(){
     const o = JSON.parse(JSON.stringify(d));
     o.aspiration = o.aspiration.filter(a => a.value || a.label);
-    o.solutionGroups.forEach(g => { g.solutions = g.solutions.filter(filled); g.solutions.forEach(s => s.tags = s.tags.filter(t => t.text)); });
+    o.solutionGroups.forEach(g => {
+      g.solutions.forEach(s => {
+        s.tags = s.tags.filter(t => t.text);
+        s.blocks = cleanBlocks(s.blocks);
+      });
+      g.solutions = g.solutions.filter(s => s.title || s.tags.length || s.blocks.length);
+    });
     o.solutionGroups = o.solutionGroups.filter(g => g.label || g.solutions.length);
     o.collaborators = o.collaborators.filter(filled);
     if (o.press && !o.press.text && !o.press.more && !o.press.url && !o.press.img) o.press = null;
@@ -481,18 +496,22 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, artKeys, draft
     o.updates = o.updates.filter(x => x.text);
     return o;
   }
-  $('editorSaveBtn').onclick = async () => {
+  // Publishes whatever has changed. The drafts stay as typed; only what is stored is tidied.
+  async function saveAll(){
     $('editorSaveBtn').disabled = true;
     $('editorSaveStatus').textContent = 'Saving…';
     try {
-      if (dirty.master){ d = cleaned(); await save(d); dirty.master = false; openDetails.clear(); show(d); }
+      if (dirty.master){ await save(cleaned()); dirty.master = false; show(d); }
       if (dirty.progress){ p = cleanedProgress(); await saveProgress(p); dirty.progress = false; openDescriptions.clear(); redrawProgress(); }
       $('editorSaveStatus').textContent = 'Saved — the live pages are updated';
     } catch (e){
       $('editorSaveStatus').textContent = `Not saved: ${e.message}`;
       $('editorSaveBtn').disabled = false;
+      throw e;
     }
-  };
+  }
+  $('editorSaveBtn').onclick = () => saveAll().catch(() => {}); // the failure is already on screen
+  const blockEditor = setupBlockEditor();
 
   // Two clicks: the first only asks.
   $('editorResetBtn').onclick = async () => {

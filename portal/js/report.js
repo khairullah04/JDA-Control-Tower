@@ -7,6 +7,7 @@ import { JDAS, DEFAULT_JDA_ICON, MS_CLIENT_ID, MS_AUTHORITY, SYNC_API_URL } from
 import { isConfigured, reportRefFor } from './config/firebase.js';
 import { contentFor, SOLUTION_ICONS } from './config/jda-content.js';
 import { startEditor } from './editor.js';
+import { blocksHtml, blocksFromBoxes } from './blocks.js';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -244,7 +245,7 @@ function overviewFromContent(){
           title: s.title, tier: s.tier === 'Tier 1' ? 'Tier 1' : 'Competitive Edge',
           art: s.art !== undefined ? s.art : (s.img !== null && SOLUTION_ICONS[key] ? key : null), // a built-in solution's key is its artwork
           tags: tags.map(([text, accent]) => ({ text, accent: !!accent })),
-          vision: s.vision || '', scope: [...(s.scope || [])], targets: [...(s.targets || [])], lead: s.lead || ''
+          blocks: JSON.parse(JSON.stringify(blocksOf(s)))
         };
       })
     })),
@@ -307,7 +308,7 @@ function renderDetailTasks(projectName, tasks){
   return assigned;
 }
 $('todayLabel').textContent = "Today: " + formatDueDate(todayISO);
-const pagenavTabFor = { "screen-overview":"screen-overview", "screen-progress":"screen-progress", "screen-project-detail":"screen-progress", "screen-solution-detail":"screen-overview", "screen-weekly":"screen-weekly", "screen-edit":"screen-edit" };
+const pagenavTabFor = { "screen-overview":"screen-overview", "screen-progress":"screen-progress", "screen-project-detail":"screen-progress", "screen-solution-detail":"screen-overview", "screen-blocks":"screen-overview", "screen-weekly":"screen-weekly", "screen-edit":"screen-edit" };
 const SCREEN_FOR = { progress: 'screen-progress', weekly: 'screen-weekly' };
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -329,6 +330,23 @@ document.querySelectorAll('.btn[data-target], .back-link, .crumb-link, .pagenav-
   btn.addEventListener('click', () => showScreen(btn.dataset.target));
 });
 
+// A solution's detail page is a list of boxes, each a header and a body. Solutions written before
+// boxes existed (the built-in ones, and what a Drive update returns) carry vision / scope / targets
+// / lead instead, which become the default boxes.
+function boxesOf(sol){
+  if (Array.isArray(sol.boxes)) return sol.boxes.map(b => ({ title: b.title || '', body: b.body || '' }));
+  return [
+    { title: 'Vision', body: sol.vision || '' },
+    { title: 'Scope', body: (sol.scope || []).join('\n') },
+    { title: 'Targets', body: (sol.targets || []).join('\n') },
+    { title: 'Delivery lead', body: sol.lead || '' }
+  ].filter(b => b.body);
+}
+
+// The detail page itself is a list of blocks (js/blocks.js). One saved before blocks existed is
+// converted from its boxes each time it is shown, and stored as blocks the next time it is saved.
+const blocksOf = sol => Array.isArray(sol.blocks) ? sol.blocks : blocksFromBoxes(boxesOf(sol));
+
 function showSolutionDetail(key){
   const s = c.solutions[key];
   if (!s) return;
@@ -338,25 +356,7 @@ function showSolutionDetail(key){
   tierEl.textContent = s.tier;
   tierEl.className = `sol-tier ${tierClass}`;
   $('solDetailTitle').textContent = s.title;
-  $('solDetailVision').textContent = s.vision;
-
-  const targetsWrap = $('solDetailTargetsWrap');
-  if (s.targets && s.targets.length){
-    targetsWrap.style.display = 'block';
-    $('solDetailTargets').innerHTML = s.targets.map(t => `<div class="sol-target-tile">${esc(t)}</div>`).join('');
-  } else {
-    targetsWrap.style.display = 'none';
-  }
-
-  $('solDetailScope').innerHTML = s.scope.map(x => `<li>${esc(x)}</li>`).join('');
-
-  const leadWrap = $('solDetailLeadWrap');
-  if (s.lead){
-    leadWrap.style.display = 'block';
-    $('solDetailLead').textContent = s.lead;
-  } else {
-    leadWrap.style.display = 'none';
-  }
+  $('solDetailBoxes').innerHTML = blocksHtml(blocksOf(s));
 
   showScreen('screen-solution-detail');
   history.replaceState(null, "", `#/${jda.id}/solution/${key}`);
@@ -411,6 +411,7 @@ document.addEventListener('keydown', (e) => {
   const order = ['screen-overview','screen-progress','screen-weekly','screen-edit'];
   const current = order.find(id => $(id).classList.contains('active'));
   const idx = order.indexOf(current);
+  if (idx === -1) return; // a detail screen or the block editor: the arrow keys belong to the page
   if (e.key === 'ArrowRight' && idx < order.length - 1) showScreen(order[idx + 1]);
   if (e.key === 'ArrowLeft' && idx > 0) showScreen(order[idx - 1]);
 });
@@ -1334,7 +1335,8 @@ if (editing){
   Promise.all([api('session'), firstLoad]).then(() => {
     document.body.classList.replace('editor-checking', 'editing');
     editor = startEditor({
-      jda, api, logoFor,
+      jda, api, logoFor, blocksOf, showScreen,
+      iconFor: art => SOLUTION_ICONS[art] || SOLUTION_ICONS.agentic,
       leave: () => goTo(masterHash + ({ 'screen-progress': '/progress', 'screen-weekly': '/weekly' }[document.querySelector('.screen.active').id] || '')),
       toMaster: () => goTo(masterHash),
       // Overall and Weekly progress: the same screens, drawn from a draft of the report's progress fields.
@@ -1354,8 +1356,12 @@ if (editing){
       show(overview){ c = contentFromOverview(overview); renderOverview(); },
       async save(overview){
         if (!reportRef) throw new Error("This JDA isn't connected to its database, so there is nowhere to save to.");
-        // mergeFields replaces `overview` whole (a plain merge would keep parts the editor removed) and leaves progress alone
-        await setDoc(reportRef, { overview }, { mergeFields: ['overview'] });
+        // mergeFields replaces `overview` whole (a plain merge would keep parts the editor removed) and leaves progress alone.
+        // The first time a page stored in the older (pre-block) shape is saved over, that version is kept as `overviewBackup`.
+        const old = currentData.overview;
+        const backup = old && !currentData.overviewBackup && !JSON.stringify(old).includes('"blocks"');
+        if (backup) await setDoc(reportRef, { overview, overviewBackup: old }, { mergeFields: ['overview', 'overviewBackup'] });
+        else await setDoc(reportRef, { overview }, { mergeFields: ['overview'] });
       },
       // Back to the content written in js/config/jda-content.js, which then shows again as it is edited there.
       async reset(){
