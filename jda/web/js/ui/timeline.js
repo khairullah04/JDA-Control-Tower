@@ -1,4 +1,5 @@
 import { $, esc, rm } from './dom.js';
+import { localToday } from '../../../../shared/dates.js';
 import { money } from '../finance/money.js';
 import { live, isMonth, COUNTS_AS_ACTUAL } from '../finance/core.js';
 
@@ -45,7 +46,7 @@ export function renderTimeline(root, { project, sanctioned, entries, range }) {
   const sc = sanctioned.filter(s => live(s) && isMonth(s.month)).map(s => ({ ...s, on: `${s.month}-01` }));
   const inv = entries.filter(e => live(e) && e.status === COUNTS_AS_ACTUAL && isMonth(e.month))
     .map(e => ({ ...e, on: okDate(e.documentDate) && e.documentDate.startsWith(e.month) ? e.documentDate : `${e.month}-01` }));
-  const today = iso(new Date());
+  const today = localToday();
   // The axis runs to the end of the current month at least, so it grows by itself as months pass.
   const thisMonthEnd = iso(addDays(monthStart(parse(today), 1), -1));
   const dates = [range?.start, range?.end, project.startDate, project.endDate, ...sc.map(s => s.on), ...inv.map(i => i.on)].filter(okDate);

@@ -39,18 +39,25 @@ export function parseCsv(csv) {
 const norm = h => text(h).toLowerCase().replace(/[^a-z0-9]/g, '');
 // The rows under the first header row that carries one of `headers`, down to the next blank row.
 // Each row is keyed by its column heading with everything but letters and digits removed.
+const ends = new WeakMap();
 export function tableIn(sheets, headers) {
   for (const { rows } of sheets) {
     const at = rows.findIndex(r => r.some(c => headers.includes(norm(c))));
     if (at < 0) continue;
-    const head = rows[at].map(norm), out = [];
-    for (let i = at + 1; i < rows.length && rows[i].some(c => text(c).trim()); i++) {
+    const head = rows[at].map(norm), out = [], filled = r => r.some(c => text(c).trim());
+    let i = at + 1;
+    for (; i < rows.length && filled(rows[i]); i++) {
       out.push({ _line: i + 1, ...Object.fromEntries(head.map((h, j) => [h, text(rows[i][j]).trim()]).filter(([h]) => h)) });
     }
+    const after = rows.slice(i).filter(filled).length;
+    ends.set(out, { blankLine: after ? i + 1 : 0, after });
     return out;
   }
   return null;
 }
+// Where a table read by tableIn stopped: the blank line that ended it, and how many lines with
+// something in them lie below and were not read. { blankLine: 0, after: 0 } when nothing was left out.
+export const tableEnd = rows => ends.get(rows) || { blankLine: 0, after: 0 };
 // The first of `names` the row has a value for. A name ending in * matches any heading that starts with it.
 const val = (row, ...names) => {
   for (const n of names) {
@@ -72,8 +79,14 @@ export function toIsoDate(v, order = 'mdy') {
   const [month, day] = a > 12 ? [b, a] : b > 12 ? [a, b] : order === 'dmy' ? [b, a] : [a, b];
   return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
-// A file whose dates include a first number above 12 is written day first; otherwise month first, as in the CJI3 sheet.
-export const dateOrder = values => values.some(v => Number(text(v).trim().match(DMY)?.[1]) > 12) ? 'dmy' : 'mdy';
+// How a file writes its dates. One whose dates include a first number above 12 is written day first;
+// otherwise month first, as in the CJI3 sheet. `sure` is false when every date could be read either
+// way (03/04/2026), so month first is only a guess and the person importing has to say.
+export function dateOrder(values) {
+  const dates = values.map(v => text(v).trim().match(DMY)).filter(Boolean);
+  const dayFirst = dates.some(m => Number(m[1]) > 12), monthFirst = dates.some(m => Number(m[2]) > 12);
+  return { order: dayFirst ? 'dmy' : 'mdy', sure: !dates.length || dayFirst || monthFirst };
+}
 // 2025-08, 2025-08-14, Aug-25, August 2025, 08/2025 -> 2025-08
 export function toMonth(v) {
   v = text(v).trim();
@@ -89,9 +102,14 @@ export const ENTRY_HEADERS = ['referenceinvoicename', 'reference', 'valuetrancur
 export const SANCTIONED_HEADERS = ['monthpt', 'ptamountmyr', 'ptamountoriginalcurrency'];
 const projectOf = (projects, code) => projects.find(p => norm(p.name) === norm(code) && norm(code));
 
-// CJI3 rows. `status` is given to rows that do not state one.
-export function entryInputs(rows, { jda, projects, status }) {
-  const order = dateOrder(rows.flatMap(r => [val(r, 'documentdate', 'invoicedate'), val(r, 'postingdate')]));
+// How the dates of a CJI3 sheet are written, judged from all its date columns together.
+export const entryDateOrder = rows => dateOrder(rows.flatMap(r => [val(r, 'documentdate', 'invoicedate'), val(r, 'postingdate'), val(r, 'duedate'), val(r, 'ratedate')]));
+// A date from the sheet that is written with slashes, to show how it is being read.
+export const sampleDate = rows => rows.flatMap(r => [val(r, 'documentdate', 'invoicedate'), val(r, 'postingdate')]).find(v => DMY.test(v)) || '';
+
+// CJI3 rows. `status` is given to rows that do not state one. `order` ('mdy' or 'dmy') is how its
+// dates are written, when the person importing has said; otherwise it is judged from the file.
+export function entryInputs(rows, { jda, projects, status, order = entryDateOrder(rows).order }) {
   return rows.filter(r => val(r, 'referenceinvoicename', 'reference', 'invoicenumber', 'invoice', 'valuetrancurr', 'amount')).map(r => {
     const named = val(r, 'name').match(/-\s*([^()]+?)\s*\(([^()]+)\)\s*$/); // "TriCipta AI - <project>(<partner>)"
     const code = val(r, 'coobjectname', 'project') || named?.[1] || '', project = projectOf(projects, code);

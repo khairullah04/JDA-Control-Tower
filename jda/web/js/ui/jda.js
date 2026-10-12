@@ -1,6 +1,6 @@
 import { updateJda, addProject, addLog, listLog } from '../services/db.js';
 import { audit } from '../services/finance.js';
-import { computeReport, ofProject } from '../services/analytics.js';
+import { computeReport, ofProject, FORECAST_NOTE } from '../services/analytics.js';
 import { money } from '../finance/money.js';
 import { $, esc, rm, pct, spendBar, jdaRange, JDA_DATE_FIELDS, checkDates, checkProject } from './dom.js';
 import { state } from './state.js';
@@ -26,7 +26,7 @@ export async function renderJda(id) {
   const starts = projects.map(p => p.startDate).filter(Boolean).sort(), ends = projects.map(p => p.endDate).filter(Boolean).sort();
   const whole = { budgetMinor: perProject.reduce((t, { r }) => t + r.budget, 0), startDate: starts[0] || '2026-01-01', endDate: ends[ends.length - 1] || '2026-12-31' };
   const totals = computeReport(whole, sanctioned, entries);
-  totals.forecast = perProject.reduce((t, { r }) => t + r.forecast, 0); // each project forecast over its own dates
+  totals.forecast = perProject.reduce((t, { r }) => t + r.forecast, 0); // each project's own forecast, added up
 
   r.current();
   page.innerHTML = `
@@ -43,7 +43,7 @@ export async function renderJda(id) {
       <div class="kpi"><small>Total budget</small><b>${rm(totals.budget)}</b></div>
       <div class="kpi ${totals.overPlan ? 'bad' : 'good'}"><small>Paid (MYR)</small><b>${rm(totals.actual)}</b></div>
       <div class="kpi"><small>Budget used</small><b>${totals.budget ? pct(totals.budgetUsedPct) : '—'}</b></div>
-      <div class="kpi ${totals.actual && totals.forecast > totals.budget ? 'bad' : 'good'}"><small>Forecast at completion</small><b>${rm(totals.forecast)}</b></div>
+      <div class="kpi ${totals.forecast > totals.budget ? 'bad' : 'good'}" title="${esc(FORECAST_NOTE)}"><small>Forecast at completion</small><b>${rm(totals.forecast)}</b></div>
       <div class="kpi ${totals.counts.pending ? 'bad' : ''}"><small>Invoices pending</small><b>${totals.counts.pending}</b></div>
     </div>
 
@@ -95,7 +95,7 @@ export async function renderJda(id) {
 
   state.page = 'jda';
   state.context = () => ({
-    page: `JDA overview: ${jda.name}`, note: 'Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month.',
+    page: `JDA overview: ${jda.name}`, note: `Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month. Forecast: ${FORECAST_NOTE}`,
     totals: { budget: money(totals.budget), paid: money(totals.actual), sanctionedToDate: money(totals.planned), invoiced: money(totals.invoiced), forecast: money(totals.forecast), pendingInvoices: totals.counts.pending },
     projects: perProject.map(({ p, r }) => ({ name: p.name, budget: money(r.budget), paid: money(r.actual), forecast: money(r.forecast), pendingInvoices: r.counts.pending }))
   });

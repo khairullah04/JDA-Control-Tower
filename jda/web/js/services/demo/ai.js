@@ -1,4 +1,5 @@
 // Demo: canned AI so the UI can be tried with no server or API key.
+import { localToday } from '../../../../../shared/dates.js';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const addDays = (iso, n) => new Date(new Date(iso).getTime() + n * 864e5).toISOString().slice(0, 10);
 
@@ -32,7 +33,7 @@ export async function analyzeDriveFile(fileId, catalog) {
   const pick = () => pool[Math.floor(Math.random() * pool.length)];
   const n = Math.random() < 0.35 ? 2 : 1;
   const chosen = Array.from({ length: n }, pick);
-  const date = new Date().toISOString().slice(0, 10);
+  const date = localToday();
 
   const allocations = chosen.map(c => {
     const s = c.scope[Math.floor(Math.random() * c.scope.length)];

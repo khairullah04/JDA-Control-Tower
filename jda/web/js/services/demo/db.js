@@ -18,7 +18,7 @@ export const listAllProjectsWithJda = async () => {
 
 export const getProject = async id => ({ ...projects.find(p => p.id === id) });
 export const addProject = async p => add(projects, p);
-export const updateProject = async (id, p) => Object.assign(projects.find(x => x.id === id), p);
+export const updateProject = async (id, p) => { const x = Object.assign(projects.find(x => x.id === id), p); if ('budgetMinor' in p) delete x.budget; return x; };
 // Invoices and sanctioned amounts are in ./finance.js; the demo has no older records to bring over.
 export const listLegacyScope = async () => [];
 export const listLegacyInvoices = async () => [];

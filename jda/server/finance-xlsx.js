@@ -29,7 +29,13 @@ export async function writeWorkbook(sheets) {
       if (!i) row.font = { bold: true };
       cells.forEach((c, j) => { if (c && typeof c === 'object') row.getCell(j + 1).numFmt = /\.\d{2}$/.test(c.n) ? '#,##0.00' : '0.########'; });
     });
-    ws.columns.forEach(col => { col.width = Math.min(Math.max(12, ...col.values.map(v => String(v ?? '').length + 2)), 44); });
+    // Each column as wide as the longest thing in it, between 12 and 44 characters. (A column's `values` is a
+    // sparse array, so the cells are walked instead.) A number is measured as it is shown, with its separators.
+    ws.columns.forEach(col => {
+      let longest = 0;
+      col.eachCell(c => { longest = Math.max(longest, (typeof c.value === 'number' ? c.value.toLocaleString('en', { minimumFractionDigits: 2 }) : cellText(c.value)).length); });
+      col.width = Math.min(Math.max(12, longest + 2), 44);
+    });
   }
   return Buffer.from(await wb.xlsx.writeBuffer());
 }

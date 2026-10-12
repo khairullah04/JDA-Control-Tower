@@ -11,6 +11,7 @@ import { blocksHtml } from './blocks.js';
 import { logoFor, contentFromOverview as overviewContent, overviewFromContent as contentOverview, blocksOf } from './overview.js';
 import { esc } from '../../shared/esc.js';
 import { digest, digests } from '../../shared/digest.js';
+import { localToday } from '../../shared/dates.js';
 import { withProjectIds, linkTasks, tasksOf } from './progress.js';
 
 const $ = id => document.getElementById(id);
@@ -205,7 +206,7 @@ function applyOverview(ov){
 
 function slugify(str){ return (str||"").toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 
-const todayISO = new Date().toISOString().slice(0, 10);
+const todayISO = localToday(); // today in Malaysia (shared/dates.js), the same day every part of this page uses
 function formatDueDate(iso){
   if (!iso) return "—";
   const d = new Date(iso + "T00:00:00");
@@ -224,8 +225,8 @@ function getCurrentMonthIndex(startMonth){
   if (!startMonth) return -1;
   const [sy, sm] = startMonth.split('-').map(Number);
   if (!sy || !sm) return -1;
-  const now = new Date();
-  return (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm);
+  const [y, m] = todayISO.split('-').map(Number);
+  return (y - sy) * 12 + (m - sm);
 }
 
 function renderDetailTasks(project, tasks){

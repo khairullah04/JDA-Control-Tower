@@ -40,7 +40,12 @@ from the top bar or from the "Invoices and payments" totals on a JDA or project 
 - **A sanctioned amount over several months**: give "Add sanctioned amount" a last month as well, and say
   whether the amount is for each month or the total to split evenly. It is saved as one record per
   month (all of them or none), so each month's row has its own figure and can be corrected alone.
-- **Only Paid invoices count as actual** (Total, variance, spend bars, cumulative spend, forecast).
+- **Only Paid invoices count as actual** (Total, variance, spend bars, cumulative spend).
+- **Forecast at completion** = everything invoiced so far (rejected invoices left out) plus the
+  sanctioned amounts, with tax, of the months still to come. A month to come that is already invoiced
+  above its sanctioned amount counts the invoices, never both.
+- **Today and this month** are Malaysia's (`shared/dates.js`), on every page, whatever the clock of
+  the computer or the server.
   Variance = Total − w TAX: above zero is over sanctioned (red), below is under, zero is within.
 - **Payment month** defaults to the month of the invoice date and can be changed.
 - **Tax rate**: one setting ("Tax rate" on the register page, 8% to start). Each record keeps the rate

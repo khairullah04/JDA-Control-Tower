@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { toMinor, fmt, money, ringgit, normRate, convert, impliedRate, perUnit, percentage, toBps, fromBps, beforeTax, roundDiv } from '../web/js/finance/money.js';
 import { amounts, build, paymentTable, tableTotals, rowId, monthsBetween, spreadOverMonths, DEFAULT_SETTINGS } from '../web/js/finance/core.js';
 import { createFinance, memoryStore } from '../web/js/finance/service.js';
-import { toCsv, parseCsv, tableIn, entryInputs, sanctionedInputs, entrySheet, paymentSheet, toIsoDate, toMonth, extractedInputs, legacyEntryInput, legacySanctionedInput, ENTRY_HEADERS, SANCTIONED_HEADERS } from '../web/js/finance/sheets.js';
+import { toCsv, parseCsv, tableIn, entryInputs, dateOrder, tableEnd, sanctionedInputs, entrySheet, paymentSheet, toIsoDate, toMonth, extractedInputs, legacyEntryInput, legacySanctionedInput, ENTRY_HEADERS, SANCTIONED_HEADERS } from '../web/js/finance/sheets.js';
 
 const S = DEFAULT_SETTINGS;
 const base = { jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA', partner: 'IBM' };
@@ -348,4 +348,21 @@ test('a Drive file is read into the register once, however often the sync is run
   assert.match(again.results[0].errors[0], /already been read/);
   assert.equal((await f.importRecords('entry', fromFile('f2'), 'sync')).imported, 2);
   assert.equal((await f.data()).entries.length, 4);
+});
+
+test('import: the date order is detected, said, and can be set by hand; a blank line ends the table and is reported', () => {
+  const head = ['Reference(invoice name)', 'CO Object Name', 'Partner', 'Transaction Currency', 'Value TranCurr', 'Document Date'];
+  const row = (no, date) => [no, 'AA', 'IBM', 'MYR', '100', date];
+  const ctx = { jda: { id: 'j1', name: 'JDA 1' }, projects: [{ id: 'p1', name: 'AA' }], status: 'pending' };
+  const sheet = [['CJI3 export'], head, row('A', '03/04/2026'), row('B', '05/06/2026'), [], ['', '', ''], row('C', '07/08/2026'), ['Total', '', '', '', '300']];
+  const rows = tableIn([{ name: 'S', rows: sheet }], ENTRY_HEADERS);
+  assert.equal(rows.length, 2);
+  assert.deepEqual(tableEnd(rows), { blankLine: 5, after: 2 });                   // two more lines with something in them lie under the blank one
+  assert.deepEqual(tableEnd(tableIn([{ name: 'S', rows: sheet.slice(0, 4) }], ENTRY_HEADERS)), { blankLine: 0, after: 0 });
+  assert.deepEqual(dateOrder(['03/04/2026', '05/06/2026']), { order: 'mdy', sure: false });   // could be either: month first is only a guess
+  assert.deepEqual(dateOrder(['03/04/2026', '25/06/2026']), { order: 'dmy', sure: true });
+  assert.deepEqual(dateOrder(['03/25/2026']), { order: 'mdy', sure: true });
+  assert.deepEqual(dateOrder(['2026-04-03', '']), { order: 'mdy', sure: true });              // nothing to decide
+  assert.deepEqual(entryInputs(rows, ctx).map(r => r.input.documentDate), ['2026-03-04', '2026-05-06']);
+  assert.deepEqual(entryInputs(rows, { ...ctx, order: 'dmy' }).map(r => r.input.documentDate), ['2026-04-03', '2026-06-05']);
 });

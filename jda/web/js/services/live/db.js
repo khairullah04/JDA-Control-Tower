@@ -1,7 +1,8 @@
-import { collection, getDocs, addDoc, updateDoc, doc, getDoc, setDoc, query, where }
+import { collection, getDocs, addDoc, updateDoc, doc, getDoc, setDoc, query, where, deleteField }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { db, auth } from './firebase.js';
 import { config } from '../../config/index.js';
+import { toMinor } from '../../finance/money.js';
 const usernameOf = () => (auth.currentUser?.email || 'unknown@').split('@')[0];
 
 const rows = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -18,7 +19,7 @@ export async function listJdas() {
         const jRef = await addDoc(collection(db, 'jdas'), { name: j.name, startDate: config.defaultJdaStart, endDate: config.defaultJdaEnd });
         for (const code of j.subProjects) {
           await addDoc(collection(db, 'projects'), {
-            jdaId: jRef.id, name: code, budget: config.defaultSubProjectBudget,
+            jdaId: jRef.id, name: code, budgetMinor: toMinor(config.defaultSubProjectBudget),
             startDate: '2026-01-01', endDate: '2026-12-31'
           });
         }
@@ -44,7 +45,8 @@ export async function listAllProjectsWithJda() {
 
 export const getProject = async id => ({ id, ...(await getDoc(doc(db, 'projects', id))).data() });
 export const addProject = p => addDoc(collection(db, 'projects'), p);
-export const updateProject = (id, p) => updateDoc(doc(db, 'projects', id), p);
+// A budget is kept in sen (budgetMinor). Saving one removes the whole-ringgit `budget` an older project may still carry, so there is one figure, not two.
+export const updateProject = (id, p) => updateDoc(doc(db, 'projects', id), 'budgetMinor' in p ? { ...p, budget: deleteField() } : p);
 
 // Invoices and sanctioned amounts now live behind the server (services/finance.js). These two read
 // the collections the tracker used before that, only so their records can be brought over once.

@@ -1,7 +1,7 @@
 import { updateProject, addLog, listLog } from '../services/db.js';
 import { audit } from '../services/finance.js';
-import { computeReport, ofProject } from '../services/analytics.js';
-import { money } from '../finance/money.js';
+import { computeReport, ofProject, budgetMinorOf, FORECAST_NOTE } from '../services/analytics.js';
+import { money, fmt } from '../finance/money.js';
 import { paymentTable, STATUS_LABEL } from '../finance/core.js';
 import { $, esc, rm, pct, monthName, jdaRange, checkProject } from './dom.js';
 import { state, CONTEXT_ROWS, firstRows } from './state.js';
@@ -39,7 +39,7 @@ export async function renderProject(id) {
       <div class="kpi"><small>Total budget</small><b>${rm(r.budget)}</b></div>
       <div class="kpi ${r.overPlan ? 'bad' : 'good'}"><small>Paid (MYR)</small><b>${rm(r.actual)}</b></div>
       <div class="kpi"><small>Budget used</small><b>${pct(r.budgetUsedPct)}</b></div>
-      <div class="kpi ${r.forecastOverBudget ? 'bad' : 'good'}"><small>Forecast at completion</small><b>${rm(r.forecast)}</b></div>
+      <div class="kpi ${r.forecastOverBudget ? 'bad' : 'good'}" title="${esc(FORECAST_NOTE)}"><small>Forecast at completion</small><b>${rm(r.forecast)}</b></div>
       <div class="kpi ${r.counts.pending ? 'bad' : ''}"><small>Invoices pending</small><b>${r.counts.pending}</b></div>
     </div>
 
@@ -53,21 +53,21 @@ export async function renderProject(id) {
   $('#edit-project').onclick = () => openForm({
     title: 'Edit project',
     fields: [
-      { name: 'budget', label: 'Total budget (RM)', type: 'number', value: project.budget },
+      { name: 'budget', label: 'Total budget (RM)', type: 'number', value: fmt(budgetMinorOf(project), 'MYR', true) },
       { name: 'startDate', label: 'Start date', type: 'date', value: project.startDate },
       { name: 'endDate', label: 'End date', type: 'date', value: project.endDate }
     ],
     onSubmit: async v => {
-      checkProject(v);
-      await updateProject(id, v);
-      await addLog(id, 'project', `Budget/dates updated: RM ${Number(v.budget).toLocaleString()}, ${v.startDate} to ${v.endDate}`);
+      const saved = checkProject(v);
+      await updateProject(id, saved);
+      await addLog(id, 'project', `Budget/dates updated: ${money(saved.budgetMinor)}, ${v.startDate} to ${v.endDate}`);
       refresh();
     }
   });
 
   state.page = 'project';
   state.context = () => ({
-    page: `Project report: ${project.name}`, note: 'Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month.',
+    page: `Project report: ${project.name}`, note: `Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month. Forecast: ${FORECAST_NOTE}`,
     project: { name: project.name, budget: money(r.budget), start: project.startDate, end: project.endDate },
     report: { asOf: r.asOf, sanctionedToDate: money(r.planned), paid: money(r.actual), invoiced: money(r.invoiced), variance: money(r.variance), overSanctioned: r.overPlan, budgetUsed: pct(r.budgetUsedPct), forecast: money(r.forecast), invoicesByStatus: r.counts },
     ...firstRows(entries.filter(e => !e.deletedAt)),

@@ -6,11 +6,12 @@ import * as finance from '../services/finance.js';
 import { money, fmt, toMinor, normRate, toBps, fromBps } from '../finance/money.js';
 import { amounts, paymentTable, tableTotals, monthsBetween, spreadOverMonths, MAX_SPAN, BASE, STATUSES, STATUS_LABEL, SAP_FIELDS } from '../finance/core.js';
 import { toCsv } from '../finance/sheets.js';
+import { localToday } from '../../../../shared/dates.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const monthLabel = m => /^\d{4}-\d{2}$/.test(m || '') ? `${MON[m.slice(5) - 1]}-${m.slice(2, 4)}` : '—'; // 2025-08 -> Aug-25
 export const statusBadge = s => `<span class="st ${esc(s)}">${esc(STATUS_LABEL[s] || s)}</span>`;
-export const today = () => new Date().toISOString().slice(0, 10);
+export const today = () => localToday(); // in Malaysia: see shared/dates.js
 export const options = (pairs, selected, first) => (first == null ? '' : `<option value="">${esc(first)}</option>`) +
   pairs.map(([v, label]) => `<option value="${esc(v)}" ${String(v) === String(selected) ? 'selected' : ''}>${esc(label)}</option>`).join('');
 

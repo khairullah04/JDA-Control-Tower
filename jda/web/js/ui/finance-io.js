@@ -7,7 +7,7 @@ import { listLegacyScope, listLegacyInvoices } from '../services/db.js';
 import { config } from '../config/index.js';
 import { money } from '../finance/money.js';
 import { STATUSES, STATUS_LABEL, isMonth, rowId } from '../finance/core.js';
-import { tableIn, entryInputs, sanctionedInputs, legacyEntryInput, legacySanctionedInput, ENTRY_HEADERS, SANCTIONED_HEADERS } from '../finance/sheets.js';
+import { tableIn, tableEnd, entryInputs, entryDateOrder, sampleDate, toIsoDate, sanctionedInputs, legacyEntryInput, legacySanctionedInput, ENTRY_HEADERS, SANCTIONED_HEADERS } from '../finance/sheets.js';
 import { dialog, options, monthLabel, statusBadge } from './finance-ui.js';
 
 const KIND = {
@@ -35,7 +35,7 @@ export function openImport(kind, ctx, jdaId = '') {
   // Read the file, turn its rows into inputs, and ask what each would become - without saving anything.
   // A sanctioned amount that matches one already entered is shown as such and left out, unless the
   // box is ticked to say it really is a further amount.
-  let fresh = [], repeats = [];
+  let fresh = [], repeats = [], order = ''; // order: how the file's dates are written, once the person importing has said
   const chosen = () => [...fresh, ...($('#import-repeats', d)?.checked ? repeats : [])];
   const count = () => { go.disabled = !chosen().length; go.textContent = `Import ${chosen().length} row(s)`; };
   async function preview() {
@@ -46,12 +46,19 @@ export function openImport(kind, ctx, jdaId = '') {
     try {
       const rows = tableIn(await finance.readFile(file), k.headers);
       if (!rows) throw new Error(`No header row with the expected columns was found in that file (${k.columns}).`);
-      const read = k.read(rows, { jda, projects: ctx.projects.filter(p => p.jdaId === jda.id), status: entry ? el.status.value : '' });
+      // What was read, said in full: how many rows, where reading stopped, and which way round the dates were taken.
+      const end = tableEnd(rows), dates = entry ? entryDateOrder(rows) : { sure: true }, sample = entry ? sampleDate(rows) : '', as = order || dates.order;
+      const said = d => new Date(toIsoDate(sample, d) + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+      const notes = `<p class="legend">${rows.length} row(s) read from the file.</p>
+        ${end.after ? `<p class="msg">Reading stopped at the blank line ${end.blankLine}: ${end.after} line(s) below it were not read. If they belong to this table, remove the blank line from the file and choose it again.</p>` : ''}
+        ${sample ? `<label class="${dates.sure ? '' : 'msg'}">${dates.sure ? 'Dates in this file are read' : `The dates in this file could be read either way (${esc(sample)}). Check that they are read`}
+          <select id="import-order"><option value="mdy" ${as === 'mdy' ? 'selected' : ''}>month first: ${esc(sample)} is ${said('mdy')}</option><option value="dmy" ${as === 'dmy' ? 'selected' : ''}>day first: ${esc(sample)} is ${said('dmy')}</option></select></label>` : ''}`;
+      const read = k.read(rows, { jda, projects: ctx.projects.filter(p => p.jdaId === jda.id), status: entry ? el.status.value : '', ...(entry && { order: as }) });
       const usable = read.filter(r => !r.error), checked = (await finance.importRecords(kind, usable.map(r => r.input), { dryRun: true })).results;
       const lines = read.map(r => r.error ? { line: r.line, ok: false, errors: [r.error], record: r.input } : { line: r.line, input: r.input, ...checked[usable.indexOf(r)] });
       fresh = lines.filter(l => l.ok && !l.duplicate).map(l => l.input); repeats = lines.filter(l => l.ok && l.duplicate).map(l => l.input);
       const refused = lines.length - fresh.length - repeats.length;
-      out.innerHTML = `<p><b>${fresh.length}</b> of ${lines.length} row(s) can be imported.${refused ? ` ${refused} cannot; each says why and will be left out.` : ''}</p>
+      out.innerHTML = `${notes}<p><b>${fresh.length}</b> of ${lines.length} row(s) can be imported.${refused ? ` ${refused} cannot; each says why and will be left out.` : ''}</p>
         ${repeats.length ? `<label class="check"><input type="checkbox" id="import-repeats"> Also add the ${repeats.length} row(s) that match a sanctioned amount already entered (same project, partner, month and amount). Tick this only if they really are further amounts; otherwise the sanctioned total is counted twice.</label>` : ''}
         <div class="pt-scroll import-preview"><table><tr><th>Line</th><th>${entry ? 'Invoice' : 'ID'}</th><th>Month</th><th>Partner</th><th class="num">Original</th><th class="num">MYR</th><th class="num">${entry ? 'Taxed MYR' : 'w TAX'}</th>${entry ? '<th>Status</th>' : ''}<th>Result</th></tr>
         ${lines.map(l => { const r = l.record || {}; return `<tr class="${l.ok ? '' : 'bad'}"><td>${l.line}</td><td>${esc(k.name(r))}</td><td>${monthLabel(r.month)}</td><td>${esc(r.partner)}</td>
@@ -61,7 +68,11 @@ export function openImport(kind, ctx, jdaId = '') {
       count();
     } catch (e) { out.innerHTML = ''; msg.textContent = e.message; }
   }
-  form.onchange = e => { if (e.target.id !== 'import-repeats') preview(); };
+  form.onchange = e => {
+    if (e.target.id === 'import-repeats') return;
+    order = e.target.id === 'import-order' ? e.target.value : e.target === el.file ? '' : order; // a new file is judged afresh
+    preview();
+  };
   $('#cancel', d).onclick = () => d.close();
   form.onsubmit = async e => {
     e.preventDefault();

@@ -3,6 +3,7 @@ import { createFinance, memoryStore } from '../../finance/service.js';
 import { parseCsv } from '../../finance/sheets.js';
 import { seedFinance } from './data.js';
 import { currentUser } from './auth.js';
+import { localToday } from '../../../../../shared/dates.js';
 
 const f = createFinance(memoryStore());
 await seedFinance(f);
@@ -23,7 +24,7 @@ export const audit = query => f.audit(query);
 export const importRecords = (kind, inputs, options) => f.importRecords(kind, inputs, who(), options);
 export async function forex(currency) {
   if (!RATES[currency]) throw new Error(`Demo mode has no rate for ${currency}. Enter one by hand.`);
-  return { rate: RATES[currency], date: new Date().toISOString().slice(0, 10), source: 'Demo rate (not a real one)' };
+  return { rate: RATES[currency], date: localToday(), source: 'Demo rate (not a real one)' };
 }
 export async function readFile(file) {
   if (!/\.csv$/i.test(file.name)) throw new Error('Demo mode reads CSV files only. Excel files are read by the server.');

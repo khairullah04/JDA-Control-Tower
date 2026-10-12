@@ -46,3 +46,13 @@ test('the sync cache drops results not used for 60 days, and dates older entries
   const out = pruned({ fresh: { at: now - 5 * day, data: { a: 1 } }, stale: { at: now - 61 * day, data: { b: 2 } }, undated: { tagline: 'from before' } }, now);
   assert.deepEqual(out, { fresh: { at: now - 5 * day, data: { a: 1 } }, undated: { at: now, data: { tagline: 'from before' } } });
 });
+
+test('an exported workbook has columns as wide as what is in them', async () => {
+  const { writeWorkbook, readSheets } = await import('./finance-xlsx.js');
+  const ExcelJS = (await import('exceljs')).default;
+  const rows = [['Invoice', 'Description', 'Amount'], ['INV-1', 'A description that is rather longer than twelve characters', { n: '813000.00' }], ['INV-2', 'x'.repeat(200), { n: '12345678901.25' }]];
+  const file = await writeWorkbook([{ name: 'CJI3', rows }]);
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.load(file);
+  assert.deepEqual(wb.worksheets[0].columns.map(c => c.width), [12, 44, 19]);     // never narrower than 12 or wider than 44; 12,345,678,901.25 is 17 characters
+  assert.equal((await readSheets('CJI3.xlsx', file))[0].rows[1][2], '813000');
+});
