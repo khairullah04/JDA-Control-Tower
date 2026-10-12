@@ -1,5 +1,6 @@
 import { config } from '../config/index.js';
 import { ringgit } from '../finance/money.js';
+export { checkDates, checkProject } from './checks.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -14,7 +15,4 @@ export const JDA_DATE_FIELDS = jda => [
   { name: 'startDate', label: 'Start date', type: 'date', value: jda ? jdaRange(jda).start : '' },
   { name: 'endDate', label: 'End date', type: 'date', value: jda ? jdaRange(jda).end : '' }
 ];
-export function checkDates({ startDate, endDate }) {
-  if (endDate < startDate) throw new Error('End date must be on or after the start date.');
-}
 export const monthName = iso => new Date(iso).toLocaleString('en-GB', { month: 'long', year: 'numeric' });

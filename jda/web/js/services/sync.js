@@ -26,7 +26,8 @@ async function buildCatalog(sanctioned) {
 export async function syncDrive(onProgress = () => {}) {
   const fin = await data();
   const [files, processed, catalog] = await Promise.all([listDriveFiles(), listProcessedFileIds(), buildCatalog(fin.sanctioned)]);
-  const todo = files.filter(f => !processed.has(f.id));
+  const alreadyRead = new Set(fin.entries.filter(live).map(e => e.driveFileId).filter(Boolean)); // even if an earlier sync stopped before marking the file done
+  const todo = files.filter(f => !processed.has(f.id) && !alreadyRead.has(f.id));
   const unsorted = catalog.find(c => c.code === 'UNSORTED');
   const partners = [...new Set([...fin.entries, ...fin.sanctioned].filter(live).map(r => r.partner).filter(Boolean))];
   const target = code => { const c = catalog.find(x => x.code === code) || unsorted || {}; return { jdaId: c.jdaId, jdaName: c.jda, projectId: c.projectId, projectCode: c.code }; };

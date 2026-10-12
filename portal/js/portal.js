@@ -18,14 +18,19 @@ const navSpy = new IntersectionObserver(entries => {
 }, { rootMargin: '-20% 0px -50% 0px', threshold: [0, .25, .5, .75, 1] });
 navTabs.forEach(t => navSpy.observe(document.querySelector(t.getAttribute('href'))));
 
+// null: this JDA has no report yet. FAILED: it could not be read, which is not the same thing.
+const FAILED = { failed: true };
 async function loadReport(j) {
   if (!isConfigured(j)) return null;
   try { const snap = await getDoc(reportRefFor(j)); return snap.exists() ? snap.data() : null; }
-  catch { return null; }
+  catch (e) { console.error(`Could not load ${j.name}'s report:`, e); return FAILED; }
 }
 
-// A JDA with no report yet keeps the same card with its progress left blank - no zeros.
+// A JDA with no report yet keeps the same card with its progress left blank - no zeros. One whose
+// report could not be read looks the same but says so, so an outage is not taken for an empty JDA.
 function card(j, data) {
+  const failed = data === FAILED;
+  if (failed) data = null;
   const projects = data?.projects || [];
   const pct = projects.length ? Math.round(projects.reduce((s, p) => s + (p.pct || 0), 0) / projects.length) : null;
   const status = statusLabel[data?.overallStatus] ? data.overallStatus : 'green';
@@ -45,7 +50,7 @@ function card(j, data) {
       </div>
     </div>
     <div class="progress-track"><div class="progress-fill" data-pct="${pct ?? 0}"></div></div>
-    <div class="project-meta"><span>${data ? `${projects.length} workstream(s)` : 'No report yet'}</span><b>View report →</b></div>
+    <div class="project-meta"><span>${data ? `${projects.length} workstream(s)` : failed ? 'Couldn’t load' : 'No report yet'}</span><b>View report →</b></div>
   </a>`;
 }
 

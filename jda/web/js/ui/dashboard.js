@@ -8,11 +8,11 @@ import { openForm } from './modal.js';
 import { runSync } from './sync.js';
 import { renderLog } from './log.js';
 import { loadCtx, storageNotice, auditLine } from './finance-ui.js';
+import { startRender } from './render.js';
 
 export async function renderDashboard() {
-  const page = $('#page');
-  page.innerHTML = '<p>Loading JDAs…</p>';
-  const ctx = await loadCtx(renderDashboard), { jdas, projects, fin } = ctx;
+  const r = startRender('Loading JDAs…', renderDashboard), { page, refresh } = r;
+  const ctx = await loadCtx(refresh), { jdas, projects, fin } = ctx;
   const rollups = jdas.map(j => {
     const mine = projects.filter(p => p.jdaId === j.id);
     const r = mine.map(p => computeReport(p, ofProject(fin.sanctioned, p.id), ofProject(fin.entries, p.id))).reduce((acc, rep) => ({
@@ -26,6 +26,7 @@ export async function renderDashboard() {
     return { ...a, detail: p ? `${p.jdaName} / ${p.name}: ${a.detail}` : a.detail };
   });
 
+  r.current();
   page.innerHTML = `<div class="section-head"><h2>JDAs</h2><div class="row"><a class="ghost" href="#/cji3">CJI3 register</a><button class="primary" id="sync-drive">Sync from Drive</button></div></div>
     ${storageNotice(ctx)}<div class="grid-4">
     ${rollups.map(({ j, r }) => `
@@ -39,7 +40,7 @@ export async function renderDashboard() {
 
     <div class="section"><h3>Recent activity</h3>${renderLog(named)}</div>`;
 
-  $('#sync-drive').onclick = e => runSync(e.target, renderDashboard);
+  $('#sync-drive').onclick = e => runSync(e.target, refresh);
   $('#add-jda').onclick = () => openForm({
     title: 'Add JDA',
     fields: [{ name: 'name', label: 'Name (e.g. JDA 5)' }, ...JDA_DATE_FIELDS()],
@@ -47,7 +48,7 @@ export async function renderDashboard() {
       checkDates(v);
       const created = await addJda(v);
       await addLog(created.id, 'jda', `JDA "${v.name}" created, ${v.startDate} to ${v.endDate}`);
-      renderDashboard();
+      refresh();
     }
   });
 

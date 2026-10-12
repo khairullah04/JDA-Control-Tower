@@ -109,17 +109,23 @@ export function build(kind, input, prev, settings) {
   if (r.grossMyrMinor === undefined) Object.assign(r, { netMyrMinor: 0, taxMyrMinor: 0, grossMyrMinor: 0 });
   // Limits, so that nothing typed, pasted or imported can outgrow a column or a number: text fields
   // hold 200 characters (description and remarks 1,000, partner 40), and amounts stay exact.
-  need(Number.isSafeInteger(r.grossMyrMinor) && r.grossMyrMinor <= 1e15, 'Amount is too large');
+  // These hold for every record, a draft included: a draft's gaps are listed on it, but it is never
+  // stored with an amount too large to be exact, and its text is cut to the limit rather than kept long.
+  const always = [];
+  if (!(Number.isSafeInteger(r.grossMyrMinor) && r.grossMyrMinor <= 1e15 && (r.netMinor == null || r.netMinor <= 1e15))) always.push('Amount is too large');
   const limit = k => k === 'description' || k === 'remarks' ? 1000 : k === 'partner' ? 40 : 200;
   for (const [k, label] of [...AUDITED[kind], ...Object.entries(r.sap || {}).map(([sk]) => ['sap.' + sk, `SAP: ${SAP_FIELDS.find(f => f[0] === sk)[1]}`])]) {
-    const value = k.startsWith('sap.') ? r.sap[k.slice(4)] : r[k];
-    if (typeof value === 'string') need(value.length <= limit(k), `${label} is too long (${limit(k)} characters at most)`);
+    const sap = k.startsWith('sap.'), value = sap ? r.sap[k.slice(4)] : r[k];
+    if (typeof value !== 'string' || value.length <= limit(k)) continue;
+    if (!input.draft) always.push(`${label} is too long (${limit(k)} characters at most)`);
+    else if (sap) r.sap[k.slice(4)] = value.slice(0, limit(k)); else r[k] = value.slice(0, limit(k));
   }
 
   if (entry) {
     r.missing = input.draft ? errors.splice(0) : [];
     if (r.missing.length && r.status !== 'rejected') r.status = 'pending';
   }
+  errors.push(...always);
   return { record: r, errors };
 }
 

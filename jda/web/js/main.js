@@ -7,18 +7,14 @@ import { renderPaymentsPage } from './ui/payments.js';
 import { session, unlock } from './services/finance.js';
 import { initCopilot, refreshCopilot } from './ui/copilot.js';
 import { $ } from './ui/dom.js';
+import { show } from './ui/render.js';
 import { config } from './config/index.js';
 
 async function route() {
   const [, kind, id, sub] = location.hash.slice(1).split('/');
   $('#page').classList.toggle('wide', kind === 'cji3' || kind === 'payments'); // the two wide tables get the whole window
-  try {
-    if (kind === 'project' && id) await renderProject(id);
-    else if (kind === 'jda' && id) await renderJda(id);
-    else if (kind === 'cji3') await renderCji3(id, sub);
-    else if (kind === 'payments') await renderPaymentsPage(id, sub);
-    else await renderDashboard();
-  } catch (e) { $('#page').innerHTML = '<p class="msg"></p>'; $('#page').firstChild.textContent = `Could not load: ${e.message}`; }
+  await show(kind === 'project' && id ? () => renderProject(id) : kind === 'jda' && id ? () => renderJda(id)
+    : kind === 'cji3' ? () => renderCji3(id, sub) : kind === 'payments' ? () => renderPaymentsPage(id, sub) : renderDashboard);
   refreshCopilot();
 }
 

@@ -7,7 +7,8 @@ import * as finance from '../services/finance.js';
 import { money, fmt } from '../finance/money.js';
 import { paymentTable, tableTotals, rowId, isMonth, BASE, FLAG_LABEL } from '../finance/core.js';
 import { paymentSheet, ptOriginal, rowRemarks } from '../finance/sheets.js';
-import { state } from './state.js';
+import { state, CONTEXT_ROWS, firstRows } from './state.js';
+import { startRender } from './render.js';
 import { loadCtx, storageNotice, scopeBar, wireScope, summaryCells, monthLabel, statusBadge, openRecord, openAudit, exportButtons, exportSheet, act } from './finance-ui.js';
 import { openImport } from './finance-io.js';
 
@@ -101,12 +102,12 @@ export function renderPayments(root, ctx, { jda, projectId = '' }) {
 
 // The Payment Table on a page of its own (#/payments/<jda>[/<project>]): the full width of the window, one JDA at a time.
 export async function renderPaymentsPage(jdaId = '', projectId = '') {
-  const page = $('#page');
-  page.innerHTML = '<p>Loading the Payment Table…</p>';
-  const ctx = await loadCtx(() => renderPaymentsPage(jdaId, projectId));
+  const r0 = startRender('Loading the Payment Table…', () => renderPaymentsPage(jdaId, projectId)), { page } = r0;
+  const ctx = await loadCtx(r0.refresh);
   const jda = ctx.jdas.find(j => j.id === jdaId) || ctx.jdas[0];
   if (!jda) throw new Error('There are no JDAs yet. Add one on the dashboard first.');
   const project = ctx.projects.find(p => p.id === projectId && p.jdaId === jda.id);
+  r0.current();
   page.innerHTML = `
     <div class="section-head"><h2>Payment table</h2>
       <div class="row"><a class="ghost" href="#/jda/${esc(jda.id)}">← ${esc(jda.name)}</a><a class="ghost" href="#/cji3/${esc(jda.id)}${project ? '/' + esc(project.id) : ''}">Invoices (CJI3)</a></div></div>
@@ -122,6 +123,7 @@ export async function renderPaymentsPage(jdaId = '', projectId = '') {
   state.context = () => ({
     page: `Payment table: ${jda.name}${project ? ' / ' + project.name : ''}`, note: 'Total counts paid invoices only. Variance = Total minus w TAX. Amounts are MYR.',
     totals: { sanctionedWithTax: money(t.sanctionedMinor), invoiced: money(t.invoicedMinor), paid: money(t.actualMinor), remaining: money(t.remainingMinor) },
-    rows: rows.map(r => ({ id: r.id, month: r.month, partner: r.partner, project: r.projectCode, sanctionedWithTax: money(r.withTaxMinor), paid: money(r.actualMinor), variance: money(r.varianceMinor), status: r.flag, invoices: r.invoices.map(i => i.invoiceNo) }))
+    ...firstRows(rows),
+    rows: rows.slice(0, CONTEXT_ROWS).map(r => ({ id: r.id, month: r.month, partner: r.partner, project: r.projectCode, sanctionedWithTax: money(r.withTaxMinor), paid: money(r.actualMinor), variance: money(r.varianceMinor), status: r.flag, invoices: r.invoices.map(i => i.invoiceNo) }))
   });
 }

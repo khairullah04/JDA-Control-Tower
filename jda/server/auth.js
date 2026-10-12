@@ -11,7 +11,7 @@ export async function requireUser(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Not signed in' });
   try {
     const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }), signal: AbortSignal.timeout(15000)
     });
     if (!r.ok) {
       const reason = (await r.json().catch(() => ({}))).error?.message || '';

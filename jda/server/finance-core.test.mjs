@@ -326,3 +326,26 @@ test('old tracker records are brought over once, however often it is run', async
   const d = await f.data();
   assert.deepEqual([d.entries.length, d.sanctioned.length], [2, 1]);
 });
+
+test('a draft is cut to the limits, and an amount too large to be exact is refused even as a draft', async () => {
+  const f = setup(), where = { jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA' };
+  const read = extractedInputs({ vendor: 'V'.repeat(300), invoiceNo: 'N'.repeat(300), date: '2026-09-03', currency: 'MYR', amount: 108, taxRate: 0.08,
+    allocations: [{ projectCode: 'AA', amount: 108, description: 'd'.repeat(5000), reasoning: 'r'.repeat(5000) }] }, { target: () => where, fileId: 'f-long', fileName: 'x.pdf' });
+  const ok = await f.importRecords('entry', read, 'sync');
+  const r = ok.results[0].record;
+  assert.deepEqual([ok.imported, r.vendor.length, r.partner.length, r.invoiceNo.length, r.description.length, r.remarks.length], [1, 200, 40, 200, 1000, 1000]);
+  const huge = await f.importRecords('entry', [{ ...where, draft: true, source: 'drive', partner: 'IBM', invoiceNo: 'HUGE', documentDate: '2026-09-03', currency: 'MYR', amount: '50000000000000' }], 'sync');
+  assert.deepEqual([huge.imported, huge.results[0].errors], [0, ['Amount is too large']]);
+});
+
+test('a Drive file is read into the register once, however often the sync is run', async () => {
+  const f = setup(), where = { jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA' };
+  const fromFile = id => extractedInputs({ vendor: 'IBM', invoiceNo: '', date: '2026-09-03', currency: 'MYR', amount: 216, taxRate: 0.08,
+    allocations: [{ projectCode: 'AA', amount: 108 }, { projectCode: 'AA', amount: 108 }] }, { target: () => where, fileId: id, fileName: `${id}.pdf` });
+  assert.equal((await f.importRecords('entry', fromFile('f1'), 'sync')).imported, 2);       // two charges from one file, neither with an invoice number
+  const again = await f.importRecords('entry', fromFile('f1'), 'sync');                    // the sync was interrupted and run again
+  assert.equal(again.imported, 0);
+  assert.match(again.results[0].errors[0], /already been read/);
+  assert.equal((await f.importRecords('entry', fromFile('f2'), 'sync')).imported, 2);
+  assert.equal((await f.data()).entries.length, 4);
+});

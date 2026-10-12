@@ -1,5 +1,4 @@
-import { config } from '../../config/index.js';
-import { auth } from './firebase.js';
+import { request } from './http.js';
 import { parseCsv } from '../../finance/sheets.js';
 
 // The passkey is exchanged for a session token, kept for this tab only. The portal's Administration
@@ -7,20 +6,10 @@ import { parseCsv } from '../../finance/sheets.js';
 const KEY = 'jda-finance-token';
 const token = () => { try { return sessionStorage.getItem(KEY) || ''; } catch { return ''; } };
 
-async function call(path, method = 'GET', body, quiet = false) {
-  let res;
-  try {
-    res = await fetch(config.apiBase + path, {
-      method, body: body && JSON.stringify(body),
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + ((await auth.currentUser?.getIdToken()) || ''), 'X-Finance-Token': token() }
-    });
-  } catch { throw new Error(`Couldn't reach the server at ${config.apiBase || location.origin}. Is it running?`); }
-  if (res.ok && !res.headers.get('content-type')?.includes('json')) return res.blob();
-  const out = await res.json().catch(() => ({}));
-  if (res.status === 401 && out.passkey && !quiet) window.dispatchEvent(new Event('finance-locked')); // the session ended: ask for the passkey again
-  if (!res.ok) throw Object.assign(new Error(out.error || 'Request failed'), { status: res.status, passkey: !!out.passkey });
-  return out;
-}
+const call = (path, method = 'GET', body, quiet = false) => request(path, { method, body, headers: { 'X-Finance-Token': token() } }).catch(e => {
+  if (e.status === 401 && e.passkey && !quiet) window.dispatchEvent(new Event('finance-locked')); // the session ended: ask for the passkey again
+  throw e;
+});
 const post = (path, body) => call(path, 'POST', body);
 const path = kind => `/api/finance/${kind === 'entry' ? 'entries' : kind}`;
 

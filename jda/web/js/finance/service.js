@@ -163,18 +163,22 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
   // says row by row what would happen. Nothing is entered twice:
   //   - an invoice already in the register is refused;
   //   - a record already brought over from the old tracker (same old id) is refused;
+  //   - an invoice from a Drive file that an earlier sync already read is refused (an interrupted or
+  //     repeated sync cannot add its invoices again, numbered or not);
   //   - a sanctioned amount that matches one already entered is marked `duplicate` and left out,
   //     unless `duplicates: 'add'` says it really is a further amount.
   async function importRecords(kind, inputs, actor, { dryRun = false, duplicates = 'skip' } = {}) {
-    const coll = collection(kind), s = await settings(), at = now(), results = [];
+    const coll = collection(kind), s = await settings(), at = now(), results = [], mine = new Set();
     const decide = (all, part) => {
       const alive = all.filter(live), writes = [];
       const invoices = new Set(kind === 'entry' ? alive.filter(e => e.invoiceNo).map(invoiceKey) : []);
       const sanctioned = new Set(kind === 'sanctioned' ? alive.map(sanctionedKey) : []), old = new Set(all.map(r => r.legacyId).filter(Boolean));
+      const filesRead = new Set(alive.filter(r => r.driveFileId && !mine.has(r.id)).map(r => r.driveFileId)); // by an earlier sync, not by this one
       for (const input of part) {
         const { record, errors } = build(kind, input, null, s);
         let again = false;
         if (record.legacyId && old.has(record.legacyId)) errors.push('Already brought over from the old tracker');
+        else if (input.source === 'drive' && record.driveFileId && filesRead.has(record.driveFileId)) errors.push('This Drive file has already been read into the register');
         else if (kind === 'entry' && record.invoiceNo && record.projectId && invoices.has(invoiceKey(record))) errors.push(duplicate(record));
         else if (kind === 'sanctioned' && !errors.length) again = sanctioned.has(sanctionedKey(record));
         const next = fresh(record, { ...input, source: input.source || 'import' }, actor, at), add = !errors.length && (!again || duplicates === 'add');
@@ -183,6 +187,7 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
         if (kind === 'entry' && record.invoiceNo) invoices.add(invoiceKey(record));
         if (kind === 'sanctioned') sanctioned.add(sanctionedKey(record));
         if (record.legacyId) old.add(record.legacyId);
+        mine.add(next.id);
         writes.push({ coll, id: next.id, data: next }, line(actor, kind, next, 'import', { new: created(next) }));
       }
       return writes;

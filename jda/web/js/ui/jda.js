@@ -2,18 +2,17 @@ import { updateJda, addProject, addLog, listLog } from '../services/db.js';
 import { audit } from '../services/finance.js';
 import { computeReport, ofProject } from '../services/analytics.js';
 import { money } from '../finance/money.js';
-import { $, esc, rm, pct, spendBar, jdaRange, JDA_DATE_FIELDS, checkDates } from './dom.js';
+import { $, esc, rm, pct, spendBar, jdaRange, JDA_DATE_FIELDS, checkDates, checkProject } from './dom.js';
 import { state } from './state.js';
 import { openForm } from './modal.js';
 import { runSync } from './sync.js';
 import { renderTimeline } from './timeline.js';
 import { renderLog } from './log.js';
 import { loadCtx, storageNotice, auditLine, financeSummary } from './finance-ui.js';
+import { startRender } from './render.js';
 
 export async function renderJda(id) {
-  const page = $('#page');
-  page.innerHTML = '<p>Loading JDA…</p>';
-  const refresh = () => renderJda(id);
+  const r = startRender('Loading JDA…', () => renderJda(id)), { page, refresh } = r;
   const ctx = await loadCtx(refresh), { fin } = ctx;
   const jda = ctx.jdas.find(j => j.id === id);
   if (!jda) throw new Error('That JDA no longer exists.');
@@ -29,6 +28,7 @@ export async function renderJda(id) {
   const totals = computeReport(whole, sanctioned, entries);
   totals.forecast = perProject.reduce((t, { r }) => t + r.forecast, 0); // each project forecast over its own dates
 
+  r.current();
   page.innerHTML = `
     <div class="section-head"><h2>${esc(jda.name)}</h2>
       <div class="row">
@@ -86,8 +86,9 @@ export async function renderJda(id) {
       { name: 'endDate', label: 'End date', type: 'date' }
     ],
     onSubmit: async v => {
-      const created = await addProject({ ...v, jdaId: id });
-      await addLog(created.id, 'project', `Project "${v.name}" added to ${jda.name}`);
+      const project = checkProject(v, ctx.projects);
+      const created = await addProject({ ...project, jdaId: id });
+      await addLog(created.id, 'project', `Project "${project.name}" added to ${jda.name}`);
       refresh();
     }
   });

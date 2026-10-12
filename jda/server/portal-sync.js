@@ -5,10 +5,16 @@ import { PORTAL_MASTER_SYSTEM, PORTAL_OVERALL_SYSTEM, portalWeeklySystem, PORTAL
 
 // Extraction results are kept per set of (file id, modified time), so a sync only pays for Claude
 // when something in a folder actually changed.
-const CACHE_FILE = new URL('./.portal-cache.json', import.meta.url);
+// Each result is { at: when it was last used, data }. One not used for KEEP_DAYS is dropped, so the
+// file does not grow for ever as files in Drive are replaced.
+const CACHE_FILE = new URL('./.portal-cache.json', import.meta.url), KEEP_DAYS = 60;
 let cache = {};
 try { cache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8')); } catch { /* first run */ }
-const saveCache = () => fs.writeFileSync(CACHE_FILE, JSON.stringify(cache));
+export function pruned(all, now = Date.now()) {
+  return Object.fromEntries(Object.entries(all).map(([k, v]) => [k, v && typeof v.at === 'number' && 'data' in v ? v : { at: now, data: v }]) // results saved before this are dated today
+    .filter(([, v]) => now - v.at < KEEP_DAYS * 864e5));
+}
+const saveCache = () => { cache = pruned(cache); fs.writeFileSync(CACHE_FILE, JSON.stringify(cache)); };
 
 const str = v => typeof v === 'string' ? v.trim() : '';
 const num = v => Number.isFinite(Number(v)) && v !== null && v !== '' ? Math.min(Math.max(Math.round(Number(v)), 0), 100) : null;
@@ -26,12 +32,13 @@ async function extract(kind, files, system, ask_, extraKey = '') {
   }
   if (!used.length) return { data: null, used, skipped };
   const key = `${kind}|${extraKey}|${used.map(f => `${f.id}@${f.modifiedTime}`).join(',')}`;
+  cache = pruned(cache);
   if (!cache[key]) {
     const text = await ask({ system, maxTokens: 16000, messages: [{ role: 'user', content: [...blocks, { type: 'text', text: ask_ }] }] });
-    cache[key] = parseJson(text);
-    saveCache();
-  }
-  return { data: cache[key], used, skipped };
+    cache[key] = { at: Date.now(), data: parseJson(text) };
+  } else cache[key].at = Date.now();
+  saveCache();
+  return { data: cache[key].data, used, skipped };
 }
 
 const cleanOverview = d => ({

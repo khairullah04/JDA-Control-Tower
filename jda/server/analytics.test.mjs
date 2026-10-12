@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { computeReport, ofProject } from '../web/js/services/analytics.js';
+import { checkDates, checkProject } from '../web/js/ui/checks.js';
 
 const project = { budget: 1000000, startDate: '2026-01-01', endDate: '2026-12-31' };   // RM 1,000,000
 const s = (month, gross, over = {}) => ({ projectId: 'p1', month, grossMyrMinor: gross, ...over });
@@ -34,4 +35,19 @@ test('several projects added up: the budget is given in sen', () => {
 test('a project with no dates or no budget still reports', () => {
   const r = computeReport({}, [], [e('2026-05', 100, 'paid')], asOf);
   assert.deepEqual([r.budget, r.actual, r.budgetUsedPct, r.forecastOverBudget], [0, 100, 0, true]);
+});
+
+test('a project is refused with dates the wrong way round, a negative budget, or a code already in use', () => {
+  const others = [{ name: 'AA', jdaName: 'JDA 1' }, { name: 'BA', jdaName: 'JDA 2' }];
+  const ok = { name: ' AD ', budget: 0, startDate: '2026-01-01', endDate: '2026-01-01' };
+  assert.deepEqual(checkProject(ok, others), { ...ok, name: 'AD' });                                     // saved without the stray spaces
+  assert.throws(() => checkProject({ ...ok, endDate: '2025-12-31' }, others), /End date must be on or after/);
+  assert.throws(() => checkProject({ ...ok, budget: -1 }, others), /zero or more/);
+  assert.throws(() => checkProject({ ...ok, budget: NaN }, others), /zero or more/);
+  assert.throws(() => checkProject({ ...ok, name: 'ba' }, others), /"BA" is already used in JDA 2/);     // whatever the capitals, whichever JDA
+  assert.throws(() => checkProject({ ...ok, name: '  ' }, others), /Give the project a code/);
+  const edit = { budget: 5, startDate: '2026-01-01', endDate: '2026-12-31' };                             // the edit form does not ask for the code
+  assert.equal(checkProject(edit), edit);
+  assert.throws(() => checkProject({ ...edit, endDate: '2025-01-01' }), /End date/);
+  assert.doesNotThrow(() => checkDates({ startDate: '2026-01-01', endDate: '2026-01-02' }));
 });

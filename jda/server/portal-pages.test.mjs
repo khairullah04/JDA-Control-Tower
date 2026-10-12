@@ -122,3 +122,16 @@ test('progress: projects arriving without ids (Drive, the feed) keep the ids the
   // a task saved by name only (an older report) still finds its project
   assert.deepEqual(tasksOf(after[0], [{ task: 't', project: 'Beta' }, { task: 'u', project: '' }], after).map(t => t.task), ['t']);
 });
+
+test('Master Page: a saved overview with parts missing or of the wrong kind still draws', () => {
+  const base = contentFor('jda1');
+  const broken = contentFromOverview({ complete: true, solutionGroups: [{ label: 'A' }, { label: 'B', solutions: [{ title: 'No tags' }, { title: 'Bad tags', tags: 'x' }] }, null],
+    aspiration: 'not a list', collaborators: { name: 'not a list' }, extraSections: [{ title: 'No cards' }, null, { id: 'k', cards: 'x' }], sectionOrder: 'x', press: { text: 'p' } }, base);
+  assert.deepEqual(broken.solutionGroups.map(g => [g.label, g.cards.map(c => c.tags)]), [['A', []], ['B', [[], []]], ['', []]]);
+  assert.deepEqual([broken.aspiration, broken.collaborators], [[], []]);
+  assert.deepEqual(broken.extraSections.map(s => [s.id, s.title, s.cards]), [['s0', 'No cards', []], ['s1', '', []], ['k', '', []]]);
+  assert.deepEqual(broken.sectionOrder.slice(0, 5), ['aspiration', 'project', 'architecture', 'collaborators', 'press']);
+  assert.doesNotThrow(() => overviewFromContent(broken));
+  const partial = contentFromOverview({ solutionGroups: 'x', aspiration: 7, collaborators: 'x' }, base);                 // not marked complete: the built-in content stands
+  assert.deepEqual([partial.solutionGroups, partial.aspiration, partial.collaborators], [base.solutionGroups, base.aspiration, base.collaborators]);
+});

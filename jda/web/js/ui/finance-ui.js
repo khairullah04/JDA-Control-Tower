@@ -54,11 +54,15 @@ export function dialog(html, wide = false) {
   d.showModal();
   return d;
 }
-// Runs one change, shows what went wrong beside the button that asked for it, and redraws on success.
-export async function act(ctx, msgEl, fn) {
+// Runs one change and redraws on success. If it is refused, `undo` puts the control that asked for it
+// back as it was, and the reason is shown where it can be seen.
+export async function act(ctx, msgEl, fn, undo) {
   if (msgEl) msgEl.textContent = '';
   try { await fn(); ctx.refresh(); }
-  catch (e) { if (msgEl) msgEl.textContent = e.message; else alert(e.message); }
+  catch (e) {
+    undo?.();
+    if (msgEl) { msgEl.textContent = e.message; msgEl.scrollIntoView?.({ block: 'nearest' }); } else alert(e.message);
+  }
 }
 
 /* ---------- Files out ---------- */

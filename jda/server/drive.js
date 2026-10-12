@@ -11,7 +11,17 @@ export const rootId = () => {
   return process.env.DRIVE_ROOT_FOLDER_ID;
 };
 
-const list = async q => (await drive.files.list({ q, fields: 'files(id,name,mimeType)', pageSize: 200, ...ALL })).data.files;
+// Every match, a page at a time: an inbox of more than one page was once cut off at the first.
+async function list(q) {
+  const out = [];
+  let pageToken;
+  do {
+    const { data } = await drive.files.list({ q, fields: 'nextPageToken,files(id,name,mimeType)', pageSize: 200, pageToken, ...ALL });
+    out.push(...(data.files || []));
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  return out;
+}
 
 // One shared inbox folder holds every invoice - no per-project subfolders. A single invoice can
 // cover several projects, so sorting happens after extraction, not by where the file was dropped.

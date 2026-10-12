@@ -13,8 +13,8 @@ process.env.PASSKEYS_FILE = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'jda
 fs.writeFileSync(process.env.PASSKEYS_FILE, JSON.stringify(passkeys));
 
 const synced = [], folders = [];
-let syncFails = false;
-mock.module('./portal-sync.js', { exports: { syncJda: async (jda, opts) => { synced.push([jda, opts.scope]); if (syncFails) throw new Error('Drive is down'); return { found: true, patch: {}, counts: {}, skipped: [] }; } } });
+let syncFails = false, hold = null;   // `hold`: a promise the stubbed sync waits on, to keep it in flight
+mock.module('./portal-sync.js', { exports: { syncJda: async (jda, opts) => { synced.push([jda, opts.scope]); await hold; if (syncFails) throw new Error('Drive is down'); return { found: true, patch: {}, counts: {}, skipped: [] }; } } });
 mock.module('./portal-drive.js', { exports: { masterFolderUrl: async jda => { folders.push(jda); return `https://drive.test/${jda.id}`; } } });
 const { createReportSaver, memoryReports } = await import('./portal-save.js');
 const reportStore = memoryReports({ 'portal/jdaReports/jda1': { weekLabel: 'Week 1' }, 'portal/jdaReports/jda2': { weekLabel: 'JDA 2 week' } }), saver = createReportSaver(reportStore);
@@ -65,14 +65,25 @@ test('after five wrong passkeys the address is locked out for a while', async ()
   assert.match(locked.body.error, /Too many wrong passkeys/);
 });
 
-test('a sync must say what to sync, and a second one straight after is held back', async () => {
+test('a sync must say what to sync, and only one runs at a time for a JDA and scope', async () => {
   const { token } = (await unlock('jda1', passkeys.jda1)).body;
   assert.equal((await call('sync', { jda: JDA1, scope: 'everything' }, token)).status, 400);
-  assert.equal((await call('sync', { jda: JDA1, scope: 'master' }, token)).status, 200);
-  const again = await call('sync', { jda: JDA1, scope: 'master' }, token);
-  assert.equal(again.status, 429);
-  assert.equal((await call('sync', { jda: JDA1, scope: 'progress' }, token)).status, 200);   // the other half is a separate matter
-  assert.deepEqual(synced.map(([jda, scope]) => [jda.id, scope]), [['jda1', 'master'], ['jda1', 'progress']]);
+  let release; hold = new Promise(r => { release = r; });
+  const first = call('sync', { jda: JDA1, scope: 'master' }, token);
+  await new Promise(r => setTimeout(r, 50));                                                // the first is now reading Drive
+  const second = await call('sync', { jda: JDA1, scope: 'master' }, token);
+  assert.deepEqual([second.status, second.body.error], [429, 'A sync for this JDA is still running. Wait for it to finish.']);
+  const other = call('sync', { jda: JDA1, scope: 'progress' }, token);                      // the other half is a separate matter
+  await new Promise(r => setTimeout(r, 50));
+  release(); hold = null;
+  assert.deepEqual([(await first).status, (await other).status], [200, 200]);
+  assert.equal((await call('sync', { jda: JDA1, scope: 'master' }, token)).status, 200);   // finished: it may run again at once
+  assert.deepEqual(synced.map(([jda, scope]) => [jda.id, scope]), [['jda1', 'master'], ['jda1', 'progress'], ['jda1', 'master']]);
+
+  syncFails = true;
+  assert.equal((await call('sync', { jda: JDA1, scope: 'master' }, token)).status, 500);
+  syncFails = false;
+  assert.equal((await call('sync', { jda: JDA1, scope: 'master' }, token)).status, 200);   // a failed run does not leave the lock held
 });
 
 test('a JDA 1 session cannot reach JDA 2\'s Drive folder, whatever name the page sends', async () => {

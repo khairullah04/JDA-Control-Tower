@@ -19,20 +19,23 @@ export function contentFromOverview(ov, baseContent){
   const out = { ...baseContent, extraSections: [], sectionOrder: [...FIXED_SECTIONS] };
   if (!ov) return out;
   const given = v => ov.complete === true ? v != null : (Array.isArray(v) ? v.length > 0 : !!v);
+  // The document can be written from outside this page (a feed, an older version), so a part that
+  // should be a list and is not is read as an empty one instead of stopping the whole page.
+  const list = v => Array.isArray(v) ? v : [], givenList = v => ov.complete === true ? v != null : list(v).length > 0;
   for (const [to, from] of [['eyebrow', 'eyebrow'], ['tagline', 'tagline'], ['sub', 'summary'], ['more', 'more']]) if (given(ov[from])) out[to] = ov[from];
-  if (given(ov.aspiration)) out.aspiration = ov.aspiration;
-  if (given(ov.solutionGroups)){
+  if (givenList(ov.aspiration)) out.aspiration = list(ov.aspiration);
+  if (givenList(ov.solutionGroups)){
     out.solutions = {};
-    out.solutionGroups = ov.solutionGroups.map((g, gi) => ({
-      label: g.label,
-      cards: g.solutions.map((sol, si) => {
+    out.solutionGroups = list(ov.solutionGroups).map((g, gi) => ({
+      label: g?.label ?? '',
+      cards: list(g?.solutions).map((sol, si) => {
         const key = `s${gi}-${si}`;
-        out.solutions[key] = { ...sol, icon: SOLUTION_ICONS[sol.art] || SOLUTION_ICONS.agentic, img: sol.art ? `assets/sol-${sol.art}.jpg` : null };
-        return { key, tags: sol.tags.map(t => [t.text, t.accent]) };
+        out.solutions[key] = { ...sol, icon: SOLUTION_ICONS[sol?.art] || SOLUTION_ICONS.agentic, img: sol?.art ? `assets/sol-${sol.art}.jpg` : null };
+        return { key, tags: list(sol?.tags).map(t => [t?.text, t?.accent]) };
       })
     }));
   }
-  if (given(ov.collaborators)) out.collaborators = ov.collaborators.map(p => ({ ...p, alt: p.name, logo: 'logo' in p ? p.logo : logoFor(p.name) }));
+  if (givenList(ov.collaborators)) out.collaborators = list(ov.collaborators).filter(Boolean).map(p => ({ ...p, alt: p.name, logo: 'logo' in p ? p.logo : logoFor(p.name) }));
   if (ov.press) out.press = {
     img: 'img' in ov.press ? ov.press.img : baseContent.press?.img, alt: baseContent.press?.alt || '',
     text: ov.press.text, more: ov.press.more, href: /^https?:\/\//.test(ov.press.url || '') ? ov.press.url : '', linkText: ov.press.linkText || 'Read the full release →'
@@ -41,9 +44,9 @@ export function contentFromOverview(ov, baseContent){
   const intros = ov.intros || {};
   for (const [to, from] of INTROS) if (intros[from]) out[to] = intros[from];
   if (intros.solutions && intros.solutions !== plainText(baseContent.solutionsIntroHtml)) out.solutionsIntroHtml = esc(intros.solutions);
-  out.extraSections = (ov.extraSections || []).map((s, i) => ({ id: s.id || `s${i}`, title: s.title || '', intro: s.intro || '', cards: s.cards || [] }));
+  out.extraSections = list(ov.extraSections).map((s, i) => ({ id: s?.id || `s${i}`, title: s?.title || '', intro: s?.intro || '', cards: list(s?.cards) }));
   // Saved order first; any section it doesn't mention (a new one, or an older save) follows in the built-in order.
-  const known = [...FIXED_SECTIONS, ...out.extraSections.map(s => 'x:' + s.id)], saved = (ov.sectionOrder || []).filter(k => known.includes(k));
+  const known = [...FIXED_SECTIONS, ...out.extraSections.map(s => 'x:' + s.id)], saved = list(ov.sectionOrder).filter(k => known.includes(k));
   out.sectionOrder = [...saved, ...known.filter(k => !saved.includes(k))];
   return out;
 }

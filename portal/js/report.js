@@ -591,16 +591,19 @@ function render(data){
   });
 
   if (chart){
-    chart.data.labels = data.scurve?.months || chart.data.labels;
-    chart.data.datasets[0].data = data.scurve?.planned || chart.data.datasets[0].data;
+    // The chart shows this document's curve and nothing else: a report with no S-curve leaves the
+    // chart empty, so the starter dataset's sample curve is never mistaken for live figures.
+    const curve = data.scurve || {};
+    chart.data.labels = curve.months || [];
+    chart.data.datasets[0].data = curve.planned || [];
 
     // The point for the real, current calendar month always reflects the live
     // project-average completion (`pct`), and every month after it is forced
     // back to null (not reached yet) — so the S-curve always lines up with
     // today's actual date instead of drifting from stale mock data. Months
     // before the current one keep whatever historical value was recorded.
-    const actualArr = (data.scurve?.actual || chart.data.datasets[1].data).slice();
-    const curIdx = getCurrentMonthIndex(data.scurve?.startMonth || c.defaultStartMonth);
+    const actualArr = (curve.actual || []).slice();
+    const curIdx = getCurrentMonthIndex(curve.startMonth || c.defaultStartMonth);
     if (pct !== null && curIdx >= 0 && curIdx < actualArr.length){
       actualArr[curIdx] = pct;
       for (let i = curIdx + 1; i < actualArr.length; i++) actualArr[i] = null;

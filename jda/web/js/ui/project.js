@@ -3,17 +3,16 @@ import { audit } from '../services/finance.js';
 import { computeReport, ofProject } from '../services/analytics.js';
 import { money } from '../finance/money.js';
 import { paymentTable, STATUS_LABEL } from '../finance/core.js';
-import { $, esc, rm, pct, monthName, jdaRange } from './dom.js';
-import { state } from './state.js';
+import { $, esc, rm, pct, monthName, jdaRange, checkProject } from './dom.js';
+import { state, CONTEXT_ROWS, firstRows } from './state.js';
 import { openForm } from './modal.js';
 import { renderTimeline } from './timeline.js';
 import { renderLog } from './log.js';
 import { loadCtx, storageNotice, auditLine, financeSummary } from './finance-ui.js';
+import { startRender } from './render.js';
 
 export async function renderProject(id) {
-  const page = $('#page');
-  page.innerHTML = '<p>Loading report…</p>';
-  const refresh = () => renderProject(id);
+  const r0 = startRender('Loading report…', () => renderProject(id)), { page, refresh } = r0;
   const ctx = await loadCtx(refresh);
   const project = ctx.projects.find(p => p.id === id);
   if (!project) throw new Error('That project no longer exists.');
@@ -22,6 +21,7 @@ export async function renderProject(id) {
   const r = computeReport(project, sanctioned, entries);
   const activity = [...await listLog(id), ...(await audit()).map(auditLine).filter(a => a.projectId === id)].sort((a, b) => b.ts.localeCompare(a.ts));
 
+  r0.current();
   page.innerHTML = `
     <div class="section-head"><h2>${esc(project.name)}</h2>
       <div class="row">
@@ -58,6 +58,7 @@ export async function renderProject(id) {
       { name: 'endDate', label: 'End date', type: 'date', value: project.endDate }
     ],
     onSubmit: async v => {
+      checkProject(v);
       await updateProject(id, v);
       await addLog(id, 'project', `Budget/dates updated: RM ${Number(v.budget).toLocaleString()}, ${v.startDate} to ${v.endDate}`);
       refresh();
@@ -69,7 +70,8 @@ export async function renderProject(id) {
     page: `Project report: ${project.name}`, note: 'Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month.',
     project: { name: project.name, budget: money(r.budget), start: project.startDate, end: project.endDate },
     report: { asOf: r.asOf, sanctionedToDate: money(r.planned), paid: money(r.actual), invoiced: money(r.invoiced), variance: money(r.variance), overSanctioned: r.overPlan, budgetUsed: pct(r.budgetUsedPct), forecast: money(r.forecast), invoicesByStatus: r.counts },
-    paymentTable: paymentTable(sanctioned, entries).map(row => ({ id: row.id, month: row.month, partner: row.partner, sanctionedWithTax: money(row.withTaxMinor), paid: money(row.actualMinor), variance: money(row.varianceMinor), status: row.flag })),
-    invoices: entries.filter(e => !e.deletedAt).map(e => ({ invoiceNo: e.invoiceNo, partner: e.partner, date: e.documentDate, month: e.month, dueDate: e.dueDate, original: money(e.netMinor, e.currency), taxedMYR: money(e.grossMyrMinor), status: STATUS_LABEL[e.status], description: e.description }))
+    ...firstRows(entries.filter(e => !e.deletedAt)),
+    paymentTable: paymentTable(sanctioned, entries).slice(0, CONTEXT_ROWS).map(row => ({ id: row.id, month: row.month, partner: row.partner, sanctionedWithTax: money(row.withTaxMinor), paid: money(row.actualMinor), variance: money(row.varianceMinor), status: row.flag })),
+    invoices: entries.filter(e => !e.deletedAt).slice(0, CONTEXT_ROWS).map(e => ({ invoiceNo: e.invoiceNo, partner: e.partner, date: e.documentDate, month: e.month, dueDate: e.dueDate, original: money(e.netMinor, e.currency), taxedMYR: money(e.grossMyrMinor), status: STATUS_LABEL[e.status], description: e.description }))
   });
 }

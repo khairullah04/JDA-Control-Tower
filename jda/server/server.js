@@ -11,6 +11,7 @@ import { requireUser } from './auth.js';
 import { passkeyProblems } from './passkeys.js';
 import { rateLimit } from './rate-limit.js';
 import { publishAccessList } from './access-list.js';
+import { apiErrors, apiNotFound } from './errors.js';
 import { openStore } from './finance-store.js';
 import { createFinance } from '../web/js/finance/service.js';
 
@@ -41,6 +42,7 @@ app.use('/api/finance', financeRoutes(createFinance(finance.store), finance.kind
 app.use('/shared', express.static(fileURLToPath(new URL('../../shared', import.meta.url))));
 app.use('/tracker', express.static(fileURLToPath(new URL('../web', import.meta.url))));
 app.use(express.static(fileURLToPath(new URL('../../portal', import.meta.url))));
+app.use('/api', apiErrors, apiNotFound);
 const port = process.env.PORT || 8080;
 const access = await publishAccessList();
 app.listen(port, () => {

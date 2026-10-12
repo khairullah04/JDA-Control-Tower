@@ -2,7 +2,8 @@
 // narrowed to one JDA or one project on those pages. Filter, search, sort, change a status alone
 // or in bulk, recalculate on request, delete and restore, and export what is on screen.
 import { $, esc } from './dom.js';
-import { state } from './state.js';
+import { state, CONTEXT_ROWS } from './state.js';
+import { startRender } from './render.js';
 import * as finance from '../services/finance.js';
 import { config } from '../config/index.js';
 import { money, fmt, fromBps } from '../finance/money.js';
@@ -100,7 +101,7 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
     const t = e.target;
     if (t.id === 'reg-all') { shown().forEach(x => t.checked ? view.selected.add(x.id) : view.selected.delete(x.id)); draw(); }
     if (t.dataset.pick) { t.checked ? view.selected.add(t.dataset.pick) : view.selected.delete(t.dataset.pick); draw(); }
-    if (t.dataset.status) act(ctx, msg, () => finance.setStatus([t.dataset.status], t.value));
+    if (t.dataset.status) { const was = find(t.dataset.status)?.status; act(ctx, msg, () => finance.setStatus([t.dataset.status], t.value), () => { t.value = was; }); } // refused: back to the status it really has
   };
   root.onclick = e => {
     const d = e.target.closest('button')?.dataset;
@@ -115,6 +116,7 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
     if (d.bulk === 'restore') act(ctx, msg, () => finance.restore('entry', picked()));
     if (d.bulk === 'recalculate') openRecalculate(ctx, picked().map(find));
   };
+  return shown; // the invoices the filters leave on screen, in the order shown
 }
 
 // Stored amounts never change by themselves. This is the one deliberate way to work them out again.
@@ -164,10 +166,10 @@ function openTaxRate(ctx) {
 // The register on a page of its own (#/cji3, #/cji3/<jda>, #/cji3/<jda>/<project>): the full width of the
 // window, with the tax rate, the audit log and the way to each Payment Table.
 export async function renderCji3(jdaId = '', projectId = '') {
-  const page = $('#page');
-  page.innerHTML = '<p>Loading the CJI3 register…</p>';
-  const ctx = await loadCtx(() => renderCji3(jdaId, projectId));
+  const r = startRender('Loading the CJI3 register…', () => renderCji3(jdaId, projectId)), { page } = r;
+  const ctx = await loadCtx(r.refresh);
   const jda = ctx.jdas.find(j => j.id === jdaId), project = jda && ctx.projects.find(p => p.id === projectId && p.jdaId === jda.id);
+  r.current();
   page.innerHTML = `
     <div class="section-head"><h2>CJI3 register</h2>
       <div class="row"><a class="ghost" href="${jda ? `#/jda/${esc(jda.id)}` : '#/'}">← ${esc(jda ? jda.name : 'All JDAs')}</a>
@@ -176,12 +178,20 @@ export async function renderCji3(jdaId = '', projectId = '') {
     ${storageNotice(ctx)}
     <div class="section" id="register"></div>`;
   wireScope('#/cji3', jda?.id);
-  renderRegister($('#register'), ctx, { jdaId: jda?.id || '', projectId: project?.id || '', full: true, title: jda ? `Invoices · ${jda.name}${project ? ' / ' + project.name : ''}` : 'All invoices' });
+  const shown = renderRegister($('#register'), ctx, { jdaId: jda?.id || '', projectId: project?.id || '', full: true, title: jda ? `Invoices · ${jda.name}${project ? ' / ' + project.name : ''}` : 'All invoices' });
 
   const { settings } = ctx.fin, alive = ctx.fin.entries.filter(e => !e.deletedAt && (!jda || e.jdaId === jda.id) && (!project || e.projectId === project.id));
   state.page = 'cji3';
-  state.context = () => ({
-    page: `CJI3 register (${jda ? jda.name + (project ? ' / ' + project.name : '') : 'all invoices'})`, taxRate: fromBps(settings.taxRateBps) + '%', note: 'Only Paid invoices count as actual spend. Amounts are MYR after tax unless a currency is shown.',
-    invoices: alive.map(e => ({ jda: e.jdaName, project: e.projectCode, partner: e.partner, invoiceNo: e.invoiceNo, date: e.documentDate, month: e.month, original: money(e.netMinor, e.currency), rate: e.rate, taxedMYR: fmt(e.grossMyrMinor), status: STATUS_LABEL[e.status] }))
-  });
+  // The assistant is sent the totals of the whole register in view, and row by row only what the
+  // filters leave on screen (the first CONTEXT_ROWS of it), so a question costs the same however long the register grows.
+  const taxed = list => fmt(list.reduce((t, e) => t + (e.grossMyrMinor || 0), 0));
+  state.context = () => {
+    const list = shown();
+    return {
+      page: `CJI3 register (${jda ? jda.name + (project ? ' / ' + project.name : '') : 'all invoices'})`, taxRate: fromBps(settings.taxRateBps) + '%', note: 'Only Paid invoices count as actual spend. Amounts are MYR after tax unless a currency is shown.',
+      summary: { invoices: alive.length, taxedMYR: taxed(alive), byStatus: Object.fromEntries(STATUSES.map(s => { const of = alive.filter(e => e.status === s); return [STATUS_LABEL[s], { invoices: of.length, taxedMYR: taxed(of) }]; })) },
+      rowsShown: `${Math.min(list.length, CONTEXT_ROWS)} of the ${list.length} ${list[0]?.deletedAt ? 'deleted ' : ''}invoice(s) the filters on screen leave`,
+      invoices: list.slice(0, CONTEXT_ROWS).map(e => ({ jda: e.jdaName, project: e.projectCode, partner: e.partner, invoiceNo: e.invoiceNo, date: e.documentDate, month: e.month, original: money(e.netMinor, e.currency), rate: e.rate, taxedMYR: fmt(e.grossMyrMinor), status: STATUS_LABEL[e.status] }))
+    };
+  };
 }

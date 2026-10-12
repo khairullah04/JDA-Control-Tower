@@ -7,7 +7,7 @@ const API = 'https://api.bnm.gov.my/public/exchange-rate';
 
 export async function bnmRate(currency, date) {
   const get = async path => {
-    const r = await fetch(`${API}/${path}?session=1700&quote=rm`, { headers: { Accept: 'application/vnd.BNM.API.v1+json' } });
+    const r = await fetch(`${API}/${path}?session=1700&quote=rm`, { headers: { Accept: 'application/vnd.BNM.API.v1+json' }, signal: AbortSignal.timeout(15000) });
     return r.ok ? (await r.json()).data : null;
   };
   let found = null;
