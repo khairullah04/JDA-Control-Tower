@@ -2,7 +2,7 @@
 // and Edit report, plus the Editor Page (#/<id>/edit) - the same Master Page made editable.
 // Behaviour is ported from the JDA3 reference file's inline script; what differs per JDA is its
 // content entry (config/jda-content.js) and where its report document lives (config/app-config.js).
-import { setDoc, onSnapshot, deleteField } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { JDAS, DEFAULT_JDA_ICON, MS_CLIENT_ID, MS_AUTHORITY, SYNC_API_URL } from './config/app-config.js';
 import { isConfigured, reportRefFor } from './config/firebase.js';
 import { contentFor, SOLUTION_ICONS } from './config/jda-content.js';
@@ -10,6 +10,7 @@ import { startEditor } from './editor.js';
 import { blocksHtml } from './blocks.js';
 import { logoFor, contentFromOverview as overviewContent, overviewFromContent as contentOverview, blocksOf } from './overview.js';
 import { esc } from '../../shared/esc.js';
+import { digest, digests } from '../../shared/digest.js';
 
 const $ = id => document.getElementById(id);
 const empty = (text = 'Not added yet.', style = '') => `<p class="detail-tasks-empty"${style ? ` style="${style}"` : ''}>${text}</p>`;
@@ -42,7 +43,7 @@ async function api(path, body = {}){
     });
   } catch { throw new Error(`Couldn't reach the server at ${SYNC_API_URL || location.origin}. Is it running?`); }
   const out = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(out.error || 'Request failed'), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(out.error || 'Request failed'), { status: res.status, changed: out.changed });
   return out;
 }
 async function unlock(passkey){
@@ -609,327 +610,19 @@ function render(data){
   }
 }
 
-function populateEditForm(data){
-  data = data || starterData || {};
-  currentData = data;
-  $('editWeekLabel').value = data.weekLabel || "";
-  $('editOverallStatus').value = data.overallStatus || "green";
-
-  resetProjectForm();
-  renderProjectsManageList();
-
-  refreshTaskProjectOptions();
-  resetTaskForm();
-  renderTasksManageList();
-
-  resetChallengeForm();
-  renderChallengesManageList();
-
-  renderUpdatesManageList();
+/* ---------- Edit report: housekeeping behind the passkey (Drive sync, calendar, clearing finished
+   tasks). The report itself is edited in one place, the Editor Page, opened from the icon on the
+   Master Page. Nothing here or there writes to the database: every save goes to the JDA server,
+   which checks the passkey session, refuses to overwrite a part someone else changed since this
+   page loaded it, and keeps the previous version. ---------- */
+const REPORT_FIELDS = ['weekLabel', 'overallStatus', 'projects', 'challenges', 'tasks', 'updates', 'overview', 'overviewBackup'];
+const saveReport = (patch, { remove = [], base = digests(currentData, [...Object.keys(patch), ...remove]), force = false } = {}) =>
+  api('save', { patch, remove, base, force });
+// Runs one save and always says how it went: the message on success, the reason in red (and left on screen) on failure.
+async function attempt(msgId, action){
+  try { flash(msgId, await action()); }
+  catch (e){ flash(msgId, `Not saved: ${e.message}`, true); }
 }
-
-const ENTRY_PENCIL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-const ENTRY_TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
-
-/* ============= Projects: single add/edit form + manage list ============= */
-let editingProjectIndex = null;
-
-function refreshTaskProjectOptions(){
-  const sel = $('taskInputProject');
-  const current = sel.value;
-  const projects = currentData.projects || [];
-  sel.innerHTML = '<option value="">— Not linked to a project —</option>' +
-    projects.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
-  if (projects.some(p => p.name === current)) sel.value = current;
-}
-
-function resetProjectForm(){
-  editingProjectIndex = null;
-  $('projInputName').value = "";
-  $('projInputOwner').value = "";
-  $('projInputPct').value = 0;
-  $('projInputStatus').value = "green";
-  $('projInputDesc').value = "";
-  $('projSaveBtn').textContent = "Add project";
-  $('projCancelBtn').style.display = "none";
-}
-
-function loadProjectIntoForm(i){
-  const p = (currentData.projects || [])[i];
-  if (!p) return;
-  editingProjectIndex = i;
-  $('projInputName').value = p.name || "";
-  $('projInputOwner').value = p.owner || "";
-  $('projInputPct').value = p.pct ?? 0;
-  $('projInputStatus').value = p.status || "green";
-  $('projInputDesc').value = p.description || "";
-  $('projSaveBtn').textContent = "Update project";
-  $('projCancelBtn').style.display = "inline-block";
-}
-
-function renderProjectsManageList(){
-  const list = $('projectsManageList');
-  const projects = currentData.projects || [];
-  if (!projects.length){ list.innerHTML = '<p class="entry-empty">No projects yet.</p>'; return; }
-  list.innerHTML = projects.map((p, i) => `
-    <div class="entry-row" data-index="${i}">
-      <div class="entry-main">
-        <div class="entry-title">${esc(p.name)}</div>
-        <div class="entry-meta">${esc(p.owner || '—')} · ${esc(p.pct)}% · ${esc(statusLabel[p.status] || p.status)}</div>
-      </div>
-      <div class="entry-actions">
-        <button type="button" class="entry-btn entry-edit" aria-label="Edit ${esc(p.name)}">${ENTRY_PENCIL}</button>
-        <button type="button" class="entry-btn danger entry-delete" aria-label="Delete ${esc(p.name)}">${ENTRY_TRASH}</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-$('projSaveBtn').onclick = async () => {
-  const name = $('projInputName').value.trim();
-  if (!name){ flash('projectsMsg', "Give the project a name first."); return; }
-  // Editing keeps whatever else is stored on the project (partner split, its own S-curve) - the
-  // form only covers these five fields.
-  const entry = {
-    ...(editingProjectIndex === null ? {} : (currentData.projects || [])[editingProjectIndex]),
-    name,
-    owner: $('projInputOwner').value,
-    pct: Number($('projInputPct').value) || 0,
-    status: $('projInputStatus').value,
-    description: $('projInputDesc').value,
-  };
-  const projects = (currentData.projects || []).slice();
-  if (editingProjectIndex === null) projects.push(entry);
-  else projects[editingProjectIndex] = entry;
-  await setDoc(reportRef, { projects }, { merge: true });
-  currentData = { ...currentData, projects };
-  resetProjectForm();
-  renderProjectsManageList();
-  refreshTaskProjectOptions();
-  flash('projectsMsg', "Saved.");
-};
-$('projCancelBtn').onclick = () => resetProjectForm();
-$('projectsManageList').addEventListener('click', async (e) => {
-  const row = e.target.closest('.entry-row');
-  if (!row) return;
-  const i = Number(row.dataset.index);
-  if (e.target.closest('.entry-edit')){
-    loadProjectIntoForm(i);
-  } else if (e.target.closest('.entry-delete')){
-    const p = (currentData.projects || [])[i];
-    if (!p || !confirm(`Delete project "${p.name}"? This can't be undone.`)) return;
-    const projects = (currentData.projects || []).filter((_, idx) => idx !== i);
-    await setDoc(reportRef, { projects }, { merge: true });
-    currentData = { ...currentData, projects };
-    if (editingProjectIndex === i) resetProjectForm();
-    renderProjectsManageList();
-    refreshTaskProjectOptions();
-    flash('projectsMsg', "Deleted.");
-  }
-});
-
-/* ============= Tasks: single add/edit form + manage list ============= */
-let editingTaskIndex = null;
-
-function resetTaskForm(){
-  editingTaskIndex = null;
-  $('taskInputName').value = "";
-  $('taskInputProject').value = "";
-  $('taskInputOwner').value = "";
-  $('taskInputDue').value = "";
-  $('taskInputStatus').value = "Not started";
-  $('taskSaveBtn').textContent = "Add task";
-  $('taskCancelBtn').style.display = "none";
-}
-
-function loadTaskIntoForm(i){
-  const t = (currentData.tasks || [])[i];
-  if (!t) return;
-  editingTaskIndex = i;
-  $('taskInputName').value = t.task || "";
-  $('taskInputProject').value = t.project || "";
-  $('taskInputOwner').value = t.owner || "";
-  $('taskInputDue').value = t.due || "";
-  $('taskInputStatus').value = t.status || "Not started";
-  $('taskSaveBtn').textContent = "Update task";
-  $('taskCancelBtn').style.display = "inline-block";
-}
-
-function renderTasksManageList(){
-  const list = $('tasksManageList');
-  const tasks = currentData.tasks || [];
-  if (!tasks.length){ list.innerHTML = '<p class="entry-empty">No tasks yet.</p>'; return; }
-  list.innerHTML = tasks.map((t, i) => `
-    <div class="entry-row" data-index="${i}">
-      <div class="entry-main">
-        <div class="entry-title">${esc(t.task)}</div>
-        <div class="entry-meta">${t.project ? esc(t.project) + ' · ' : ''}${esc(t.owner || '—')} · ${esc(formatDueDate(t.due))} · <span class="task-status ${taskStatusClass[t.status]||'notstarted'}">${esc(t.status)}</span></div>
-      </div>
-      <div class="entry-actions">
-        <button type="button" class="entry-btn entry-edit" aria-label="Edit task">${ENTRY_PENCIL}</button>
-        <button type="button" class="entry-btn danger entry-delete" aria-label="Delete task">${ENTRY_TRASH}</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-$('taskSaveBtn').onclick = async () => {
-  const task = $('taskInputName').value.trim();
-  if (!task){ flash('tasksMsg', "Give the task a name first."); return; }
-  const entry = {
-    task,
-    project: $('taskInputProject').value,
-    owner: $('taskInputOwner').value,
-    due: $('taskInputDue').value,
-    status: $('taskInputStatus').value,
-  };
-  const tasks = (currentData.tasks || []).slice();
-  if (editingTaskIndex === null) tasks.push(entry);
-  else tasks[editingTaskIndex] = entry;
-  await setDoc(reportRef, { tasks }, { merge: true });
-  currentData = { ...currentData, tasks };
-  resetTaskForm();
-  renderTasksManageList();
-  flash('tasksMsg', "Saved.");
-};
-$('taskCancelBtn').onclick = () => resetTaskForm();
-$('tasksManageList').addEventListener('click', async (e) => {
-  const row = e.target.closest('.entry-row');
-  if (!row) return;
-  const i = Number(row.dataset.index);
-  if (e.target.closest('.entry-edit')){
-    loadTaskIntoForm(i);
-  } else if (e.target.closest('.entry-delete')){
-    const t = (currentData.tasks || [])[i];
-    if (!t || !confirm(`Delete task "${t.task}"? This can't be undone.`)) return;
-    const tasks = (currentData.tasks || []).filter((_, idx) => idx !== i);
-    await setDoc(reportRef, { tasks }, { merge: true });
-    currentData = { ...currentData, tasks };
-    if (editingTaskIndex === i) resetTaskForm();
-    renderTasksManageList();
-    flash('tasksMsg', "Deleted.");
-  }
-});
-$('clearDoneBtn').onclick = async () => {
-  const tasks = (currentData.tasks || []).filter(t => t.status !== 'Done');
-  await setDoc(reportRef, { tasks }, { merge: true });
-  currentData = { ...currentData, tasks };
-  resetTaskForm();
-  renderTasksManageList();
-  flash('tasksMsg', "Cleared completed tasks.");
-};
-
-/* ============= Challenges: single add/edit form + manage list ============= */
-let editingChallengeIndex = null;
-
-function resetChallengeForm(){
-  editingChallengeIndex = null;
-  $('chalInputSeverity').value = "medium";
-  $('chalInputTitle').value = "";
-  $('chalInputDesc').value = "";
-  $('chalInputMitigation').value = "";
-  $('chalSaveBtn').textContent = "Add challenge";
-  $('chalCancelBtn').style.display = "none";
-}
-
-function loadChallengeIntoForm(i){
-  const ch = (currentData.challenges || [])[i];
-  if (!ch) return;
-  editingChallengeIndex = i;
-  $('chalInputSeverity').value = ch.severity || "medium";
-  $('chalInputTitle').value = ch.title || "";
-  $('chalInputDesc').value = ch.description || "";
-  $('chalInputMitigation').value = ch.mitigation || "";
-  $('chalSaveBtn').textContent = "Update challenge";
-  $('chalCancelBtn').style.display = "inline-block";
-}
-
-function renderChallengesManageList(){
-  const list = $('challengesManageList');
-  const challenges = currentData.challenges || [];
-  if (!challenges.length){ list.innerHTML = '<p class="entry-empty">No challenges logged.</p>'; return; }
-  list.innerHTML = challenges.map((ch, i) => `
-    <div class="entry-row" data-index="${i}">
-      <div class="entry-main">
-        <div class="entry-title">${esc(ch.title)}</div>
-        <div class="entry-meta">${sevLabel[ch.severity] || 'LOW'}</div>
-      </div>
-      <div class="entry-actions">
-        <button type="button" class="entry-btn entry-edit" aria-label="Edit challenge">${ENTRY_PENCIL}</button>
-        <button type="button" class="entry-btn danger entry-delete" aria-label="Delete challenge">${ENTRY_TRASH}</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-$('chalSaveBtn').onclick = async () => {
-  const title = $('chalInputTitle').value.trim();
-  if (!title){ flash('challengesMsg', "Give the challenge a title first."); return; }
-  const entry = {
-    severity: $('chalInputSeverity').value,
-    title,
-    description: $('chalInputDesc').value,
-    mitigation: $('chalInputMitigation').value,
-  };
-  const challenges = (currentData.challenges || []).slice();
-  if (editingChallengeIndex === null) challenges.push(entry);
-  else challenges[editingChallengeIndex] = entry;
-  await setDoc(reportRef, { challenges }, { merge: true });
-  currentData = { ...currentData, challenges };
-  resetChallengeForm();
-  renderChallengesManageList();
-  flash('challengesMsg', "Saved.");
-};
-$('chalCancelBtn').onclick = () => resetChallengeForm();
-$('challengesManageList').addEventListener('click', async (e) => {
-  const row = e.target.closest('.entry-row');
-  if (!row) return;
-  const i = Number(row.dataset.index);
-  if (e.target.closest('.entry-edit')){
-    loadChallengeIntoForm(i);
-  } else if (e.target.closest('.entry-delete')){
-    const ch = (currentData.challenges || [])[i];
-    if (!ch || !confirm(`Delete challenge "${ch.title}"? This can't be undone.`)) return;
-    const challenges = (currentData.challenges || []).filter((_, idx) => idx !== i);
-    await setDoc(reportRef, { challenges }, { merge: true });
-    currentData = { ...currentData, challenges };
-    if (editingChallengeIndex === i) resetChallengeForm();
-    renderChallengesManageList();
-    flash('challengesMsg', "Deleted.");
-  }
-});
-
-/* ============= Key updates: manage list (delete only — updates are a log) ============= */
-function renderUpdatesManageList(){
-  const list = $('updatesManageList');
-  const updates = currentData.updates || [];
-  if (!updates.length){ list.innerHTML = '<p class="entry-empty">No updates posted yet.</p>'; return; }
-  list.innerHTML = updates.map((u, i) => `
-    <div class="entry-row" data-index="${i}">
-      <div class="entry-main">
-        <div class="entry-title">${esc(formatDueDate(u.date))}</div>
-        <div class="entry-meta">${esc(u.text)}</div>
-      </div>
-      <div class="entry-actions">
-        <button type="button" class="entry-btn danger entry-delete" aria-label="Delete update">${ENTRY_TRASH}</button>
-      </div>
-    </div>
-  `).join('');
-}
-$('updatesManageList').addEventListener('click', async (e) => {
-  const row = e.target.closest('.entry-row');
-  if (!row) return;
-  const i = Number(row.dataset.index);
-  if (e.target.closest('.entry-delete')){
-    const u = (currentData.updates || [])[i];
-    if (!u || !confirm(`Delete the update from ${formatDueDate(u.date)}? This can't be undone.`)) return;
-    const updates = (currentData.updates || []).filter((_, idx) => idx !== i);
-    await setDoc(reportRef, { updates }, { merge: true });
-    currentData = { ...currentData, updates };
-    renderUpdatesManageList();
-    flash('updateMsg', "Deleted.");
-  }
-});
 
 let editUnlocked = false;
 
@@ -954,7 +647,6 @@ async function tryUnlock(){
     input.value = "";
     $('editLockMsg').textContent = "";
     updateEditGateUI();
-    populateEditForm(currentData);
   } catch (e){
     $('editLockMsg').textContent = e.message;
   }
@@ -966,52 +658,20 @@ $('editPasskeyInput').addEventListener('keydown', (e) => {
 
 $('openEditBtn').onclick = () => showScreen('screen-edit');
 
-// The starter dataset and the sample challenges/updates belong to the JDA they were written for;
-// a JDA without its own never gets offered another one's.
-if (!starterData){
-  $('loadSampleChallengesBtn').hidden = true;
-  $('loadSampleUpdatesBtn').hidden = true;
-  $('loadSampleUpdatesBtn').nextElementSibling.hidden = true;
-}
+// The starter dataset belongs to the JDA it was written for; a JDA without its own is never offered another one's.
+$('bootstrapBtn').onclick = () => attempt('bootstrapMsg', async () => {
+  await saveReport(Object.fromEntries(Object.entries(starterData).filter(([k]) => REPORT_FIELDS.includes(k) || k === 'scurve')));
+  return 'Starter data loaded.';
+});
 
-$('bootstrapBtn').onclick = async () => {
-  await setDoc(reportRef, starterData);
-};
-
-$('saveOverallBtn').onclick = async () => {
-  await setDoc(reportRef, {
-    weekLabel: $('editWeekLabel').value,
-    overallStatus: $('editOverallStatus').value,
-  }, { merge: true });
-  flash('overallMsg', "Saved.");
-};
-
-$('addUpdateBtn').onclick = async () => {
-  const date = $('newUpdateDate').value;
-  const text = $('newUpdateText').value;
-  if (!date || !text) { flash('updateMsg', "Add a date and text first."); return; }
-  const updates = [{date, text}, ...(currentData.updates || [])];
-  await setDoc(reportRef, { updates }, { merge: true });
-  currentData = { ...currentData, updates };
-  $('newUpdateDate').value = "";
-  $('newUpdateText').value = "";
-  renderUpdatesManageList();
-  flash('updateMsg', "Posted.");
-};
-
-$('loadSampleUpdatesBtn').onclick = async () => {
-  await setDoc(reportRef, { updates: starterData.updates }, { merge: true });
-  currentData = { ...currentData, updates: starterData.updates };
-  renderUpdatesManageList();
-  flash('updateMsg', `Loaded ${starterData.updates.length} sample updates.`);
-};
-$('loadSampleChallengesBtn').onclick = async () => {
-  await setDoc(reportRef, { challenges: starterData.challenges }, { merge: true });
-  currentData = { ...currentData, challenges: starterData.challenges };
-  resetChallengeForm();
-  renderChallengesManageList();
-  flash('challengesMsg', `Loaded ${starterData.challenges.length} sample challenges.`);
-};
+// Finished tasks are removed on request, never by themselves, and only after saying how many.
+$('clearDoneBtn').onclick = () => attempt('tasksMsg', async () => {
+  const tasks = currentData.tasks || [], done = tasks.filter(t => t.status === 'Done').length;
+  if (!done) return 'There are no completed tasks to clear.';
+  if (!confirm(`Remove ${done} completed task${done === 1 ? '' : 's'} from the weekly report? The other ${tasks.length - done} stay.`)) return '';
+  await saveReport({ tasks: tasks.filter(t => t.status !== 'Done') });
+  return `Cleared ${done} completed task${done === 1 ? '' : 's'}.`;
+});
 
 /* ---------- Update progress from Google Drive: the server reads this JDA's Overall and Weekly Progress
    folders and Claude extracts them. The Master File folder belongs to the Editor Page. ---------- */
@@ -1026,7 +686,7 @@ $('driveSyncBtn').onclick = async () => {
     if (!out.found) throw new Error(`No folder named "${jda.name}" in the portal's Drive folder.`);
     const { driveSync, ...sections } = out.patch;
     if (Object.keys(sections).length){
-      await setDoc(reportRef, out.patch, { merge: true });
+      await saveReport(out.patch);
       const n = out.counts, parts = [];
       if (n.overall && sections.challenges) parts.push(`overall progress (${files(n.overall)})`);
       if (sections.tasks) parts.push(`weekly progress (${files(n.weekly, 'report')})`);
@@ -1042,10 +702,13 @@ $('driveSyncBtn').onclick = async () => {
   }
 };
 
-function flash(id, text){
+let flashTimer = {};
+function flash(id, text, failed = false){
   const el = $(id);
-  el.textContent = text;
-  setTimeout(()=>{ el.textContent = ""; }, 2500);
+  el.textContent = text || "";
+  el.style.color = failed ? 'var(--red)' : '';
+  clearTimeout(flashTimer[id]);
+  if (!failed) flashTimer[id] = setTimeout(()=>{ el.textContent = ""; }, 4000); // a failure stays until the next attempt
 }
 
 /* ---------- Microsoft Calendar sync (client-side OAuth via MSAL.js + Microsoft Graph) ---------- */
@@ -1253,6 +916,17 @@ if (editing){
   document.body.classList.add('editor-checking');
   Promise.all([api('session'), firstLoad]).then(() => {
     document.body.classList.replace('editor-checking', 'editing');
+    // The editor works on drafts taken now. `loaded` remembers each part as it was at this moment, so a
+    // save is refused if someone else has changed that part since; saving again then overwrites, knowingly.
+    const loaded = digests(currentData, REPORT_FIELDS);
+    let overwrite = false;
+    async function saveDraft(patch, remove = []){
+      const fields = [...Object.keys(patch), ...remove];
+      try { await api('save', { patch, remove, base: Object.fromEntries(fields.map(k => [k, loaded[k]])), force: overwrite }); }
+      catch (e){ if (e.status === 409) overwrite = true; throw e; }
+      overwrite = false;
+      for (const k of fields) loaded[k] = digest(patch[k]);
+    }
     editor = startEditor({
       jda, api, logoFor, blocksOf, showScreen,
       iconFor: art => SOLUTION_ICONS[art] || SOLUTION_ICONS.agentic,
@@ -1264,28 +938,21 @@ if (editing){
         projects: currentData.projects || [], challenges: currentData.challenges || [], tasks: currentData.tasks || [], updates: currentData.updates || []
       })),
       showProgress(progress){ render({ ...currentData, ...progress }); },
-      async saveProgress(progress){
-        if (!reportRef) throw new Error("This JDA isn't connected to its database, so there is nowhere to save to.");
-        await setDoc(reportRef, progress, { merge: true });
-      },
+      saveProgress: progress => saveDraft(progress),
       statusLabel, taskStatuses: ['Not started', 'In progress', 'Done'], today: todayISO,
       artKeys: Object.keys(SOLUTION_ICONS),
       draft: overviewFromContent(),
       sectionOrder: () => [...c.sectionOrder],
       show(overview){ c = contentFromOverview(overview); renderOverview(); },
-      async save(overview){
-        if (!reportRef) throw new Error("This JDA isn't connected to its database, so there is nowhere to save to.");
-        // mergeFields replaces `overview` whole (a plain merge would keep parts the editor removed) and leaves progress alone.
-        // The first time a page stored in the older (pre-block) shape is saved over, that version is kept as `overviewBackup`.
+      // `overview` is replaced whole (so parts the editor removed are gone) and progress is left alone.
+      // The first time a page stored in the older (pre-block) shape is saved over, that version is kept as `overviewBackup`.
+      save(overview){
         const old = currentData.overview;
         const backup = old && !currentData.overviewBackup && !JSON.stringify(old).includes('"blocks"');
-        if (backup) await setDoc(reportRef, { overview, overviewBackup: old }, { mergeFields: ['overview', 'overviewBackup'] });
-        else await setDoc(reportRef, { overview }, { mergeFields: ['overview'] });
+        return saveDraft(backup ? { overview, overviewBackup: old } : { overview });
       },
       // Back to the content written in js/config/jda-content.js, which then shows again as it is edited there.
-      async reset(){
-        if (reportRef) await setDoc(reportRef, { overview: deleteField() }, { merge: true });
-      }
+      reset: () => saveDraft({}, ['overview'])
     });
     if (SCREEN_FOR[hashParts[1]]) showScreen(SCREEN_FOR[hashParts[1]]);
   }).catch(e => {

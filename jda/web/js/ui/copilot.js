@@ -24,7 +24,8 @@ async function ask(text) {
   history.push({ role: 'user', content: text });
   bubble('ai', 'Thinking…');
   try {
-    const reply = await chat(history.slice(-10), state.context()); // context = whatever page is open right now
+    const recent = history.slice(-10);
+    const reply = await chat(recent.slice(recent.findIndex(m => m.role === 'user')), state.context()); // context = whatever page is open right now
     history.push({ role: 'assistant', content: reply });
     log().lastElementChild.innerHTML = mdToHtml(reply);
   } catch (e) { log().lastElementChild.innerHTML = mdToHtml('Error: ' + e.message); }

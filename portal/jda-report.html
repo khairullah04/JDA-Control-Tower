@@ -506,7 +506,7 @@
   <section class="screen" id="screen-edit">
     <div class="page-title reveal">
       <h2>Edit Report</h2>
-      <div class="page-week mono">Changes save straight to Firestore — no draft, no undo</div>
+      <div class="page-week mono">Drive sync and housekeeping · the report itself is edited from the icon on the Master Page</div>
     </div>
 
     <div class="edit-page">
@@ -515,7 +515,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
         </div>
         <h3>Enter passkey</h3>
-        <p class="hint">This report is editable by anyone who has this JDA's passkey.</p>
+        <p class="hint">Enter this JDA's passkey to sync its progress from Google Drive or clear finished tasks.</p>
         <input id="editPasskeyInput" type="text" class="passkey-input" spellcheck="false" data-lpignore="true" autocomplete="off" placeholder="Passkey">
         <button class="save" id="editUnlockBtn">Unlock</button>
         <div class="save-msg" id="editLockMsg" style="color:var(--red);"></div>
@@ -535,68 +535,14 @@
           <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Z"/><path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15Z"/></svg></span><h3>Seed the report</h3></div>
           <p class="hint">No data yet in the database. Load the starter dataset to begin.</p>
           <button class="save" id="bootstrapBtn">Load starter data</button>
-        </div>
-
-        <div class="edit-card">
-          <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></span><h3>Overall status</h3></div>
-          <p class="hint">Completion % is calculated automatically as the average of the project progress below — edit projects to change it.</p>
-          <label>Week label</label>
-          <input id="editWeekLabel">
-          <label>Status</label>
-          <select id="editOverallStatus"><option value="green">On track</option><option value="amber">At risk</option><option value="red">Delayed</option></select>
-          <button class="save" id="saveOverallBtn">Save</button>
-          <div class="save-msg" id="overallMsg"></div>
-        </div>
-
-        <div class="edit-card">
-          <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V10M12 21V4M19 21v-7"/></svg></span><h3>Project progress</h3></div>
-          <p class="hint">Fill in the fields and click Add — the form clears so you can add the next one straight away. Click the pencil on a project below to edit it, or the trash to remove it.</p>
-          <label>Project name</label>
-          <input id="projInputName">
-          <label>Owner</label>
-          <input id="projInputOwner">
-          <div class="row-grid">
-            <div><label>%</label><input id="projInputPct" type="number" min="0" max="100" value="0"></div>
-            <div><label>Status</label>
-              <select id="projInputStatus">
-                <option value="green">On track</option>
-                <option value="amber">At risk</option>
-                <option value="red">Delayed</option>
-              </select>
-            </div>
-          </div>
-          <label>Description</label>
-          <textarea id="projInputDesc"></textarea>
-          <button class="save" id="projSaveBtn">Add project</button>
-          <button type="button" class="entry-cancel" id="projCancelBtn" style="display:none;">Cancel edit</button>
-          <div class="save-msg" id="projectsMsg"></div>
-          <div class="entry-list" id="projectsManageList"></div>
+          <div class="save-msg" id="bootstrapMsg"></div>
         </div>
 
         <div class="edit-card">
           <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="6" rx="1.2"/><path d="m4.3 7 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1.2"/><path d="m4.3 17 1 1 2-2"/><path d="M12 7h9M12 17h9"/></svg></span><h3>Tasks</h3></div>
-          <p class="hint">Fill in the fields and click Add — the form clears so you can add the next one straight away. Click the pencil on a task below to edit it, or the trash to remove it.</p>
-          <label>Task</label>
-          <textarea id="taskInputName"></textarea>
-          <label>Project</label>
-          <select id="taskInputProject">
-            <option value="">— Not linked to a project —</option>
-          </select>
-          <div class="row-grid">
-            <div><label>Owner</label><input id="taskInputOwner"></div>
-            <div><label>Due date</label><input id="taskInputDue" type="date"></div>
-          </div>
-          <label>Status</label>
-          <select id="taskInputStatus">
-            <option value="Not started">Not started</option>
-            <option value="In progress">In progress</option>
-            <option value="Done">Done</option>
-          </select>
-          <button class="save" id="taskSaveBtn">Add task</button>
-          <button type="button" class="entry-cancel" id="taskCancelBtn" style="display:none;">Cancel edit</button>
-          <button class="add-row" id="clearDoneBtn">Clear completed</button>
+          <p class="hint">Finished tasks stay on the weekly report until they are cleared. This removes every task marked Done, after asking; the others are left as they are. To add, change or delete a single task, use the editor.</p>
+          <button class="add-row" id="clearDoneBtn">Clear completed tasks</button>
           <div class="save-msg" id="tasksMsg"></div>
-          <div class="entry-list" id="tasksManageList"></div>
         </div>
 
         <div class="edit-card">
@@ -608,40 +554,6 @@
           <div class="save-msg" id="msCalMsg"></div>
         </div>
 
-        <div class="edit-card">
-          <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 22 20H2Z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></svg></span><h3>Challenges</h3></div>
-          <p class="hint">Fill in the fields and click Add — the form clears so you can add the next one straight away. Click the pencil on a challenge below to edit it, or the trash to remove it.</p>
-          <label>Severity</label>
-          <select id="chalInputSeverity">
-            <option value="high">High</option>
-            <option value="medium" selected>Medium</option>
-            <option value="low">Low</option>
-          </select>
-          <label>Title</label>
-          <input id="chalInputTitle">
-          <label>Description</label>
-          <textarea id="chalInputDesc"></textarea>
-          <label>Mitigation</label>
-          <input id="chalInputMitigation">
-          <button class="save" id="chalSaveBtn">Add challenge</button>
-          <button type="button" class="entry-cancel" id="chalCancelBtn" style="display:none;">Cancel edit</button>
-          <button class="add-row" id="loadSampleChallengesBtn">Load sample challenges</button>
-          <div class="save-msg" id="challengesMsg"></div>
-          <div class="entry-list" id="challengesManageList"></div>
-        </div>
-
-        <div class="edit-card">
-          <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18"/><path d="M6 4h12l-3.2 4L18 12H6"/></svg></span><h3>Add a key update</h3></div>
-          <label>Date</label>
-          <input id="newUpdateDate" type="date">
-          <label>Update text</label>
-          <textarea id="newUpdateText"></textarea>
-          <button class="save" id="addUpdateBtn">Post update</button>
-          <button class="add-row" id="loadSampleUpdatesBtn">Load sample updates</button>
-          <p class="hint">Loading samples replaces the whole log below with 6 mock entries — use this to seed the log, not alongside real updates. Use the trash icon below to delete a single entry.</p>
-          <div class="save-msg" id="updateMsg"></div>
-          <div class="entry-list" id="updatesManageList"></div>
-        </div>
 
       </div>
     </div>

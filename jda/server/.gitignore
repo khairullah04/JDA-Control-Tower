@@ -1,6 +1,7 @@
 .env
-service-account.json
+service-account*.json
 node_modules
 .portal-cache.json
 .finance-data.json
 .finance-data.json.tmp
+portal-passkeys.json

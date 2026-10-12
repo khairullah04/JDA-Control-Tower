@@ -1,22 +1,34 @@
-Add this match block alongside your existing ones in Firestore Rules
-(Firebase console -> Firestore Database -> Rules), then Publish:
+Firestore rules for the portal's report documents
+=================================================
+
+The portal's pages read each JDA's report document straight from Firestore and have no sign-in, so
+reading is open. Writing is closed: every save goes through the JDA server
+(POST /api/portal/save), which checks the JDA's passkey session and writes with its
+service-account key. The rules below are what makes the passkey real.
+
+JDA 1, 2 and 4 (project test-invoice-c38a4)
+-------------------------------------------
+Nothing to add by hand: jda/firestore.rules already holds this block. Publish that file.
 
     match /jdaReports/{doc} {
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
     }
 
-This covers JDA 1, 2 and 4. JDA 3 reads and writes report/current in the
-original JDA3 Firebase project (jda3-9c0c5), which needs its own block there:
+JDA 3 (its own project, jda3-9c0c5)
+-----------------------------------
+In that project's console (Firestore Database -> Rules), replace the report block with:
 
     match /report/{doc} {
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
     }
 
-Same open-write trade-off as the JDA3 reference file: anyone with the link
-can edit a report, not just view it - there's no login and no record of who
-changed what. Reasonable for an internal, no-sensitive-data tool; revisit
-with Firebase Auth if that changes. The Invoice Tracker's own rules
-(projects/scope/invoices/activity/jdas/processedFiles) are untouched - this
-portal uses a separate `jdaReports` collection in the same Firebase project.
+Two things must be in place BEFORE you publish it, or JDA 3 stops updating:
+  1. The JDA server needs a service-account key for jda3-9c0c5
+     (JDA3_GOOGLE_APPLICATION_CREDENTIALS in jda/server/.env), or the editor cannot save JDA 3.
+  2. The Excel -> Power Automate feed that writes report/current must write with a service account
+     too. If it writes the way a browser does, the closed rule will refuse it.
+
+Previous versions of each report are kept by the server in a `versions` subcollection of the
+document (the newest 20). No rule opens that subcollection, so no browser can read it.

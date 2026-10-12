@@ -1,16 +1,32 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Signed-in users read and write the tracker's JDAs, projects and activity log directly.
-    // Invoices, sanctioned amounts and their audit log (the finance... collections) are not open to
-    // any browser: only the server touches them, with its service-account key, which these rules do
-    // not apply to. That is what makes the passkey, the validation and the audit log binding.
-    match /{collection}/{document=**} {
-      allow read, write: if request.auth != null && !collection.matches('finance.*');
+    // Who may use the Invoice Tracker: signed in, and on the access list. The list is ALLOWED_EMAILS in
+    // server/.env; the server copies it to access/allowlist at start-up, and only the server can
+    // write it. Signing in alone gives nothing: without the list document, everyone is refused.
+    function onAccessList() {
+      return request.auth != null
+        && request.auth.token.email in get(/databases/$(database)/documents/access/allowlist).data.emails;
     }
-    // The portal's report pages for JDA 1, 2 and 4, which have no sign-in (see portal/firestore-rules-addition.txt).
+
+    // People on the list read and write the tracker's JDAs, projects and activity log directly.
+    // Closed to every browser, whoever is signed in:
+    //   finance...  invoices, sanctioned amounts and their audit log
+    //   access      the access list itself
+    //   jdaReports  the portal's report documents (their own rule is below)
+    // Only the server touches those, with its service-account key, which these rules do not apply to.
+    // That is what makes the passkeys, the validation and the audit log binding.
+    match /{collection}/{document=**} {
+      allow read, write: if onAccessList()
+        && !collection.matches('finance.*') && collection != 'access' && collection != 'jdaReports';
+    }
+
+    // The portal's report pages for JDA 1, 2 and 4 have no sign-in: anyone may read them, nobody may
+    // write them from a browser. Saves go through the server (POST /api/portal/save), behind the
+    // JDA's passkey, which also keeps the last 20 versions in jdaReports/<jda>/versions.
     match /jdaReports/{doc} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

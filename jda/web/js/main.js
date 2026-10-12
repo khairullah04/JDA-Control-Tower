@@ -1,4 +1,4 @@
-import { login, register, logout, onUser, usernameOf } from './services/auth.js';
+import { login, logout, onUser, usernameOf } from './services/auth.js';
 import { renderDashboard } from './ui/dashboard.js';
 import { renderProject } from './ui/project.js';
 import { renderJda } from './ui/jda.js';
@@ -29,7 +29,6 @@ async function authAction(fn) {
 }
 
 $('#login-form').onsubmit = e => { e.preventDefault(); authAction(login); };
-$('#register-btn').onclick = () => authAction(register);
 $('#logout-btn').onclick = logout;
 document.querySelectorAll('[data-portal-link]').forEach(a => a.href = config.portalUrl);
 initCopilot();

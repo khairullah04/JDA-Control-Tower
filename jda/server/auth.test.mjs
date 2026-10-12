@@ -6,7 +6,7 @@ import { requireUser } from './auth.js';
 
 const realFetch = globalThis.fetch;
 let answer, asked;
-beforeEach(() => { asked = []; globalThis.fetch = async (url, init) => { asked.push([String(url), JSON.parse(init.body)]); return answer; }; process.env.REQUIRE_AUTH = 'true'; process.env.FIREBASE_API_KEY = 'key-1'; });
+beforeEach(() => { asked = []; globalThis.fetch = async (url, init) => { asked.push([String(url), JSON.parse(init.body)]); return answer; }; process.env.REQUIRE_AUTH = 'true'; process.env.FIREBASE_API_KEY = 'key-1'; process.env.ALLOWED_EMAILS = 'aina@jda.app, Badrul@JDA.app'; });
 afterEach(() => { globalThis.fetch = realFetch; });
 const reply = (ok, body) => ({ ok, json: async () => body });
 const run = (headers = {}) => new Promise(resolve => {
@@ -25,6 +25,22 @@ test('a good token: the request goes on, and carries who it is', async () => {
   assert.equal(out.req.user.email, 'aina@jda.app');
   assert.equal(out.req.user.name, 'aina');
   assert.deepEqual(asked[0], ['https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=key-1', { idToken: 'tok-1' }]);
+});
+
+test('signed in but not on the access list: refused, by name', async () => {
+  answer = reply(true, { users: [{ email: 'stranger@jda.app' }] });
+  const out = await run({ authorization: 'Bearer tok' });
+  assert.deepEqual([out.code, out.body.error], [403, 'stranger@jda.app is not on the access list. Ask the administrator to add it.']);
+  answer = reply(true, { users: [{ email: 'BADRUL@jda.app' }] });                     // the list is not case-sensitive
+  assert.equal((await run({ authorization: 'Bearer tok' })).next, true);
+});
+
+test('an empty access list lets nobody in, and says what to set', async () => {
+  process.env.ALLOWED_EMAILS = ' ';
+  answer = reply(true, { users: [{ email: 'aina@jda.app' }] });
+  const out = await run({ authorization: 'Bearer tok' });
+  assert.equal(out.code, 403);
+  assert.match(out.body.error, /ALLOWED_EMAILS/);
 });
 
 test('an expired or made-up token: 401', async () => {

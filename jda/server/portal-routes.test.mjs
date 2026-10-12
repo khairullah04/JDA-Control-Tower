@@ -16,6 +16,9 @@ const synced = [], folders = [];
 let syncFails = false;
 mock.module('./portal-sync.js', { exports: { syncJda: async (jda, opts) => { synced.push([jda, opts.scope]); if (syncFails) throw new Error('Drive is down'); return { found: true, patch: {}, counts: {}, skipped: [] }; } } });
 mock.module('./portal-drive.js', { exports: { masterFolderUrl: async jda => { folders.push(jda); return `https://drive.test/${jda.id}`; } } });
+const { createReportSaver, memoryReports } = await import('./portal-save.js');
+const reportStore = memoryReports({ 'portal/jdaReports/jda1': { weekLabel: 'Week 1' }, 'portal/jdaReports/jda2': { weekLabel: 'JDA 2 week' } }), saver = createReportSaver(reportStore);
+mock.module('./report-store.js', { exports: { reports: () => saver } });
 const { default: portal } = await import('./routes/portal.js');
 
 let server, base;
@@ -51,6 +54,7 @@ test('everything else needs the session of the JDA it names', async () => {
 test('the Invoice Tracker passkey opens no JDA', async () => {
   const { token } = (await unlock('admin', passkeys.admin)).body;
   assert.equal((await call('session', { jda: { id: 'admin', name: 'JDA 1' } }, token)).status, 400);
+  assert.equal((await call('save', { jda: { id: 'admin' }, patch: { weekLabel: 'x' } }, token)).status, 400);
   assert.equal((await call('session', { jda: JDA1 }, token)).status, 401);
 });
 
@@ -69,4 +73,39 @@ test('a sync must say what to sync, and a second one straight after is held back
   assert.equal(again.status, 429);
   assert.equal((await call('sync', { jda: JDA1, scope: 'progress' }, token)).status, 200);   // the other half is a separate matter
   assert.deepEqual(synced.map(([jda, scope]) => [jda.id, scope]), [['jda1', 'master'], ['jda1', 'progress']]);
+});
+
+test('a JDA 1 session cannot reach JDA 2\'s Drive folder, whatever name the page sends', async () => {
+  const { token } = (await unlock('jda1', passkeys.jda1)).body;
+  folders.length = 0;
+  const out = await call('master-folder', { jda: { id: 'jda1', name: 'JDA 2' } }, token);      // the name is a lie
+  assert.deepEqual([out.status, out.body.url], [200, 'https://drive.test/jda1']);
+  assert.deepEqual(folders.map(j => [j.id, j.name]), [['jda1', 'JDA 1']]);                      // the server used its own name for jda1
+  synced.length = 0;
+  await call('sync', { jda: { id: 'jda1', name: 'jda2' }, scope: 'progress' }, token);
+  assert.deepEqual(synced.map(([jda]) => jda.name).filter(n => n !== 'JDA 1'), []);
+  assert.equal((await call('master-folder', { jda: { id: 'jda2', name: 'JDA 2' } }, token)).status, 401);
+  assert.equal((await call('master-folder', { jda: { id: 'jda7', name: 'JDA 1' } }, token)).status, 400);   // not a JDA the portal knows
+});
+
+test('a report is saved through the server, only with that JDA\'s session', async () => {
+  const { token } = (await unlock('jda1', passkeys.jda1)).body;
+  assert.equal((await call('save', { jda: JDA1, patch: { weekLabel: 'Week 2' } })).status, 401);
+  assert.equal((await call('save', { jda: JDA2, patch: { weekLabel: 'hijacked' } }, token)).status, 401);
+  const ok = await call('save', { jda: JDA1, patch: { weekLabel: 'Week 2', tasks: [{ task: 'a' }] } }, token);
+  assert.deepEqual([ok.status, ok.body.saved], [200, { weekLabel: 'Week 2', tasks: [{ task: 'a' }] }]);
+  assert.equal(reportStore.docs['portal/jdaReports/jda2'].weekLabel, 'JDA 2 week');
+  assert.equal(reportStore.versions['portal/jdaReports/jda1'][0].data.weekLabel, 'Week 1');     // the version before is kept
+
+  const stale = await call('save', { jda: JDA1, patch: { weekLabel: 'Week 3' }, base: { weekLabel: 'not what is stored' } }, token);
+  assert.deepEqual([stale.status, stale.body.changed], [409, ['weekLabel']]);
+  assert.equal((await call('save', { jda: JDA1, patch: { weekLabel: 'Week 3' }, base: { weekLabel: 'not what is stored' }, force: true }, token)).status, 200);
+  assert.equal((await call('save', { jda: JDA1, patch: { secrets: 1 } }, token)).status, 400);
+});
+
+test('JDA 3\'s report is saved to its own project', async () => {
+  fs.writeFileSync(process.env.PASSKEYS_FILE, JSON.stringify({ ...passkeys, jda3: 'test-passkey-jda-three' }));
+  const { token } = (await unlock('jda3', 'test-passkey-jda-three')).body;
+  await call('save', { jda: { id: 'jda3' }, patch: { weekLabel: 'JDA 3 week' } }, token);
+  assert.deepEqual(reportStore.docs['jda3/report/current'], { weekLabel: 'JDA 3 week' });
 });
