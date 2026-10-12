@@ -26,6 +26,8 @@ const finance = await openStore();
 app.use('/api/finance', financeRoutes(createFinance(finance.store), finance.kind));
 // Both sites are served from here too, so one command runs everything on one port:
 // the JDA Programme Portal at / and the Invoice Tracker at /tracker/.
+// Modules both sites use (escaping, dates, the Firebase config) live in shared/ at the top of the repository.
+app.use('/shared', express.static(fileURLToPath(new URL('../../shared', import.meta.url))));
 app.use('/tracker', express.static(fileURLToPath(new URL('../web', import.meta.url))));
 app.use(express.static(fileURLToPath(new URL('../../portal', import.meta.url))));
 const port = process.env.PORT || 8080;

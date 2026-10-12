@@ -4,13 +4,18 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import express from 'express';
 import { unlock } from './passkeys.js';
 import financeRoutes from './routes/finance.js';
 import { createFinance, memoryStore } from '../web/js/finance/service.js';
 import { entrySheet, entryInputs, tableIn, ENTRY_HEADERS } from '../web/js/finance/sheets.js';
 
-const passkeys = JSON.parse(fs.readFileSync(new URL('./portal-passkeys.json', import.meta.url), 'utf8'));
+// The tests bring their own passkeys; the real file is never read.
+const passkeys = { jda1: 'test-passkey-jda-one', admin: 'test-passkey-tracker' };
+process.env.PASSKEYS_FILE = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'jda-')), 'passkeys.json');
+fs.writeFileSync(process.env.PASSKEYS_FILE, JSON.stringify(passkeys));
 let server, base, token;
 const call = async (path, { method = 'GET', body, as = 'aina', key = token } = {}) => {
   const res = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'X-Finance-Token': key || '', 'X-Test-User': as }, body: body && JSON.stringify(body) });

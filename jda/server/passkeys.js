@@ -10,9 +10,10 @@ const SESSION_MS = 8 * 60 * 60 * 1000;
 const MAX_TRIES = 5, LOCKOUT_MS = 60_000;
 const tries = {};
 
-const PASSKEYS = new URL('./portal-passkeys.json', import.meta.url);
+// PASSKEYS_FILE names another file to read them from (a deployment's own location; the tests' fixture).
+const passkeysFile = () => process.env.PASSKEYS_FILE || new URL('./portal-passkeys.json', import.meta.url);
 export function passkeyFor(scope) {
-  try { const v = JSON.parse(fs.readFileSync(PASSKEYS, 'utf8'))[scope]; return typeof v === 'string' && v ? v : null; }
+  try { const v = JSON.parse(fs.readFileSync(passkeysFile(), 'utf8'))[scope]; return typeof v === 'string' && v ? v : null; }
   catch { return null; }
 }
 

@@ -1,0 +1,92 @@
+// node --test portal-pages.test.mjs
+// The portal's page logic that can be run without a browser: how a solution's detail page is laid
+// out and cleaned, and how a saved Master Page combines with a JDA's built-in content.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
+
+const dom = new JSDOM('<!doctype html><body></body>');
+Object.assign(globalThis, { document: dom.window.document, Node: dom.window.Node }); // what blocks.js expects of a page
+const { layout, placeStyle, cleanBlocks, cleanHtml, blocksFromBoxes } = await import('../../portal/js/blocks.js');
+const { contentFromOverview, overviewFromContent, boxesOf, blocksOf, logoFor } = await import('../../portal/js/overview.js');
+const { contentFor } = await import('../../portal/js/config/jda-content.js');
+
+test('layout: full-width blocks stack; columned neighbours share a band', () => {
+  const b = (col) => ({ id: 'x', type: 'body', html: 'x', ...(col && { col }) });
+  assert.deepEqual(layout([b(), b(1), b(2), b(1), b()]), [
+    { start: 1, span: 6, row: 1 },
+    { start: 1, span: 3, row: 2 }, { start: 4, span: 3, row: 2 }, { start: 1, span: 3, row: 3 },   // two columns are halves; column 1 stacks
+    { start: 1, span: 6, row: 4 }
+  ]);
+  assert.deepEqual(layout([b(1), b(2), b(3)]).map(p => [p.start, p.span, p.row]), [[1, 2, 1], [3, 2, 1], [5, 2, 1]]); // three are thirds
+  assert.deepEqual(layout([b(7)]), [{ start: 1, span: 6, row: 1 }]);                                    // an unknown column is full width
+  assert.equal(placeStyle({ start: 4, span: 3, row: 2 }), '--blk-col:4 / span 3;--blk-row:2');
+});
+
+test('cleanBlocks: only the allowed formatting is stored, and empty blocks are dropped', () => {
+  const out = cleanBlocks([
+    { id: 'a', type: 'body', html: '<p>Hello <script>alert(1)</script><b onclick="x()">bold</b> <a href="javascript:alert(1)">bad</a> <a href="https://ok.test/x">good</a></p>' },
+    { id: 'b', type: 'h2', html: '  <br> ' },
+    { id: 'c', type: 'marquee', html: 'text', col: 2 },
+    { id: 'd', type: 'boxes', items: [{ title: ' One ', text: '' }, { title: '', text: '' }], col: 9 },
+    { id: 'e', type: 'boxes', items: [{ title: '', text: ' ' }] }
+  ]);
+  assert.deepEqual(out, [
+    { id: 'a', type: 'body', html: 'Hello <b>bold</b> bad <a href="https://ok.test/x" target="_blank" rel="noopener">good</a>' },
+    { id: 'c', type: 'body', html: 'text', col: 2 },
+    { id: 'd', type: 'boxes', items: [{ title: 'One', text: '' }] }
+  ]);
+  assert.equal(cleanHtml('<ul><li>a</li><li>b</li></ul>', { lists: false }), 'a<br>b');
+});
+
+test('a detail page saved before blocks existed is shown as blocks', () => {
+  const old = { vision: 'Why', scope: ['one', 'two'], targets: [], lead: 'IBM' };
+  assert.deepEqual(boxesOf(old), [{ title: 'Vision', body: 'Why' }, { title: 'Scope', body: 'one\ntwo' }, { title: 'Delivery lead', body: 'IBM' }]);
+  assert.deepEqual(blocksOf(old).map(b => [b.type, b.html]), [['h3', 'Vision'], ['body', 'Why'], ['h3', 'Scope'], ['body', '<ul><li>one</li><li>two</li></ul>'], ['h3', 'Delivery lead'], ['body', 'IBM']]);
+  assert.deepEqual(blocksOf({ blocks: [{ id: 'k', type: 'body', html: 'kept' }] }), [{ id: 'k', type: 'body', html: 'kept' }]);
+  assert.deepEqual(blocksFromBoxes([{ title: '', body: '' }]), []);
+});
+
+const jda = { id: 'jda1', name: 'JDA 1' }, base = contentFor(jda);
+const saved = () => ({
+  complete: true, eyebrow: 'E', tagline: 'T', summary: 'S', more: 'M',
+  intros: { aspiration: 'ia', architecture: 'ib', collaborators: 'ic', press: 'ip', solutions: 'The solution portfolio being delivered.' },
+  aspiration: [{ value: '90%', label: 'Uptime', highlight: true }],
+  solutionGroups: [{ label: 'Group', solutions: [{ title: 'Sol', tier: 'Tier 1', art: 'gai', tags: [{ text: 't', accent: true }], blocks: [{ id: 'b1', type: 'body', html: 'x' }] }] }],
+  collaborators: [{ name: 'IBM Malaysia', role: 'r', text: 't', more: '', logo: 'assets/ibm-logo.jpg' }],
+  press: { text: 'p', more: '', url: 'https://x.test/a', linkText: 'Read', img: '' },
+  sectionOrder: ['press', 'aspiration', 'project', 'architecture', 'collaborators', 'x:x1'],
+  extraSections: [{ id: 'x1', title: 'Extra', intro: 'i', cards: [{ title: 'c', sub: 's', text: 't' }] }]
+});
+
+test('Master Page: nothing saved shows the built-in content, sections in the built-in order', () => {
+  const c = contentFromOverview(null, base);
+  assert.deepEqual([c.short, c.aspiration, c.solutionGroups, c.press, c.extraSections], ['JDA 1', [], [], null, []]);
+  assert.deepEqual(c.sectionOrder, ['aspiration', 'project', 'architecture', 'collaborators', 'press']);
+});
+
+test('Master Page: what the Editor Page saves comes back exactly as it was saved', () => {
+  const c = contentFromOverview(saved(), base);
+  assert.deepEqual([c.eyebrow, c.tagline, c.sub, c.more, c.aspirationIntro, c.pressIntro], ['E', 'T', 'S', 'M', 'ia', 'ip']);
+  assert.deepEqual(c.solutionGroups, [{ label: 'Group', cards: [{ key: 's0-0', tags: [['t', true]] }] }]);
+  assert.equal(c.solutions['s0-0'].img, 'assets/sol-gai.jpg');
+  assert.deepEqual(overviewFromContent(c), saved());                                                    // the round trip loses nothing
+});
+
+test('Master Page: a partial save (from Drive) keeps the built-in value wherever it says nothing', () => {
+  const jda3 = contentFor({ id: 'jda3', name: 'JDA 3' });
+  const c = contentFromOverview({ tagline: 'New tagline', summary: '', aspiration: [], collaborators: [{ name: 'Tridiagonal.ai', role: 'r', text: 't' }], press: { text: 'P', url: 'javascript:alert(1)' }, sectionOrder: ['press', 'nonsense'] }, jda3);
+  assert.equal(c.tagline, 'New tagline');
+  assert.equal(c.sub, jda3.sub);                                                                        // empty summary: built-in kept
+  assert.equal(c.aspiration, jda3.aspiration);
+  assert.equal(c.collaborators[0].logo, 'assets/tridiagonal-logo-cropped.png');                         // logo found from the name
+  assert.deepEqual([c.press.href, c.press.linkText, c.press.img], ['', 'Read the full release →', jda3.press.img]); // an unsafe link is dropped
+  assert.deepEqual(c.sectionOrder, ['press', 'aspiration', 'project', 'architecture', 'collaborators']);
+  assert.equal(logoFor('Somebody Else'), '');
+});
+
+test('Master Page: an emptied part stays empty once the editor has saved it', () => {
+  const jda3 = contentFor({ id: 'jda3', name: 'JDA 3' });
+  const c = contentFromOverview({ ...saved(), aspiration: [], press: null, solutionGroups: [] }, jda3);
+  assert.deepEqual([c.aspiration, c.press, c.solutionGroups], [[], null, []]);
+});
