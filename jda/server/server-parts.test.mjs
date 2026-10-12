@@ -1,12 +1,13 @@
 // node --experimental-test-module-mocks --test server-parts.test.mjs
 // Small parts of the server on their own: error answers, the AI wrapper, the sync cache.
-import { test, mock, before, after } from 'node:test';
+import { test, before, after } from 'node:test';
+import { mockModule } from './test-mocks.mjs';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { apiErrors, apiNotFound } from './errors.js';
 
 let reply;
-mock.module('@anthropic-ai/sdk', { defaultExport: class { messages = { create: async () => reply }; } });
+mockModule('@anthropic-ai/sdk', { default: class { messages = { create: async () => reply }; } });
 const { ask, parseJson } = await import('./claude.js');
 const { pruned } = await import('./portal-sync.js');
 

@@ -1,12 +1,13 @@
 // node --experimental-test-module-mocks --test chat.test.mjs
 // The assistant's route with the AI stubbed out: what it will pass on, and how often.
-import { test, mock, before, after } from 'node:test';
+import { test, before, after } from 'node:test';
+import { mockModule } from './test-mocks.mjs';
 import assert from 'node:assert/strict';
 import express from 'express';
 import { rateLimit } from './rate-limit.js';
 
 const asked = [];
-mock.module('./claude.js', { exports: { ask: async opts => { asked.push(opts); return 'an answer'; }, parseJson: JSON.parse, MODEL: 'test' } });
+mockModule('./claude.js', { ask: async opts => { asked.push(opts); return 'an answer'; }, parseJson: JSON.parse, MODEL: 'test' });
 const { default: chat } = await import('./routes/chat.js');
 
 let server, base;

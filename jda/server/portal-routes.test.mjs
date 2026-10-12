@@ -1,7 +1,8 @@
 // node --experimental-test-module-mocks --test portal-routes.test.mjs
 // The portal's passkey routes over real HTTP, with Drive and the AI stubbed out: who gets a session,
 // what a session opens, and how repeated syncs are held back.
-import { test, mock, before, after } from 'node:test';
+import { test, before, after } from 'node:test';
+import { mockModule } from './test-mocks.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -14,11 +15,11 @@ fs.writeFileSync(process.env.PASSKEYS_FILE, JSON.stringify(passkeys));
 
 const synced = [], folders = [];
 let syncFails = false, hold = null;   // `hold`: a promise the stubbed sync waits on, to keep it in flight
-mock.module('./portal-sync.js', { exports: { syncJda: async (jda, opts) => { synced.push([jda, opts.scope]); await hold; if (syncFails) throw new Error('Drive is down'); return { found: true, patch: {}, counts: {}, skipped: [] }; } } });
-mock.module('./portal-drive.js', { exports: { masterFolderUrl: async jda => { folders.push(jda); return `https://drive.test/${jda.id}`; } } });
+mockModule('./portal-sync.js', { syncJda: async (jda, opts) => { synced.push([jda, opts.scope]); await hold; if (syncFails) throw new Error('Drive is down'); return { found: true, patch: {}, counts: {}, skipped: [] }; } });
+mockModule('./portal-drive.js', { masterFolderUrl: async jda => { folders.push(jda); return `https://drive.test/${jda.id}`; } });
 const { createReportSaver, memoryReports } = await import('./portal-save.js');
 const reportStore = memoryReports({ 'portal/jdaReports/jda1': { weekLabel: 'Week 1' }, 'portal/jdaReports/jda2': { weekLabel: 'JDA 2 week' } }), saver = createReportSaver(reportStore);
-mock.module('./report-store.js', { exports: { reports: () => saver } });
+mockModule('./report-store.js', { reports: () => saver });
 const { default: portal } = await import('./routes/portal.js');
 
 let server, base;

@@ -135,3 +135,21 @@ test('Master Page: a saved overview with parts missing or of the wrong kind stil
   const partial = contentFromOverview({ solutionGroups: 'x', aspiration: 7, collaborators: 'x' }, base);                 // not marked complete: the built-in content stands
   assert.deepEqual([partial.solutionGroups, partial.aspiration, partial.collaborators], [base.solutionGroups, base.aspiration, base.collaborators]);
 });
+
+test('cleanHtml: what is typed or pasted into a block cannot carry script, style or a dangerous link', () => {
+  const clean = (html, opts) => cleanHtml(html, opts);
+  assert.equal(clean('<img src=x onerror="alert(1)">text'), 'text');
+  assert.equal(clean('<svg onload="alert(1)"><circle/></svg>a<iframe src="https://evil.test"></iframe>b'), 'ab');
+  assert.equal(clean('<style>body{display:none}</style><script>alert(1)</script>kept'), 'kept');
+  assert.equal(clean('<b style="position:fixed" class="x" id="y" onmouseover="x()">bold</b>'), '<b>bold</b>');
+  assert.equal(clean('<a href="JaVaScRiPt:alert(1)">a</a><a href=" javascript:alert(1)">b</a><a href="data:text/html,x">c</a><a href="//evil.test">d</a>'), 'abcd');
+  assert.equal(clean('<a href="https://ok.test/?q=1&r=2" onclick="x()" target="_self">ok</a>'), '<a href="https://ok.test/?q=1&amp;r=2" target="_blank" rel="noopener">ok</a>');
+  assert.equal(clean('<a href="mailto:a@b.test">mail</a>'), '<a href="mailto:a@b.test" target="_blank" rel="noopener">mail</a>');   // http, https and mailto are the only links kept
+  assert.equal(clean('&lt;script&gt;alert(1)&lt;/script&gt;'), '&lt;script&gt;alert(1)&lt;/script&gt;');   // text that looks like a tag stays text
+  assert.equal(clean('<div><p>one</p><p>two</p></div>'), 'one<br>two');
+  assert.equal(clean('<h1>Head</h1><table><tr><td>cell</td></tr></table>'), 'Head<br>cell');
+  assert.equal(clean('<ul><li><i>a</i></li><li>b<script>x</script></li></ul>'), '<ul><li><i>a</i></li><li>b</li></ul>');
+  assert.deepEqual(cleanBlocks([{ id: 'a', type: 'body', html: '  <br> &nbsp; ' }]), []);            // a block with nothing but space in it is dropped when saved
+  const twice = clean(clean('<b><a href="https://ok.test">x</a></b><img src=x onerror=1>'));
+  assert.equal(twice, '<b><a href="https://ok.test" target="_blank" rel="noopener">x</a></b>');     // cleaning what is already clean changes nothing
+});

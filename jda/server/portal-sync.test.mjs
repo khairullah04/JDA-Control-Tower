@@ -1,6 +1,7 @@
 // node --experimental-test-module-mocks --test portal-sync.test.mjs
 // Checks how a JDA's Drive files are assembled into its report, with Drive and Claude stubbed out.
-import { test, mock } from 'node:test';
+import { test } from 'node:test';
+import { mockModule } from './test-mocks.mjs';
 import assert from 'node:assert/strict';
 
 const file = (id, name, modifiedTime) => ({ id, name, modifiedTime, mimeType: 'text/plain' });
@@ -25,11 +26,11 @@ const replies = {
 };
 let calls = 0;
 
-mock.module('./portal-drive.js', { exports: {
+mockModule('./portal-drive.js', {
   listJdaFiles: async jda => jda.id === 'jda9' ? drive : null,
   fileBlocks: async f => { if (f.name.endsWith('.pptx')) throw new Error('unsupported file type'); return [{ type: 'text', text: `FILE ${f.id}` }]; }
-} });
-mock.module('./claude.js', { exports: {
+});
+mockModule('./claude.js', {
   ask: async ({ system, messages }) => {
     calls++;
     const ids = messages[0].content.map(b => b.text).join(' ');
@@ -37,8 +38,8 @@ mock.module('./claude.js', { exports: {
     return 'Here you go: ' + JSON.stringify(replies[key]);
   },
   parseJson: text => JSON.parse(text.match(/\{[\s\S]*\}/)[0])
-} });
-mock.module('node:fs', { exports: { default: { readFileSync: () => { throw new Error('no cache'); }, writeFileSync: () => {} } } });
+});
+mockModule('node:fs', { default: { readFileSync: () => { throw new Error('no cache'); }, writeFileSync: () => {} } });
 
 const { syncJda } = await import('./portal-sync.js');
 

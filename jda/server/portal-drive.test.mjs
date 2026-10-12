@@ -1,6 +1,7 @@
 // node --experimental-test-module-mocks --test portal-drive.test.mjs
 // Checks folder recognition and file reading against a fake Drive tree.
-import { test, mock } from 'node:test';
+import { test } from 'node:test';
+import { mockModule } from './test-mocks.mjs';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 
@@ -25,14 +26,14 @@ ws.addRow(['Reality Capture Handover', 20, new Date('2026-09-02T00:00:00Z')]);
 const xlsx = Buffer.from(await wb.xlsx.writeBuffer());
 const bodies = { o1: xlsx, m1: Buffer.from('zip-not-text'), w1: Buffer.from('%PDF-1.4 fake'), p1: Buffer.from('plain words') };
 
-mock.module('./drive.js', { exports: {
+mockModule('./drive.js', {
   ALL: {},
   drive: { files: {
     list: async ({ q }) => ({ data: { files: tree[q.match(/'([^']+)' in parents/)[1]] || [] } }),
     get: async ({ fileId }) => ({ data: bodies[fileId] }),
     export: async () => ({ data: Buffer.from('exported') })
   } }
-} });
+});
 process.env.PORTAL_DRIVE_ROOT_FOLDER_ID = 'root';
 const { listJdaFiles, fileBlocks } = await import('./portal-drive.js');
 
