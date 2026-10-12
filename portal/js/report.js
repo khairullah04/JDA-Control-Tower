@@ -319,10 +319,10 @@ document.querySelectorAll('[data-anchor]').forEach(btn => {
 document.addEventListener('keydown', (e) => {
   const typingTags = ['INPUT', 'TEXTAREA', 'SELECT'];
   if (document.activeElement && (typingTags.includes(document.activeElement.tagName) || document.activeElement.isContentEditable)) return;
-  const order = ['screen-overview','screen-progress','screen-weekly','screen-edit'];
+  const order = ['screen-overview','screen-progress','screen-weekly']; // the three reading screens only: a stray arrow never leaves Edit report, or lands on it
   const current = order.find(id => $(id).classList.contains('active'));
   const idx = order.indexOf(current);
-  if (idx === -1) return; // a detail screen or the block editor: the arrow keys belong to the page
+  if (idx === -1) return; // Edit report, a detail screen or the block editor: the arrow keys belong to the page
   if (e.key === 'ArrowRight' && idx < order.length - 1) showScreen(order[idx + 1]);
   if (e.key === 'ArrowLeft' && idx > 0) showScreen(order[idx - 1]);
 });

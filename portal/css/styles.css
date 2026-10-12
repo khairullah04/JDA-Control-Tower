@@ -12,6 +12,10 @@
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
+  /* The hero is as wide as the viewport, scrollbar included (100vw), so on a desktop with a classic
+     scrollbar it used to stick out by the scrollbar's width and the page scrolled sideways. The page
+     never scrolls sideways now; anything wide scrolls inside its own box (the tabs, the tasks table). */
+  body{overflow-x:clip;}
   body{margin:0;color:var(--text);font-family:var(--font);font-size:15.5px;line-height:1.6;
     background:
       radial-gradient(1100px 540px at 85% -8%,rgba(0,161,156,.14),transparent 60%),
@@ -55,6 +59,7 @@
   .back-link:hover{text-decoration:underline;}
 
   /* ---------- persistent page nav (built into the topbar, sticky with it) ---------- */
+  .pagenav{min-width:0;max-width:100%;} /* may be narrower than its tabs: they scroll inside it */
   .pagenav-scroll{overflow-x:auto;}
   .pagenav-inner{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;
     background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:5px;}
@@ -296,7 +301,7 @@
   .challenge-body .mitigation{margin-top:6px;font-size:12.5px;color:var(--teal-700);font-weight:600;}
 
   /* ---------- tasks table (glass wrapper) ---------- */
-  .table-card{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:16px;box-shadow:var(--elev-1);padding:8px 20px;}
+  .table-card{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:16px;box-shadow:var(--elev-1);padding:8px 20px;overflow-x:auto;}
   table.tasks{width:100%;border-collapse:collapse;font-size:13.5px;}
   table.tasks th{text-align:left;font-weight:700;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:14px 0 10px;border-bottom:1px solid var(--glass-brd);}
   table.tasks td{padding:13px 10px 13px 0;border-bottom:1px solid var(--glass-brd);vertical-align:top;}
@@ -598,8 +603,6 @@ body.editing .sol-card:hover,body.editing .collab-card:hover{transform:none;}
 body.editing .collab-more-toggle{display:none;}
 body.editing .collab-more,body.editing .hero-more{max-height:none;overflow:visible;opacity:1;margin-top:10px;}
 
-/* Passkey boxes are masked text, not password fields, so the browser does not offer to save or autofill them. */
-.passkey-input{-webkit-text-security:disc;}
 
 /* Editor Page: Overall progress and Weekly progress */
 .ed-click{cursor:pointer;outline:1.5px dashed rgba(0,161,156,.5);outline-offset:2px;}

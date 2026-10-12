@@ -36,7 +36,7 @@ export async function renderDashboard() {
         ${spendBar(r.budget ? r.actual / r.budget : 0)}
         <small>${r.projectCount} project(s) · ${r.pending} invoice(s) pending</small>
       </a>`).join('')}
-    <div class="card add" id="add-jda" role="button" tabindex="0">+ Add JDA</div></div>
+    <button type="button" class="card add" id="add-jda">+ Add JDA</button></div>
 
     <div class="section"><h3>Recent activity</h3>${renderLog(named)}</div>`;
 
