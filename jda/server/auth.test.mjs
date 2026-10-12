@@ -2,11 +2,11 @@
 // The sign-in check in front of the API, with Google's token service stubbed out.
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { requireUser } from './auth.js';
+import { requireUser, forgetTokens } from './auth.js';
 
 const realFetch = globalThis.fetch;
 let answer, asked;
-beforeEach(() => { asked = []; globalThis.fetch = async (url, init) => { asked.push([String(url), JSON.parse(init.body)]); return answer; }; process.env.REQUIRE_AUTH = 'true'; process.env.FIREBASE_API_KEY = 'key-1'; process.env.ALLOWED_EMAILS = 'aina@jda.app, Badrul@JDA.app'; });
+beforeEach(() => { forgetTokens(); asked = []; globalThis.fetch = async (url, init) => { asked.push([String(url), JSON.parse(init.body)]); return answer; }; process.env.REQUIRE_AUTH = 'true'; process.env.FIREBASE_API_KEY = 'key-1'; process.env.ALLOWED_EMAILS = 'aina@jda.app, Badrul@JDA.app'; });
 afterEach(() => { globalThis.fetch = realFetch; });
 const reply = (ok, body) => ({ ok, json: async () => body });
 const run = (headers = {}) => new Promise(resolve => {
@@ -32,7 +32,7 @@ test('signed in but not on the access list: refused, by name', async () => {
   const out = await run({ authorization: 'Bearer tok' });
   assert.deepEqual([out.code, out.body.error], [403, 'stranger@jda.app is not on the access list. Ask the administrator to add it.']);
   answer = reply(true, { users: [{ email: 'BADRUL@jda.app' }] });                     // the list is not case-sensitive
-  assert.equal((await run({ authorization: 'Bearer tok' })).next, true);
+  assert.equal((await run({ authorization: 'Bearer tok-2' })).next, true);
 });
 
 test('an empty access list lets nobody in, and says what to set', async () => {
@@ -64,4 +64,31 @@ test('Google unreachable: 500, not a crash', async () => {
 test('REQUIRE_AUTH=false skips the check', async () => {
   process.env.REQUIRE_AUTH = 'false';
   assert.deepEqual([(await run()).next, asked.length], [true, 0]);
+});
+
+test('a token that has been checked is not checked again for five minutes; the access list still is', async () => {
+  const realNow = Date.now; let clock = 1_800_000_000_000; Date.now = () => clock;
+  try {
+    answer = reply(true, { users: [{ email: 'aina@jda.app' }] });
+    assert.equal((await run({ authorization: 'Bearer tok-a' })).next, true);
+    assert.equal((await run({ authorization: 'Bearer tok-a' })).req.user.email, 'aina@jda.app');
+    assert.equal(asked.length, 1);                                                    // Google was asked once
+    assert.equal((await run({ authorization: 'Bearer tok-b' })).next, true);
+    assert.equal(asked.length, 2);                                                    // another token is another question
+    process.env.ALLOWED_EMAILS = 'badrul@jda.app';
+    assert.equal((await run({ authorization: 'Bearer tok-a' })).code, 403);          // taken off the list: refused at once, cache or not
+    process.env.ALLOWED_EMAILS = 'aina@jda.app, badrul@jda.app';
+    clock += 5 * 60_000 + 1;
+    assert.equal((await run({ authorization: 'Bearer tok-a' })).next, true);
+    assert.equal(asked.length, 3);                                                    // five minutes on, it is checked again
+    answer = reply(false, { error: { message: 'INVALID_ID_TOKEN' } });
+    assert.equal((await run({ authorization: 'Bearer bad' })).code, 401);
+    assert.equal((await run({ authorization: 'Bearer bad' })).code, 401);
+    assert.equal(asked.length, 5);                                                    // a refusal is never remembered
+    // a token about to run out is not kept past its own end
+    const expiring = 'h.' + Buffer.from(JSON.stringify({ exp: Math.floor(clock / 1000) + 60 })).toString('base64url') + '.s';
+    answer = reply(true, { users: [{ email: 'aina@jda.app' }] });
+    await run({ authorization: 'Bearer ' + expiring }); clock += 61_000; await run({ authorization: 'Bearer ' + expiring });
+    assert.equal(asked.length, 7);
+  } finally { Date.now = realNow; }
 });

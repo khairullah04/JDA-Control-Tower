@@ -29,18 +29,31 @@ function fileStore(file = FILE) {
 async function firestoreStore() {
   const db = await adminDb('portal');
   const rows = snap => snap.docs.map(d => ({ ...d.data(), id: d.id }));
+  const query = (coll, { where, latest, by } = {}) => {
+    let q = db.collection(coll);
+    if (where) q = q.where(where[0], '==', where[1]);
+    return latest ? q.orderBy(by, 'desc').limit(latest) : q;
+  };
+  let warned = false;
   return {
-    // `where: [field, value]` or `latest: n, by: field` narrow what is read; without them, the whole collection.
-    list: async (coll, { where, latest, by } = {}) => {
-      const all = db.collection(coll);
-      return rows(await (where ? all.where(where[0], '==', where[1]) : latest ? all.orderBy(by, 'desc').limit(latest) : all).get());
+    // `where: [field, value]` and `latest: n, by: field` narrow what is read; without them, the whole collection.
+    // The two together need a composite index (jda/firestore.indexes.json). Until it is deployed the
+    // matching records are all read, which gives the same answer more slowly, and the log says so once.
+    list: async (coll, how = {}) => {
+      try { return rows(await query(coll, how).get()); }
+      catch (e) {
+        if (e.code !== 9 || !(how.where && how.latest)) throw e; // 9: FAILED_PRECONDITION, "the query requires an index"
+        if (!warned) console.warn(`Firestore has no index for ${coll} by ${how.where[0]} and ${how.by} yet. Deploy jda/firestore.indexes.json (see jda/README.md). Reading without it for now.`);
+        warned = true;
+        return rows(await query(coll, { where: how.where }).get());
+      }
     },
     get: async (coll, id) => { const d = await db.collection(coll).doc(id).get(); return d.exists ? { ...d.data(), id } : null; },
     // One all-or-nothing step, as a Firestore transaction: everything the step reads is checked again at
     // commit, so if someone else saved in between, the step is run again on the new state.
     atomic: step => db.runTransaction(async t => {
       const { writes = [], result } = await step({
-        list: async coll => rows(await t.get(db.collection(coll))),
+        list: async (coll, how) => rows(await t.get(query(coll, how))),
         get: async (coll, id) => { const d = await t.get(db.collection(coll).doc(id)); return d.exists ? { ...d.data(), id } : null; }
       });
       for (const w of writes) t.set(db.collection(w.coll).doc(w.id), w.data);

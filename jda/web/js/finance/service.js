@@ -20,7 +20,7 @@ const sanctionedKey = r => [r.jdaId, r.projectId, partnerKey(r.partner), r.month
 export function createFinance(store, { now = () => new Date().toISOString() } = {}) {
   let count = 0;
   const newId = () => Date.now().toString(36) + (count++ % 46656).toString(36).padStart(3, '0') + Math.random().toString(36).slice(2, 8);
-  const settings = async (read = store) => ({ ...DEFAULT_SETTINGS, ...(await read.get('financeMeta', 'settings')) });
+  const settings = async (read = store) => { const { id, ...saved } = await read.get('financeMeta', 'settings') || {}; return { ...DEFAULT_SETTINGS, ...saved }; };
   const collection = kind => COLL[kind] || (() => { throw new FinanceError('Unknown kind of record.'); })();
   const line = (actor, entity, rec, action, change = {}) => ({
     coll: 'financeAudit', id: newId(),
@@ -39,14 +39,16 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
   async function save(kind, input, actor) {
     const coll = collection(kind), s = await settings();
     return store.atomic(async read => {
-      const all = await read.list(coll), prev = input.id ? all.find(r => r.id === input.id) : null;
-      if (input.id && !prev) throw new FinanceError('That record no longer exists.');
-      if (prev?.deletedAt) throw new FinanceError('That record has been deleted. Restore it before editing it.');
+      const prev = input.id ? await read.get(coll, input.id) : null;
+      if (input.id && !prev) throw new FinanceError('That record no longer exists.', null, 409);
+      if (prev?.deletedAt) throw new FinanceError('That record has been deleted. Restore it before editing it.', null, 409);
       if (prev && input.expectedUpdatedAt && input.expectedUpdatedAt !== prev.updatedAt) {
         throw new FinanceError(`${refOf(kind, prev)} was changed by ${prev.updatedBy || 'someone else'} after you opened it. Close this form, look at the latest version, and make your change again.`, null, 409);
       }
       const { record, errors } = build(kind, { ...input, draft: false }, prev, s);
-      if (kind === 'entry' && record.invoiceNo && all.some(e => live(e) && e.id !== prev?.id && invoiceKey(e) === invoiceKey(record))) errors.push(duplicate(record));
+      // An invoice number must be new for its project. Only that project's invoices are read to check it, not the whole register.
+      const sameProject = kind === 'entry' && record.invoiceNo && record.projectId ? await read.list(coll, { where: ['projectId', record.projectId] }) : [];
+      if (sameProject.some(e => live(e) && e.id !== prev?.id && invoiceKey(e) === invoiceKey(record))) errors.push(duplicate(record));
       if (errors.length) throw new FinanceError(errors.join('. ') + '.', errors);
       const at = now(), next = prev ? stamp({ ...prev, ...record }, actor, at) : fresh(record, input, actor, at);
       const diff = prev ? changes(kind, prev, next) : [];
@@ -69,12 +71,13 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
 
   // The same shape for every change to records that already exist: `change(record, all)` gives the
   // new record and its audit lines, or nothing if there is nothing to do. Done in steps of `size`
-  // records, each record always in the same step as its own audit lines.
-  async function each(kind, ids, size, change) {
+  // records, each record always in the same step as its own audit lines. Only the named records are
+  // read, unless the change has to look at the others too (`whole`), when `all` is the full list.
+  async function each(kind, ids, size, change, whole = false) {
     const coll = collection(kind), records = [];
     for (const part of slices([...new Set(ids)], size)) {
       records.push(...await store.atomic(async read => {
-        const all = await read.list(coll), writes = [], done = [];
+        const all = whole ? await read.list(coll) : (await Promise.all(part.map(id => read.get(coll, id)))).filter(Boolean), writes = [], done = [];
         for (const r of all.filter(x => part.includes(x.id))) {
           const out = change(r, all);
           if (!out) continue;
@@ -98,7 +101,7 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
       }
       const next = stamp({ ...r, deletedAt: deleted ? at : null, deletedBy: deleted ? actor : null }, actor, at);
       return { next, lines: [line(actor, kind, next, deleted ? 'delete' : 'restore')] };
-    });
+    }, !deleted && kind === 'entry'); // restoring an invoice has to see that its number has not been used again
   }
 
   async function setStatus(ids, status, actor) {
@@ -115,7 +118,7 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
   // The one place a stored amount is worked out again after the fact, and only when asked: with a
   // new rate (the chosen records must share a currency), with today's tax rate, or simply afresh.
   async function recalculate(kind, ids, { rate = '', rateDate = '', rateSource = 'manual', currentTax = false } = {}, actor) {
-    const chosen = (await store.list(collection(kind))).filter(r => ids.includes(r.id) && live(r)), at = now();
+    const chosen = (await Promise.all([...new Set(ids)].map(id => store.get(collection(kind), id)))).filter(r => r && live(r)), at = now();
     const newRate = rate === '' || rate == null ? null : normRate(rate), taxRateBps = (await settings()).taxRateBps;
     if (rate && !newRate) throw new FinanceError(`Rate to ${BASE} must be a positive number.`);
     if (newRate && new Set(chosen.filter(r => r.currency !== BASE).map(r => r.currency)).size > 1) throw new FinanceError('The chosen records are in more than one currency. Apply a rate to one currency at a time.');
@@ -153,9 +156,11 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     });
   }
 
-  async function audit({ entityId = '', limit = 500 } = {}) {
-    const lines = await store.list('financeAudit', entityId ? { where: ['entityId', entityId] } : { latest: limit, by: 'at' });
-    return lines.filter(l => !entityId || l.entityId === entityId).sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id)).slice(0, limit);
+  // The newest `limit` lines: of one record, of one project, of one JDA, or of everything.
+  async function audit({ entityId = '', projectId = '', jdaId = '', limit = 500 } = {}) {
+    const where = entityId ? ['entityId', entityId] : projectId ? ['projectId', projectId] : jdaId ? ['jdaId', jdaId] : null;
+    const lines = await store.list('financeAudit', { ...(where && { where }), latest: limit, by: 'at' });
+    return lines.filter(l => !where || l[where[0]] === where[1]).sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id)).slice(0, limit);
   }
 
   // Many records at once: a spreadsheet, the old invoice list, invoices read by the AI. Rows that
@@ -206,7 +211,11 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
 export function memoryStore(seed = {}, onCommit = () => {}) {
   const db = seed, copy = v => JSON.parse(JSON.stringify(v));
   const read = {
-    list: async coll => Object.entries(db[coll] || {}).map(([id, d]) => ({ ...copy(d), id })),
+    // `where: [field, value]` and `latest: n, by: field` narrow what is read, as they do in the Firestore store.
+    list: async (coll, { where, latest, by } = {}) => {
+      const rows = Object.entries(db[coll] || {}).map(([id, d]) => ({ ...copy(d), id })).filter(r => !where || r[where[0]] === where[1]);
+      return latest ? rows.sort((a, b) => String(b[by]).localeCompare(String(a[by]))).slice(0, latest) : rows;
+    },
     get: async (coll, id) => db[coll]?.[id] ? { ...copy(db[coll][id]), id } : null
   };
   let queue = Promise.resolve();

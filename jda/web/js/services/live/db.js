@@ -1,4 +1,4 @@
-import { collection, getDocs, addDoc, updateDoc, doc, getDoc, setDoc, query, where, deleteField }
+import { collection, getDocs, addDoc, updateDoc, doc, getDoc, setDoc, query, where, orderBy, limit, deleteField }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { db, auth } from './firebase.js';
 import { config } from '../../config/index.js';
@@ -37,8 +37,10 @@ export const listProjectsByJda = jdaId => byField('projects', 'jdaId', jdaId).th
 
 // Every project across every JDA, with its JDA's name joined in - used to populate the
 // "move this invoice to..." dropdown when editing an invoice.
-export async function listAllProjectsWithJda() {
-  const [projSnap, jdaList] = await Promise.all([getDocs(collection(db, 'projects')), listJdas()]);
+// `jdaList`: the JDAs, when the caller has just read them, so they are not read a second time.
+export async function listAllProjectsWithJda(jdaList) {
+  const projSnap = await getDocs(collection(db, 'projects'));
+  jdaList ||= await listJdas();
   const jmap = Object.fromEntries(jdaList.map(j => [j.id, j.name]));
   return rows(projSnap).map(p => ({ ...p, jdaName: jmap[p.jdaId] || '—' })).sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -54,9 +56,24 @@ export const listLegacyScope = () => getDocs(collection(db, 'scope')).then(rows)
 export const listLegacyInvoices = () => getDocs(collection(db, 'invoices')).then(rows);
 
 export const addLog = (projectId, action, detail) => addDoc(collection(db, 'activity'), { projectId, action, by: usernameOf(), detail, ts: new Date().toISOString() });
-export async function listLog(projectId) {
-  const list = projectId ? await byField('activity', 'projectId', projectId) : rows(await getDocs(collection(db, 'activity')));
-  return list.sort((a, b) => b.ts.localeCompare(a.ts));
+// The newest `max` lines of the change log: of everything, or of the given JDA and project ids
+// (a line carries the id of the JDA or project it is about in `projectId`). Only those lines are
+// read, not the whole log. Asking by id and newest-first together needs a composite index
+// (jda/firestore.indexes.json); until it is deployed the matching lines are all read and sorted here,
+// which gives the same answer more slowly.
+export async function listLog(ids, max = 25) {
+  const log = collection(db, 'activity'), newest = [orderBy('ts', 'desc'), limit(max)], found = [];
+  if (!ids) return rows(await getDocs(query(log, ...newest)));
+  for (let i = 0; i < ids.length; i += 30) { // "in" takes 30 values at most
+    const mine = where('projectId', 'in', ids.slice(i, i + 30));
+    try { found.push(...rows(await getDocs(query(log, mine, ...newest)))); }
+    catch (e) {
+      if (e.code !== 'failed-precondition') throw e;
+      console.warn('The change log has no index by projectId and ts yet. Deploy jda/firestore.indexes.json (see jda/README.md).');
+      found.push(...rows(await getDocs(query(log, mine))));
+    }
+  }
+  return found.sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, max);
 }
 
 // Tracks which Drive files have already been synced, globally - a file can be split across many

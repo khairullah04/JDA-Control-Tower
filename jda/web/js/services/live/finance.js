@@ -26,7 +26,8 @@ export const restore = (kind, ids) => post(`${path(kind)}/restore`, { ids });
 export const setStatus = (ids, status) => post('/api/finance/entries/status', { ids, status });
 export const recalculate = (kind, ids, options) => post(`${path(kind)}/recalculate`, { ids, ...options });
 export const saveSettings = input => call('/api/finance/settings', 'PUT', input);
-export const audit = ({ entityId = '' } = {}) => call(`/api/finance/audit?entityId=${encodeURIComponent(entityId)}`);
+// The newest lines of one record, one project or one JDA; with none of them, of everything.
+export const audit = (about = {}) => call(`/api/finance/audit?${new URLSearchParams(Object.entries(about).filter(([, v]) => v))}`);
 export const forex = (currency, date = '') => call(`/api/finance/forex?currency=${encodeURIComponent(currency)}&date=${encodeURIComponent(date)}`);
 export const importRecords = (kind, inputs, options = {}) => post(`${path(kind)}/import`, { inputs, ...options });
 export const workbook = sheets => post('/api/finance/workbook', { sheets }); // -> the .xlsx file, as a Blob

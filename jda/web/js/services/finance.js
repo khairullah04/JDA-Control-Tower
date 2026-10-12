@@ -1,5 +1,8 @@
 import { config } from '../config/index.js';
+import { withBook } from '../finance/book.js';
 // The CJI3 register and the sanctioned amounts. Live: the server does every read and write, behind
 // the Invoice Tracker passkey. Demo: the same rules, run in this page over sample data.
+// Every change answers with the records it changed, and they are kept in the page's own copy
+// (finance/book.js), so a redraw after a change does not read the whole register again.
 export const { session, unlock, data, save, saveSanctionedOver, remove, restore, setStatus, recalculate, saveSettings, audit, forex, readFile, importRecords, workbook } =
-  config.demoMode ? await import('./demo/finance.js') : await import('./live/finance.js');
+  withBook(config.demoMode ? await import('./demo/finance.js') : await import('./live/finance.js'));

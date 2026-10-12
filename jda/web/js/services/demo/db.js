@@ -23,7 +23,7 @@ export const updateProject = async (id, p) => { const x = Object.assign(projects
 export const listLegacyScope = async () => [];
 export const listLegacyInvoices = async () => [];
 export const addLog = async (projectId, action, detail) => add(logs, { projectId, action, by: usernameOf(), detail, ts: new Date().toISOString() });
-export const listLog = async projectId => copy(projectId ? logs.filter(l => l.projectId === projectId) : logs).sort((a, b) => b.ts.localeCompare(a.ts));
+export const listLog = async (ids, max = 25) => copy(ids ? logs.filter(l => ids.includes(l.projectId)) : logs).sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, max);
 
 export const listProcessedFileIds = async () => new Set(processedFiles.map(x => x.driveFileId));
 export const markFileProcessed = async (driveFileId, fileName, allocations) => add(processedFiles, { driveFileId, fileName, allocations, processedAt: new Date().toISOString() });

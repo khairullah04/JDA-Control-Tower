@@ -1,0 +1,9 @@
+{
+  "indexes": [
+    { "collectionGroup": "activity", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "projectId", "order": "ASCENDING" }, { "fieldPath": "ts", "order": "DESCENDING" }] },
+    { "collectionGroup": "financeAudit", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "entityId", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] },
+    { "collectionGroup": "financeAudit", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "projectId", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] },
+    { "collectionGroup": "financeAudit", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "jdaId", "order": "ASCENDING" }, { "fieldPath": "at", "order": "DESCENDING" }] }
+  ],
+  "fieldOverrides": []
+}

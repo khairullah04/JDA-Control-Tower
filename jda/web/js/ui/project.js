@@ -7,19 +7,19 @@ import { $, esc, rm, pct, monthName, jdaRange, checkProject } from './dom.js';
 import { state, CONTEXT_ROWS, firstRows } from './state.js';
 import { openForm } from './modal.js';
 import { renderTimeline } from './timeline.js';
-import { renderLog } from './log.js';
-import { loadCtx, storageNotice, auditLine, financeSummary } from './finance-ui.js';
+import { renderLog, LOG_LINES } from './log.js';
+import { loadCtx, forget, storageNotice, auditLine, financeSummary } from './finance-ui.js';
 import { startRender } from './render.js';
 
 export async function renderProject(id) {
   const r0 = startRender('Loading report…', () => renderProject(id)), { page, refresh } = r0;
-  const ctx = await loadCtx(refresh);
+  const ctx = await loadCtx(r0);
   const project = ctx.projects.find(p => p.id === id);
   if (!project) throw new Error('That project no longer exists.');
   const jda = ctx.jdas.find(j => j.id === project.jdaId);
   const sanctioned = ofProject(ctx.fin.sanctioned, id), entries = ofProject(ctx.fin.entries, id);
   const r = computeReport(project, sanctioned, entries);
-  const activity = [...await listLog(id), ...(await audit()).map(auditLine).filter(a => a.projectId === id)].sort((a, b) => b.ts.localeCompare(a.ts));
+  const activity = [...await listLog([id], LOG_LINES), ...(await audit({ projectId: id, limit: LOG_LINES })).map(auditLine)].sort((a, b) => b.ts.localeCompare(a.ts));
 
   r0.current();
   page.innerHTML = `
@@ -61,7 +61,7 @@ export async function renderProject(id) {
       const saved = checkProject(v);
       await updateProject(id, saved);
       await addLog(id, 'project', `Budget/dates updated: ${money(saved.budgetMinor)}, ${v.startDate} to ${v.endDate}`);
-      refresh();
+      forget(); refresh();
     }
   });
 

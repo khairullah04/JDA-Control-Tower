@@ -15,11 +15,19 @@ export const today = () => localToday(); // in Malaysia: see shared/dates.js
 export const options = (pairs, selected, first) => (first == null ? '' : `<option value="">${esc(first)}</option>`) +
   pairs.map(([v, label]) => `<option value="${esc(v)}" ${String(v) === String(selected) ? 'selected' : ''}>${esc(label)}</option>`).join('');
 
-// Everything a finance screen draws from, read once per page. `refresh` redraws the page after a change.
-export async function loadCtx(refresh) {
-  const jdas = await listJdas(); // first, alone: the very first call also creates the starting JDAs
-  const [projects, fin] = await Promise.all([listAllProjectsWithJda(), finance.data()]);
-  return { jdas, projects, fin, refresh };
+// Everything a finance screen draws from. Opening a page reads it from the server. A redraw after a
+// change on the page (`r.again`) reads nothing: the change has already been put into the page's copy
+// of the register (finance/book.js), and the JDAs and projects are as they were. `r` is the render
+// (ui/render.js); `ctx.refresh` redraws the page.
+let places = null; // the JDAs and projects as last read
+export const forget = () => { places = null; }; // a JDA or project was added or changed: read everything again on the next draw
+export async function loadCtx(r) {
+  const kept = r.again && places;
+  if (!kept) {
+    const jdas = await listJdas(); // first, alone: the very first call also creates the starting JDAs
+    places = { jdas, projects: await listAllProjectsWithJda(jdas) };
+  }
+  return { ...places, fin: await finance.data({ cached: !!kept }), refresh: r.refresh };
 }
 export const storageNotice = ctx => ctx.fin.storage === 'file'
   ? '<div class="banner over notice">Invoices and payments are being saved on this server only, not in Firebase, because the server has no Firebase service-account key yet. See jda/README.md, "Where invoices and payments are saved".</div>' : '';
@@ -209,7 +217,10 @@ export function openRecord(kind, ctx, { record = null, preset = {} } = {}) {
       else await finance.save(kind, out);
       d.close(); ctx.refresh();
     }
-    catch (err) { msg.textContent = err.message; btn.disabled = false; }
+    catch (err) {
+      msg.textContent = err.message; btn.disabled = false;
+      if (err.status === 409) ctx.refresh(); // someone else changed it: show what is there now, behind this form
+    }
   };
 }
 

@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { toMinor, fmt, money, ringgit, normRate, convert, impliedRate, perUnit, percentage, toBps, fromBps, beforeTax, roundDiv } from '../web/js/finance/money.js';
 import { amounts, build, paymentTable, tableTotals, rowId, monthsBetween, spreadOverMonths, DEFAULT_SETTINGS } from '../web/js/finance/core.js';
 import { createFinance, memoryStore } from '../web/js/finance/service.js';
+import { withBook } from '../web/js/finance/book.js';
 import { toCsv, parseCsv, tableIn, entryInputs, dateOrder, tableEnd, sanctionedInputs, entrySheet, paymentSheet, toIsoDate, toMonth, extractedInputs, legacyEntryInput, legacySanctionedInput, ENTRY_HEADERS, SANCTIONED_HEADERS } from '../web/js/finance/sheets.js';
 
 const S = DEFAULT_SETTINGS;
@@ -365,4 +366,73 @@ test('import: the date order is detected, said, and can be set by hand; a blank 
   assert.deepEqual(dateOrder(['2026-04-03', '']), { order: 'mdy', sure: true });              // nothing to decide
   assert.deepEqual(entryInputs(rows, ctx).map(r => r.input.documentDate), ['2026-03-04', '2026-05-06']);
   assert.deepEqual(entryInputs(rows, { ...ctx, order: 'dmy' }).map(r => r.input.documentDate), ['2026-04-03', '2026-06-05']);
+});
+
+// A store that counts what is read from it, to hold the register to reading no more than a change needs.
+const counting = () => {
+  const inner = memoryStore(), reads = [];
+  const wrap = read => ({ list: (coll, how) => { reads.push(`list ${coll}${how?.where ? ` where ${how.where[0]}` : how?.latest ? ` latest ${how.latest}` : ''}`); return read.list(coll, how); },
+    get: (coll, id) => { reads.push(`get ${coll}`); return read.get(coll, id); } });
+  return { reads, store: { ...wrap(inner), atomic: step => inner.atomic(read => step(wrap(read))) } };
+};
+
+test('a change reads the records it touches, not the whole register', async () => {
+  const { reads, store } = counting(), f = createFinance(store);
+  const made = await Promise.all(['A', 'B', 'C'].map(n => f.save('entry', invoice({ invoiceNo: n }), 'aina')));
+  const entryReads = () => reads.splice(0).filter(r => /financeEntries/.test(r));
+  entryReads();
+  await f.setStatus([made[0].id], 'paid', 'aina');
+  assert.deepEqual(entryReads(), ['get financeEntries']);
+  await f.remove('entry', [made[1].id, made[2].id], 'aina');
+  assert.deepEqual(entryReads(), ['get financeEntries', 'get financeEntries']);
+  await f.recalculate('entry', [made[0].id], { currentTax: true }, 'aina');
+  assert.deepEqual(entryReads(), ['get financeEntries', 'get financeEntries']);                        // once to check the request, once in the step that saves
+  await f.save('entry', { id: made[0].id, remarks: 'checked' }, 'aina');                               // an edit: itself, and its own project's invoices for the duplicate check
+  assert.deepEqual(entryReads(), ['get financeEntries', 'list financeEntries where projectId']);
+  await assert.rejects(f.save('entry', invoice({ invoiceNo: 'a' }), 'aina'), /already entered/);       // the duplicate check still holds
+  await assert.rejects(f.save('entry', { id: 'nope', remarks: 'x' }, 'aina'), /no longer exists/);
+  const elsewhere = await f.save('entry', invoice({ invoiceNo: 'A', projectId: 'p2', projectCode: 'AB' }), 'aina');   // the same number for another project is a different invoice
+  assert.equal(elsewhere.projectId, 'p2');
+});
+
+test('the audit log can be asked for one project or one JDA, newest first, a few lines at a time', async () => {
+  const { reads, store } = counting(), f = createFinance(store, { now: (() => { let t = 0; return () => new Date(Date.UTC(2026, 0, 1, 0, 0, t++)).toISOString(); })() });
+  for (const n of ['A', 'B', 'C']) await f.save('entry', invoice({ invoiceNo: n }), 'aina');
+  await f.save('entry', invoice({ invoiceNo: 'D', projectId: 'p2', projectCode: 'AB' }), 'aina');
+  await f.save('entry', invoice({ invoiceNo: 'E', jdaId: 'j2', jdaName: 'JDA 2', projectId: 'p9', projectCode: 'BA' }), 'aina');
+  reads.length = 0;
+  assert.deepEqual((await f.audit({ projectId: 'p1', limit: 2 })).map(l => l.ref), ['Invoice C', 'Invoice B']);
+  assert.deepEqual((await f.audit({ jdaId: 'j1', limit: 10 })).map(l => l.ref), ['Invoice D', 'Invoice C', 'Invoice B', 'Invoice A']);
+  assert.deepEqual((await f.audit({ limit: 1 })).map(l => l.ref), ['Invoice E']);
+  assert.equal((await f.audit()).length, 5);
+  assert.deepEqual(reads, ['list financeAudit where projectId', 'list financeAudit where jdaId', 'list financeAudit latest 1', 'list financeAudit latest 500']);
+});
+
+test('the page keeps its own copy of the register up to date from what each change answers', async () => {
+  const f = setup(), who = 'aina';
+  let loads = 0;
+  const api = withBook({
+    data: async () => { loads++; return f.data(); }, save: (kind, input) => f.save(kind, input, who), saveSanctionedOver: inputs => f.saveAll('sanctioned', inputs, who),
+    remove: (kind, ids) => f.remove(kind, ids, who), restore: (kind, ids) => f.restore(kind, ids, who), setStatus: (ids, status) => f.setStatus(ids, status, who),
+    recalculate: (kind, ids, options) => f.recalculate(kind, ids, options, who), saveSettings: input => f.saveSettings(input, who), importRecords: (kind, inputs, options) => f.importRecords(kind, inputs, who, options)
+  });
+  const sorted = d => ({ settings: d.settings, entries: [...d.entries].sort((a, b) => a.id.localeCompare(b.id)), sanctioned: [...d.sanctioned].sort((a, b) => a.id.localeCompare(b.id)) });
+  const same = async () => assert.deepEqual(sorted(await api.data({ cached: true })), sorted(await f.data()));
+  await api.data();
+  const a = await api.save('entry', invoice()); await same();
+  await api.save('entry', { id: a.id, remarks: 'checked' }); await same();
+  await api.setStatus([a.id], 'paid'); await same();
+  await api.remove('entry', [a.id]); await same();
+  await api.restore('entry', [a.id]); await same();
+  await api.saveSettings({ taxRate: '6' }); await same();
+  await api.recalculate('entry', [a.id], { currentTax: true }); await same();
+  await api.saveSanctionedOver(spreadOverMonths({ ...base, currency: 'MYR', amount: '300', month: '2026-01' }, '2026-03', true)); await same();
+  await api.importRecords('entry', [invoice({ invoiceNo: 'X-1' }), invoice({ invoiceNo: 'X-2', amount: '-1' })], { dryRun: true }); await same();   // a preview adds nothing
+  await api.importRecords('entry', [invoice({ invoiceNo: 'X-1' }), invoice({ invoiceNo: 'X-2', amount: '-1' })]); await same();
+  assert.deepEqual([loads, (await api.data({ cached: true })).entries.length, (await api.data({ cached: true })).sanctioned.length], [1, 2, 3]);   // read from the server once
+  await assert.rejects(api.save('entry', { id: a.id, remarks: 'late', expectedUpdatedAt: 'an older time' }), e => e.status === 409);
+  await api.data({ cached: true });
+  assert.equal(loads, 2);                                                                              // told it is out of date, the copy is read again
+  await api.data();
+  assert.equal(loads, 3);                                                                              // and always when a page is opened
 });

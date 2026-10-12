@@ -7,19 +7,19 @@ import { state } from './state.js';
 import { openForm } from './modal.js';
 import { runSync } from './sync.js';
 import { renderTimeline } from './timeline.js';
-import { renderLog } from './log.js';
-import { loadCtx, storageNotice, auditLine, financeSummary } from './finance-ui.js';
+import { renderLog, LOG_LINES } from './log.js';
+import { loadCtx, forget, storageNotice, auditLine, financeSummary } from './finance-ui.js';
 import { startRender } from './render.js';
 
 export async function renderJda(id) {
   const r = startRender('Loading JDA…', () => renderJda(id)), { page, refresh } = r;
-  const ctx = await loadCtx(refresh), { fin } = ctx;
+  const ctx = await loadCtx(r), { fin } = ctx;
   const jda = ctx.jdas.find(j => j.id === id);
   if (!jda) throw new Error('That JDA no longer exists.');
   const projects = ctx.projects.filter(p => p.jdaId === id);
   const perProject = projects.map(p => ({ p, r: computeReport(p, ofProject(fin.sanctioned, p.id), ofProject(fin.entries, p.id)) }));
-  const ids = new Set(projects.map(p => p.id));
-  const activity = [...await listLog(), ...(await audit()).map(auditLine)].filter(a => ids.has(a.projectId) || a.projectId === id || a.jdaId === id).sort((a, b) => b.ts.localeCompare(a.ts));
+  // The newest lines about this JDA and its projects: from the tracker's change log and from the audit log of invoices and payments.
+  const activity = [...await listLog([id, ...projects.map(p => p.id)], LOG_LINES), ...(await audit({ jdaId: id, limit: LOG_LINES })).map(auditLine)].sort((a, b) => b.ts.localeCompare(a.ts));
 
   // The JDA as a whole: every project's sanctioned amounts and invoices together, against the budgets added up.
   const sanctioned = fin.sanctioned.filter(s => s.jdaId === id), entries = fin.entries.filter(e => e.jdaId === id);
@@ -74,7 +74,7 @@ export async function renderJda(id) {
       checkDates(v);
       await updateJda(id, v);
       await addLog(id, 'jda', `${jda.name} dates set: ${v.startDate} to ${v.endDate}`);
-      refresh();
+      forget(); refresh();
     }
   });
   $('#add-project').onclick = () => openForm({
@@ -89,7 +89,7 @@ export async function renderJda(id) {
       const project = checkProject(v, ctx.projects);
       const created = await addProject({ ...project, jdaId: id });
       await addLog(created.id, 'project', `Project "${project.name}" added to ${jda.name}`);
-      refresh();
+      forget(); refresh();
     }
   });
 

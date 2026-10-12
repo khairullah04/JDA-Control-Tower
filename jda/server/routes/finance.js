@@ -24,7 +24,11 @@ export default function financeRoutes(finance, storage) {
   router.get('/session', run(async () => ({ ok: true })));
   router.get('/data', run(async () => ({ ...(await finance.data()), storage })));
   router.put('/settings', run(req => finance.saveSettings(req.body || {}, actor(req))));
-  router.get('/audit', run(req => finance.audit({ entityId: String(req.query.entityId || '') })));
+  // ?entityId= one record's history, ?projectId= or ?jdaId= that project's or JDA's, none: everything. Newest first, `limit` lines (500 at most).
+  router.get('/audit', run(req => {
+    const q = k => String(req.query[k] || ''), limit = Math.min(Math.max(parseInt(q('limit'), 10) || 500, 1), 500);
+    return finance.audit({ entityId: q('entityId'), projectId: q('projectId'), jdaId: q('jdaId'), limit });
+  }));
   router.get('/forex', run(req => {
     const currency = String(req.query.currency || '').toUpperCase(), date = String(req.query.date || '');
     if (!/^[A-Z]{3}$/.test(currency) || (date && !isDate(date))) throw Object.assign(new Error('Which currency, and for which date?'), { status: 400 });

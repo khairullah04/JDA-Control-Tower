@@ -103,7 +103,7 @@ export function renderPayments(root, ctx, { jda, projectId = '' }) {
 // The Payment Table on a page of its own (#/payments/<jda>[/<project>]): the full width of the window, one JDA at a time.
 export async function renderPaymentsPage(jdaId = '', projectId = '') {
   const r0 = startRender('Loading the Payment Table…', () => renderPaymentsPage(jdaId, projectId)), { page } = r0;
-  const ctx = await loadCtx(r0.refresh);
+  const ctx = await loadCtx(r0);
   const jda = ctx.jdas.find(j => j.id === jdaId) || ctx.jdas[0];
   if (!jda) throw new Error('There are no JDAs yet. Add one on the dashboard first.');
   const project = ctx.projects.find(p => p.id === projectId && p.jdaId === jda.id);

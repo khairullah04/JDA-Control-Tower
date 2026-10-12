@@ -167,7 +167,7 @@ function openTaxRate(ctx) {
 // window, with the tax rate, the audit log and the way to each Payment Table.
 export async function renderCji3(jdaId = '', projectId = '') {
   const r = startRender('Loading the CJI3 register…', () => renderCji3(jdaId, projectId)), { page } = r;
-  const ctx = await loadCtx(r.refresh);
+  const ctx = await loadCtx(r);
   const jda = ctx.jdas.find(j => j.id === jdaId), project = jda && ctx.projects.find(p => p.id === projectId && p.jdaId === jda.id);
   r.current();
   page.innerHTML = `

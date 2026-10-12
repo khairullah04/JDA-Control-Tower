@@ -63,6 +63,9 @@ test('an invoice is worked out, validated and logged by the server', async () =>
   assert.equal((await call('/api/finance/entries/delete', { method: 'POST', body: { ids: [id] }, as: 'chong' })).body.changed, 1);
   assert.equal((await call('/api/finance/entries/restore', { method: 'POST', body: { ids: [id] }, as: 'chong' })).body.changed, 1);
   const log = (await call(`/api/finance/audit?entityId=${id}`)).body;
+  assert.deepEqual((await call('/api/finance/audit?projectId=p1&limit=2')).body, log.slice(0, 2));     // a project's latest lines only
+  assert.deepEqual((await call('/api/finance/audit?jdaId=j1&limit=1')).body, log.slice(0, 1));
+  assert.deepEqual((await call('/api/finance/audit?projectId=none')).body, []);
   assert.deepEqual(log.map(l => [l.by, l.action, l.field, l.old, l.new]).reverse(), [
     ['aina', 'create', '', '', 'USD 100.00 at 4.7, MYR 507.60 taxed, 2025-08'], ['badrul', 'status', 'Status', 'Pending', 'Paid'], ['chong', 'delete', '', '', ''], ['chong', 'restore', '', '', '']
   ]);

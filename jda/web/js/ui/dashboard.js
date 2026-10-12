@@ -6,13 +6,13 @@ import { $, esc, rm, spendBar, JDA_DATE_FIELDS, checkDates } from './dom.js';
 import { state } from './state.js';
 import { openForm } from './modal.js';
 import { runSync } from './sync.js';
-import { renderLog } from './log.js';
-import { loadCtx, storageNotice, auditLine } from './finance-ui.js';
+import { renderLog, LOG_LINES } from './log.js';
+import { loadCtx, forget, storageNotice, auditLine } from './finance-ui.js';
 import { startRender } from './render.js';
 
 export async function renderDashboard() {
   const r = startRender('Loading JDAs…', renderDashboard), { page, refresh } = r;
-  const ctx = await loadCtx(refresh), { jdas, projects, fin } = ctx;
+  const ctx = await loadCtx(r), { jdas, projects, fin } = ctx;
   const rollups = jdas.map(j => {
     const mine = projects.filter(p => p.jdaId === j.id);
     const r = mine.map(p => computeReport(p, ofProject(fin.sanctioned, p.id), ofProject(fin.entries, p.id))).reduce((acc, rep) => ({
@@ -21,7 +21,7 @@ export async function renderDashboard() {
     return { j, r: { ...r, projectCount: mine.length } };
   });
   // Changes to JDAs and projects are logged by the tracker; changes to invoices and payments by the audit log. One list shows both.
-  const named = [...await listLog(), ...(await audit()).map(auditLine)].sort((a, b) => b.ts.localeCompare(a.ts)).map(a => {
+  const named = [...await listLog(null, LOG_LINES), ...(await audit({ limit: LOG_LINES })).map(auditLine)].sort((a, b) => b.ts.localeCompare(a.ts)).map(a => {
     const p = projects.find(x => x.id === a.projectId);
     return { ...a, detail: p ? `${p.jdaName} / ${p.name}: ${a.detail}` : a.detail };
   });
@@ -48,7 +48,7 @@ export async function renderDashboard() {
       checkDates(v);
       const created = await addJda(v);
       await addLog(created.id, 'jda', `JDA "${v.name}" created, ${v.startDate} to ${v.endDate}`);
-      refresh();
+      forget(); refresh();
     }
   });
 

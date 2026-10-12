@@ -16,7 +16,7 @@ export function startRender(loading, redraw) {
   inPlace = false;
   if (!again) page.innerHTML = `<p>${loading}</p>`;
   return {
-    page,
+    page, again, // again: this is a redraw in place, after a change made on this page
     current() {
       if (mine !== latest) throw new Superseded();
       if (!again) return;
