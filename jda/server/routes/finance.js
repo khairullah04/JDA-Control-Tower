@@ -42,6 +42,6 @@ export default function financeRoutes(finance, storage) {
   router.post('/:kind/delete', run(req => finance.remove(kindOf(req), ids(req), actor(req))));
   router.post('/:kind/restore', run(req => finance.restore(kindOf(req), ids(req), actor(req))));
   router.post('/:kind/recalculate', run(req => finance.recalculate(kindOf(req), ids(req), req.body || {}, actor(req))));
-  router.post('/:kind/import', run(req => finance.importRecords(kindOf(req), Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req), { dryRun: req.body?.dryRun === true })));
+  router.post('/:kind/import', run(req => finance.importRecords(kindOf(req), Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req), { dryRun: req.body?.dryRun === true, duplicates: req.body?.duplicates === 'add' ? 'add' : 'skip' })));
   return router;
 }

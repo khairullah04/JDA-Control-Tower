@@ -4,6 +4,7 @@
 // "Save changes"; the "Update from Google Drive" buttons load the Drive folders into those drafts.
 import { setupBlockEditor } from './block-editor.js';
 import { starterBlocks, cleanBlocks } from './blocks.js';
+import { withProjectIds, linkTasks, newId } from './progress.js';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -12,6 +13,8 @@ const NEW_PRESS = { text: '', more: '', url: '', linkText: 'Read the full releas
 
 export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today }){
   let d = draft, p = progress;
+  // Tasks are tied to their project by its id, not its name (progress.js), so a rename keeps them together.
+  p.projects = withProjectIds(p.projects); p.tasks = linkTasks(p.tasks, p.projects);
   const dirty = { master: false, progress: false };
   let part = 'master'; // which draft the controls being built right now belong to
   const openDescriptions = new Set(); // likewise for project descriptions
@@ -311,6 +314,9 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
     input.onchange = changeP(() => set(input.value));
     return input;
   }
+  // The project choices on each task row, kept in step with the project names as they are typed on the other screen.
+  const projectOptions = () => '<option value="">Not linked to a project</option>' + p.projects.filter(x => x.name).map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  const refreshProjectPickers = () => $('tasksBody').querySelectorAll('select.ed-select').forEach(pick => { pick.innerHTML = projectOptions(); pick.value = pick._task.projectId || ''; });
   function decorateProgress(){
     part = 'progress';
     // Overall progress
@@ -320,7 +326,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
 
     $('projectGrid').querySelectorAll('.project-card').forEach((card, i) => {
       const pr = p.projects[i];
-      text(card.querySelector('h4'), v => { p.tasks.forEach(t => { if (t.project === pr.name) t.project = v; }); pr.name = v; }, 'Project name');
+      text(card.querySelector('h4'), v => { pr.name = v; p.tasks.forEach(t => { if (t.projectId === pr.id) t.project = v; }); refreshProjectPickers(); }, 'Project name');
       text(card.querySelector('.project-meta'), v => pr.owner = v, 'Owner');
       const pct = card.querySelector('.project-pct');
       text(pct, v => {
@@ -337,9 +343,9 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
       card.append(tools(bar(
         button(`Status: ${statusLabel[pr.status] || statusLabel.green}`, changeP(() => pr.status = cycle(RAG, pr.status))),
         toggle,
-        button('Delete', changeP(() => { openDescriptions.clear(); p.tasks.forEach(t => { if (t.project === pr.name) t.project = ''; }); p.projects.splice(i, 1); }), 'danger')), description));
+        button('Delete', changeP(() => { openDescriptions.clear(); p.tasks.forEach(t => { if (t.projectId === pr.id) { delete t.projectId; t.project = ''; } }); p.projects.splice(i, 1); }), 'danger')), description));
     });
-    const addProject = bar(button('+ Add project', changeP(() => p.projects.push({ name: '', owner: '', pct: 0, status: 'green', description: '' }))));
+    const addProject = bar(button('+ Add project', changeP(() => p.projects.push({ id: newId(), name: '', owner: '', pct: 0, status: 'green', description: '' }))));
     addProject.style.gridColumn = '1 / -1';
     $('projectGrid').append(addProject);
 
@@ -365,9 +371,14 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
       name.textContent = t.task;
       const project = document.createElement('select');
       project.className = 'ed-select';
-      project.innerHTML = '<option value="">Not linked to a project</option>' + p.projects.filter(x => x.name).map(x => `<option>${esc(x.name)}</option>`).join('');
-      project.value = t.project || '';
-      project.onchange = () => { t.project = project.value; touched('progress'); };
+      project._task = t;
+      project.innerHTML = projectOptions();
+      project.value = t.projectId || '';
+      project.onchange = () => {
+        const chosen = p.projects.find(x => x.id === project.value);
+        if (chosen) Object.assign(t, { projectId: chosen.id, project: chosen.name }); else { delete t.projectId; t.project = ''; }
+        touched('progress');
+      };
       task.replaceChildren(name, bar(project, button('Delete', changeP(() => p.tasks.splice(i, 1)), 'danger')));
       text(name, v => t.task = v, 'Task');
       text(owner, v => t.owner = v, 'Owner');
@@ -418,7 +429,9 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
       if (!Object.keys(sections).length) sayP("Nothing to load: no readable files in this JDA's Overall Progress or Weekly Progress folders.");
       else {
         // Each section the files cover replaces that section of the draft; the others stay as they are.
+        const before = p.projects;
         Object.assign(p, sections);
+        p.projects = withProjectIds(p.projects, before); p.tasks = linkTasks(p.tasks, p.projects); // projects from Drive keep the ids they had
         openDescriptions.clear(); touched('progress'); redrawProgress();
         const parts = [];
         if (out.counts.overall) parts.push(`overall progress (${count(out.counts.overall, 'file')})`);
@@ -491,6 +504,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
   function cleanedProgress(){
     const o = JSON.parse(JSON.stringify(p));
     o.projects = o.projects.filter(x => x.name);
+    o.tasks = linkTasks(o.tasks, o.projects); // each linked task carries its project's current name; one whose project is gone keeps only the text
     o.challenges = o.challenges.filter(x => x.title || x.description);
     o.tasks = o.tasks.filter(x => x.task);
     o.updates = o.updates.filter(x => x.text);

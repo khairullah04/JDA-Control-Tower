@@ -1,25 +1,33 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { memoryStore } from '../web/js/finance/service.js';
+import { adminDb, hasKey } from './firebase-admin.js';
 
 // Where the CJI3 register, the sanctioned amounts and their audit log are kept.
-//   firestore - the Firebase project's database, reached with a service-account key. The real one.
+//   firestore - the Firebase project's database, reached with the service-account key. The real one.
 //   file      - a JSON file beside the server, for trying things out before the key is in place.
-// FINANCE_STORE picks one. Left unset it is firestore when a key (or the emulator) is configured,
-// and file otherwise. Either way the browser never touches this data directly.
-const FILE = fileURLToPath(new URL('./.finance-data.json', import.meta.url));
+//   memory    - nothing kept at all (the tests).
+// FINANCE_STORE picks one, and must be set when NODE_ENV=production. Left unset elsewhere, it is
+// firestore when a key (or the emulator) is configured and file otherwise. Any other value stops
+// the server: a typing mistake must not quietly send invoices to a local file.
+// To move what a file holds into Firestore: node scripts/finance-file-to-firestore.mjs
+export const FILE = fileURLToPath(new URL('./.finance-data.json', import.meta.url));
 
-function fileStore() {
-  let db = {};
-  try { db = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { /* first run */ }
-  return memoryStore(db, all => { fs.writeFileSync(FILE + '.tmp', JSON.stringify(all)); fs.renameSync(FILE + '.tmp', FILE); });
+// Only "there is no file yet" counts as a first run. A file that exists but cannot be read stops the
+// server: starting empty would let the next save overwrite the whole register.
+export function readFinanceFile(file = FILE) {
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); }
+  catch (e) { if (e.code === 'ENOENT') return {}; throw new Error(`The finance file ${file} cannot be read (${e.code || e.message}). Fix it or restore it from a backup; the server will not start without it.`); }
+  try { const db = JSON.parse(text); if (!db || typeof db !== 'object' || Array.isArray(db)) throw new Error('not an object'); return db; }
+  catch (e) { throw new Error(`The finance file ${file} is damaged (${e.message}). Restore it from a backup (backups/<date>/finance-data.json); the server will not start on a damaged file, because the next save would replace it.`); }
+}
+function fileStore(file = FILE) {
+  return memoryStore(readFinanceFile(file), all => { fs.writeFileSync(file + '.tmp', JSON.stringify(all)); fs.renameSync(file + '.tmp', file); });
 }
 
 async function firestoreStore() {
-  const { initializeApp, applicationDefault } = await import('firebase-admin/app');
-  const { getFirestore } = await import('firebase-admin/firestore');
-  const emulator = !!process.env.FIRESTORE_EMULATOR_HOST;
-  const db = getFirestore(initializeApp({ ...(!emulator && { credential: applicationDefault() }), ...(process.env.FIREBASE_PROJECT_ID && { projectId: process.env.FIREBASE_PROJECT_ID }) }));
+  const db = await adminDb('portal');
   const rows = snap => snap.docs.map(d => ({ ...d.data(), id: d.id }));
   return {
     // `where: [field, value]` or `latest: n, by: field` narrow what is read; without them, the whole collection.
@@ -28,20 +36,25 @@ async function firestoreStore() {
       return rows(await (where ? all.where(where[0], '==', where[1]) : latest ? all.orderBy(by, 'desc').limit(latest) : all).get());
     },
     get: async (coll, id) => { const d = await db.collection(coll).doc(id).get(); return d.exists ? { ...d.data(), id } : null; },
-    // One batch is all-or-nothing, so a record and its audit lines are saved together (a batch holds 500 writes; a large import is split).
-    commit: async writes => {
-      for (let i = 0; i < writes.length; i += 400) {
-        const batch = db.batch();
-        for (const w of writes.slice(i, i + 400)) batch.set(db.collection(w.coll).doc(w.id), w.data);
-        await batch.commit();
-      }
-    }
+    // One all-or-nothing step, as a Firestore transaction: everything the step reads is checked again at
+    // commit, so if someone else saved in between, the step is run again on the new state.
+    atomic: step => db.runTransaction(async t => {
+      const { writes = [], result } = await step({
+        list: async coll => rows(await t.get(db.collection(coll))),
+        get: async (coll, id) => { const d = await t.get(db.collection(coll).doc(id)); return d.exists ? { ...d.data(), id } : null; }
+      });
+      for (const w of writes) t.set(db.collection(w.coll).doc(w.id), w.data);
+      return result;
+    })
   };
 }
 
-export async function openStore() {
-  const key = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  const kind = process.env.FINANCE_STORE || (process.env.FIRESTORE_EMULATOR_HOST || (key && fs.existsSync(key)) ? 'firestore' : 'file');
+const KINDS = ['firestore', 'file', 'memory'];
+export async function openStore(env = process.env) {
+  const asked = env.FINANCE_STORE;
+  if (asked && !KINDS.includes(asked)) throw new Error(`FINANCE_STORE is "${asked}". It must be one of: ${KINDS.join(', ')}.`);
+  if (!asked && env.NODE_ENV === 'production') throw new Error('FINANCE_STORE is not set. In production, say where invoices and payments are kept: FINANCE_STORE=firestore.');
+  const kind = asked || (hasKey('portal') ? 'firestore' : 'file');
   if (kind === 'firestore') return { kind, store: await firestoreStore() };
-  return kind === 'memory' ? { kind, store: memoryStore() } : { kind: 'file', store: fileStore() };
+  return kind === 'memory' ? { kind, store: memoryStore() } : { kind, store: fileStore(env.FINANCE_FILE || FILE) };
 }

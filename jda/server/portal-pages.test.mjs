@@ -90,3 +90,35 @@ test('Master Page: an emptied part stays empty once the editor has saved it', ()
   const c = contentFromOverview({ ...saved(), aspiration: [], press: null, solutionGroups: [] }, jda3);
   assert.deepEqual([c.aspiration, c.press, c.solutionGroups], [[], null, []]);
 });
+
+const { withProjectIds, linkTasks, tasksOf, projectOf } = await import('../../portal/js/progress.js');
+
+test('progress: a task stays with its project through a rename, and is never matched on an empty name', () => {
+  let projects = withProjectIds([{ name: 'Alpha' }, { name: '' }, { name: 'Beta', id: 'b1' }]);
+  assert.ok(projects.every(p => p.id) && new Set(projects.map(p => p.id)).size === 3);
+  let tasks = linkTasks([{ task: 'one', project: 'Alpha' }, { task: 'two', project: '' }, { task: 'three', project: 'Gone' }, { task: 'four', project: 'Beta' }], projects);
+  assert.deepEqual(tasks.map(t => [t.task, t.project, t.projectId]), [['one', 'Alpha', projects[0].id], ['two', '', undefined], ['three', 'Gone', undefined], ['four', 'Beta', 'b1']]);
+
+  projects[1] = { ...projects[1], name: 'N' };                                         // the unnamed project gets its first letter
+  assert.deepEqual(tasksOf(projects[1], tasks, projects), []);                         // the unlinked task is NOT swept into it
+  projects[0] = { ...projects[0], name: 'Alpha renamed' };
+  tasks = linkTasks(tasks, projects);
+  assert.deepEqual(tasks.map(t => [t.task, t.project]), [['one', 'Alpha renamed'], ['two', ''], ['three', 'Gone'], ['four', 'Beta']]);
+  assert.deepEqual(tasksOf(projects[0], tasks, projects).map(t => t.task), ['one']);
+
+  projects = projects.filter(p => p.id !== 'b1');                                      // Beta is deleted
+  tasks = linkTasks(tasks, projects);
+  assert.deepEqual([tasks[3].project, 'projectId' in tasks[3]], ['Beta', false]);      // its task keeps the name as text and no link
+  assert.equal(projectOf(tasks[3], projects), null);
+});
+
+test('progress: projects arriving without ids (Drive, the feed) keep the ids they had', () => {
+  const before = withProjectIds([{ name: 'Alpha' }, { name: 'Beta' }]);
+  const after = withProjectIds([{ name: 'Beta', pct: 50 }, { name: 'New' }, { name: 'Alpha' }], before);
+  assert.deepEqual([after[0].id, after[2].id], [before[1].id, before[0].id]);
+  assert.ok(after[1].id && ![before[0].id, before[1].id].includes(after[1].id));
+  const twins = withProjectIds([{ name: 'Same' }, { name: 'Same' }], withProjectIds([{ name: 'Same' }]));
+  assert.notEqual(twins[0].id, twins[1].id);                                           // two with one name never share an id
+  // a task saved by name only (an older report) still finds its project
+  assert.deepEqual(tasksOf(after[0], [{ task: 't', project: 'Beta' }, { task: 'u', project: '' }], after).map(t => t.task), ['t']);
+});

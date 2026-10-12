@@ -24,7 +24,11 @@ export function isDate(s) { // a real calendar date, written YYYY-MM-DD
 export const isMonth = s => /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
 export const live = r => !r.deletedAt;
 export const partnerKey = p => str(p).toUpperCase();
-export const invoiceKey = e => [e.jdaId, str(e.invoiceNo).toUpperCase(), e.projectId].join('|'); // what must be unique
+// What must be unique among invoices: JDA + invoice number + project. One invoice may bill several
+// projects of a JDA, so the project is part of it. The partner (vendor) is deliberately NOT part of
+// it: this assumes two vendors never issue the same invoice number for one project. If they can,
+// add partnerKey(e.partner) here; the review raised it and the owner chose to leave it (#20).
+export const invoiceKey = e => [e.jdaId, str(e.invoiceNo).toUpperCase(), e.projectId].join('|');
 
 // The table's three amounts: original currency -> MYR -> taxed MYR. Tax is charged on the MYR amount.
 export function amounts({ currency, netMinor, rate, taxRateBps }) {
@@ -53,6 +57,7 @@ export function build(kind, input, prev, settings) {
     jdaId: pick('jdaId'), jdaName: pick('jdaName'), projectId: pick('projectId'), projectCode: pick('projectCode'), partner: pick('partner'),
     month: pick('month'), currency: pick('currency').toUpperCase(), description: pick('description'), remarks: pick('remarks')
   };
+  if (pick('legacyId')) r.legacyId = pick('legacyId'); // the id it had in the old tracker, so it is never brought over twice
   need(r.jdaId, 'Choose a JDA');
   need(r.projectId && r.projectCode, 'Choose a project');
   need(r.partner, 'Partner is required');

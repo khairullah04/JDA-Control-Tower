@@ -189,7 +189,7 @@ export function openRecord(kind, ctx, { record = null, preset = {} } = {}) {
     const btn = $('.primary', d), msg = $('#form-msg', d), jda = ctx.jdas.find(j => j.id === get('jdaId')), project = ctx.projects.find(p => p.id === get('projectId'));
     const foreign = get('currency') !== BASE;
     const out = {
-      ...(record && { id: record.id }), jdaId: jda?.id || '', jdaName: jda?.name || '', projectId: project?.id || '', projectCode: project?.name || '', partner: get('partner'),
+      ...(record && { id: record.id, expectedUpdatedAt: record.updatedAt }), jdaId: jda?.id || '', jdaName: jda?.name || '', projectId: project?.id || '', projectCode: project?.name || '', partner: get('partner'),
       month: get('month'), currency: get('currency'), amount: get('amount'), taxRate: get('taxRate'), description: get('description'), remarks: get('remarks'),
       ...(foreign && { rate: get('rate'), rateDate: get('rateDate'), rateSource: get('rateSource') || 'Entered by hand', rateOverridden: overridden }),
       ...(entry && {

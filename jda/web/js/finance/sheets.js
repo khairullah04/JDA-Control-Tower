@@ -192,7 +192,7 @@ export function legacyEntryInput(inv, where, rates = {}) {
   const currency = text(inv.currency).toUpperCase(), taxRate = percentOf(inv.taxRate);
   const verdict = inv.verdict || (['approved', 'flagged', 'rejected'].includes(inv.status) ? inv.status : 'approved');
   return {
-    ...where, draft: true, source: 'migrated', partner: text(inv.vendor), vendor: text(inv.vendor), invoiceNo: text(inv.invoiceNo), documentDate: text(inv.date),
+    ...where, draft: true, source: 'migrated', legacyId: inv.id ? `invoice:${inv.id}` : '', partner: text(inv.vendor), vendor: text(inv.vendor), invoiceNo: text(inv.invoiceNo), documentDate: text(inv.date),
     dueDate: text(inv.dueDate), currency, amount: draftAmount(inv.amount, currency, toBps(taxRate)), taxRate,
     rate: currency && currency !== BASE && rates[currency] != null ? String(rates[currency]) : undefined, rateSource: 'old tracker setting',
     status: inv.status === 'paid' ? 'paid' : verdict === 'rejected' ? 'rejected' : verdict === 'approved' ? 'approved' : 'pending',
@@ -201,6 +201,6 @@ export function legacyEntryInput(inv, where, rates = {}) {
 }
 // An old WBS item is a sanctioned amount. The old tracker compared it with tax-inclusive invoices as it stood, so it comes over with no tax added.
 export const legacySanctionedInput = (item, where, partner) => ({
-  ...where, source: 'migrated', partner: partner || 'TBC', month: text(item.plannedDate).slice(0, 7), currency: BASE, amount: String(item.amount ?? ''), taxRate: '0',
+  ...where, source: 'migrated', legacyId: item.id ? `wbs:${item.id}` : '', partner: partner || 'TBC', month: text(item.plannedDate).slice(0, 7), currency: BASE, amount: String(item.amount ?? ''), taxRate: '0',
   description: text(item.description), remarks: 'Moved from the old WBS list'
 });

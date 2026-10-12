@@ -11,6 +11,7 @@ import { blocksHtml } from './blocks.js';
 import { logoFor, contentFromOverview as overviewContent, overviewFromContent as contentOverview, blocksOf } from './overview.js';
 import { esc } from '../../shared/esc.js';
 import { digest, digests } from '../../shared/digest.js';
+import { withProjectIds, linkTasks, tasksOf } from './progress.js';
 
 const $ = id => document.getElementById(id);
 const empty = (text = 'Not added yet.', style = '') => `<p class="detail-tasks-empty"${style ? ` style="${style}"` : ''}>${text}</p>`;
@@ -227,9 +228,9 @@ function getCurrentMonthIndex(startMonth){
   return (now.getFullYear() - sy) * 12 + (now.getMonth() + 1 - sm);
 }
 
-function renderDetailTasks(projectName, tasks){
+function renderDetailTasks(project, tasks){
   const container = $('detailTasks');
-  const assigned = (tasks || []).filter(t => t.project === projectName);
+  const assigned = tasksOf(project, tasks || [], currentData.projects || []);
   assigned.sort((a, b) => (a.due || '9999-99-99').localeCompare(b.due || '9999-99-99'));
   if (!assigned.length){
     container.innerHTML = empty('No tasks assigned yet.');
@@ -418,7 +419,7 @@ function showProjectDetail(slug){
   pill.className = "status-pill " + (statusColor[p.status] || "green");
   pill.textContent = statusLabel[p.status] || "On track";
   $('detailPct').textContent = p.pct + "%";
-  const assignedTasks = renderDetailTasks(p.name, currentData.tasks);
+  const assignedTasks = renderDetailTasks(p, currentData.tasks);
   $('detailDescription').textContent = p.description || "No description added yet.";
   const fill = $('detailFill');
   fill.style.width = "0";
@@ -686,6 +687,9 @@ $('driveSyncBtn').onclick = async () => {
     if (!out.found) throw new Error(`No folder named "${jda.name}" in the portal's Drive folder.`);
     const { driveSync, ...sections } = out.patch;
     if (Object.keys(sections).length){
+      // Projects from Drive keep the ids they had here, and tasks stay tied to them (progress.js).
+      if (out.patch.projects) out.patch.projects = withProjectIds(out.patch.projects, currentData.projects || []);
+      if (out.patch.tasks) out.patch.tasks = linkTasks(out.patch.tasks, out.patch.projects || currentData.projects || []);
       await saveReport(out.patch);
       const n = out.counts, parts = [];
       if (n.overall && sections.challenges) parts.push(`overall progress (${files(n.overall)})`);

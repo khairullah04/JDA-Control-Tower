@@ -33,8 +33,13 @@ export function openImport(kind, ctx, jdaId = '') {
   let ready = [];
 
   // Read the file, turn its rows into inputs, and ask what each would become - without saving anything.
+  // A sanctioned amount that matches one already entered is shown as such and left out, unless the
+  // box is ticked to say it really is a further amount.
+  let fresh = [], repeats = [];
+  const chosen = () => [...fresh, ...($('#import-repeats', d)?.checked ? repeats : [])];
+  const count = () => { go.disabled = !chosen().length; go.textContent = `Import ${chosen().length} row(s)`; };
   async function preview() {
-    ready = []; go.disabled = true; out.innerHTML = ''; msg.textContent = '';
+    fresh = []; repeats = []; go.disabled = true; out.innerHTML = ''; msg.textContent = '';
     const file = el.file.files[0], jda = ctx.jdas.find(j => j.id === el.jdaId.value);
     if (!file || !jda || (entry && !el.status.value)) return;
     out.innerHTML = '<p class="legend">Reading the file…</p>';
@@ -44,30 +49,34 @@ export function openImport(kind, ctx, jdaId = '') {
       const read = k.read(rows, { jda, projects: ctx.projects.filter(p => p.jdaId === jda.id), status: entry ? el.status.value : '' });
       const usable = read.filter(r => !r.error), checked = (await finance.importRecords(kind, usable.map(r => r.input), { dryRun: true })).results;
       const lines = read.map(r => r.error ? { line: r.line, ok: false, errors: [r.error], record: r.input } : { line: r.line, input: r.input, ...checked[usable.indexOf(r)] });
-      ready = lines.filter(l => l.ok).map(l => l.input);
-      out.innerHTML = `<p><b>${ready.length}</b> of ${lines.length} row(s) can be imported.${lines.length > ready.length ? ' The others are listed with the reason and will be left out.' : ''}</p>
+      fresh = lines.filter(l => l.ok && !l.duplicate).map(l => l.input); repeats = lines.filter(l => l.ok && l.duplicate).map(l => l.input);
+      const refused = lines.length - fresh.length - repeats.length;
+      out.innerHTML = `<p><b>${fresh.length}</b> of ${lines.length} row(s) can be imported.${refused ? ` ${refused} cannot; each says why and will be left out.` : ''}</p>
+        ${repeats.length ? `<label class="check"><input type="checkbox" id="import-repeats"> Also add the ${repeats.length} row(s) that match a sanctioned amount already entered (same project, partner, month and amount). Tick this only if they really are further amounts; otherwise the sanctioned total is counted twice.</label>` : ''}
         <div class="pt-scroll import-preview"><table><tr><th>Line</th><th>${entry ? 'Invoice' : 'ID'}</th><th>Month</th><th>Partner</th><th class="num">Original</th><th class="num">MYR</th><th class="num">${entry ? 'Taxed MYR' : 'w TAX'}</th>${entry ? '<th>Status</th>' : ''}<th>Result</th></tr>
         ${lines.map(l => { const r = l.record || {}; return `<tr class="${l.ok ? '' : 'bad'}"><td>${l.line}</td><td>${esc(k.name(r))}</td><td>${monthLabel(r.month)}</td><td>${esc(r.partner)}</td>
           <td class="num mono">${l.ok ? esc(money(r.netMinor, r.currency)) : esc(r.amount ?? '')}</td><td class="num mono">${l.ok ? esc(money(r.netMyrMinor)) : ''}</td><td class="num mono">${l.ok ? esc(money(r.grossMyrMinor)) : ''}</td>
-          ${entry ? `<td>${l.ok ? statusBadge(r.status) : ''}</td>` : ''}<td>${l.ok ? 'Ready' : esc(l.errors.join('. '))}</td></tr>`; }).join('')}</table></div>`;
-      go.disabled = !ready.length; go.textContent = `Import ${ready.length} row(s)`;
+          ${entry ? `<td>${l.ok ? statusBadge(r.status) : ''}</td>` : ''}<td>${!l.ok ? esc(l.errors.join('. ')) : l.duplicate ? 'Already entered' : 'Ready'}</td></tr>`; }).join('')}</table></div>`;
+      if ($('#import-repeats', d)) $('#import-repeats', d).onchange = e => { e.stopPropagation(); count(); };
+      count();
     } catch (e) { out.innerHTML = ''; msg.textContent = e.message; }
   }
-  form.onchange = preview;
+  form.onchange = e => { if (e.target.id !== 'import-repeats') preview(); };
   $('#cancel', d).onclick = () => d.close();
   form.onsubmit = async e => {
     e.preventDefault();
     go.disabled = true; msg.textContent = 'Importing…';
-    try { await finance.importRecords(kind, ready); d.close(); ctx.refresh(); }
+    try { await finance.importRecords(kind, chosen(), { duplicates: $('#import-repeats', d)?.checked ? 'add' : 'skip' }); d.close(); ctx.refresh(); }
     catch (err) { msg.textContent = err.message; go.disabled = false; }
   };
 }
 
 // One time only: the invoices and WBS items the tracker kept before the register become CJI3
-// entries and sanctioned amounts. The old records are read, not changed. Anything incomplete
-// comes over as a Pending invoice that says what it is missing.
+// entries and sanctioned amounts. The old records are read, not changed, and each carries its old
+// id across, so however often this is run nothing comes over twice. Nothing is saved until the
+// preview has been seen: it lists what will come over and, row by row, what will not and why.
+// Only after a confirmed run is the offer withdrawn.
 export async function bringOverOldRecords(ctx, button, msg) {
-  if (!confirm('Copy the old tracker\'s invoices and WBS items into the CJI3 register and the sanctioned amounts? The old records are left as they are. This is done once.')) return;
   button.disabled = true; msg.textContent = 'Reading the old records…';
   try {
     const [invoices, scope] = await Promise.all([listLegacyInvoices(), listLegacyScope()]);
@@ -76,11 +85,32 @@ export async function bringOverOldRecords(ctx, button, msg) {
       return { jdaId: j.id || '', jdaName: j.name || '', projectId: p.id || '', projectCode: p.name || '' };
     };
     const vendorOf = item => invoices.find(i => i.matchedScopeId === item.id)?.vendor; // an old WBS item's partner: whoever invoiced against it
-    const entries = await finance.importRecords('entry', invoices.map(i => legacyEntryInput(i, where(i.projectId), config.fxToMYR)));
-    const sanctioned = await finance.importRecords('sanctioned', scope.map(s => legacySanctionedInput(s, where(s.projectId), vendorOf(s))));
-    await finance.saveSettings({ migratedAt: new Date().toISOString() });
-    const skipped = [...entries.results, ...sanctioned.results].filter(r => !r.ok).length;
-    alert(`Brought over ${entries.imported} invoice(s) and ${sanctioned.imported} sanctioned amount(s).${skipped ? ` ${skipped} could not be brought over.` : ''} Invoices that came over incomplete are marked "Incomplete": open each one with Edit.`);
-    ctx.refresh();
-  } catch (e) { msg.textContent = e.message; button.disabled = false; }
+    const fromInvoices = invoices.map(i => legacyEntryInput(i, where(i.projectId), config.fxToMYR)), fromWbs = scope.map(s => legacySanctionedInput(s, where(s.projectId), vendorOf(s)));
+    const [e, w] = await Promise.all([finance.importRecords('entry', fromInvoices, { dryRun: true }), finance.importRecords('sanctioned', fromWbs, { dryRun: true })]);
+    msg.textContent = '';
+    const coming = r => r.ok && !r.duplicate;
+    const nE = e.results.filter(coming).length, nW = w.results.filter(coming).length, incomplete = e.results.filter(r => coming(r) && r.record.missing?.length).length;
+    const refused = [...e.results.map(r => ['Invoice', r]), ...w.results.map(r => ['WBS item', r])].filter(([, r]) => !coming(r));
+    const d = dialog(`<form><h3>Bring over old tracker records</h3>
+      <p>The old tracker holds <b>${invoices.length}</b> invoice record(s) and <b>${scope.length}</b> WBS item(s). <b>${nE}</b> invoice(s) and <b>${nW}</b> sanctioned amount(s) will come over${incomplete ? `; ${incomplete} of the invoices are incomplete and will be marked "Incomplete" for you to finish with Edit` : ''}. The old records themselves are not changed.</p>
+      ${refused.length ? `<p class="msg">${refused.length} will not come over:</p><div class="pt-scroll import-preview"><table><tr><th>What</th><th>Record</th><th>Why</th></tr>
+        ${refused.map(([what, r]) => `<tr class="bad"><td>${what}</td><td>${esc(what === 'Invoice' ? `${r.record.vendor || 'unknown vendor'} ${r.record.invoiceNo || '(no number)'}` : `${r.record.projectCode || '?'} ${r.record.month || ''} ${r.record.description || ''}`)}</td>
+          <td>${esc(r.ok ? 'A sanctioned amount with the same project, partner, month and amount is already entered' : r.errors.join('. '))}</td></tr>`).join('')}</table></div>` : ''}
+      <p class="legend">After this the offer is withdrawn. Run it again before then and nothing comes over twice.</p>
+      <p class="msg" id="form-msg"></p>
+      <div class="row"><button type="button" class="ghost" id="cancel">Not now</button><button class="primary">${nE + nW ? `Bring over ${nE} invoice(s) and ${nW} sanctioned amount(s)` : 'Nothing to bring over: stop offering this'}</button></div></form>`, true);
+    $('#cancel', d).onclick = () => d.close();
+    $('form', d).onsubmit = async ev => {
+      ev.preventDefault();
+      const go = $('.primary', d), note = $('#form-msg', d);
+      go.disabled = true; note.textContent = 'Bringing them over…';
+      try {
+        await finance.importRecords('entry', fromInvoices);
+        await finance.importRecords('sanctioned', fromWbs);
+        await finance.saveSettings({ migratedAt: new Date().toISOString() });
+        d.close(); ctx.refresh();
+      } catch (err) { note.textContent = `${err.message} Nothing is lost: press the button again to carry on where it stopped.`; go.disabled = false; }
+    };
+  } catch (e) { msg.textContent = e.message; }
+  button.disabled = false;
 }

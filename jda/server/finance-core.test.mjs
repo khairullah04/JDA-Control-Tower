@@ -273,3 +273,56 @@ test('a sanctioned amount that covers several months', async () => {
   await assert.rejects(f.saveAll('sanctioned', [split[0], { ...split[1], amount: '-1' }], 'aina'), /Record 2 \(2025-12\): Amount must be a positive number/);
   assert.equal((await f.data()).sanctioned.length, 3);                                                  // one bad month: none of them is saved
 });
+
+test('saves are steps: a stale form is refused, and saves at the same moment cannot both pass the duplicate check', async () => {
+  const f = setup();
+  const a = await f.save('entry', invoice(), 'aina');
+  await f.save('entry', { id: a.id, remarks: 'first', expectedUpdatedAt: a.updatedAt }, 'badrul');
+  await assert.rejects(f.save('entry', { id: a.id, remarks: 'second', expectedUpdatedAt: a.updatedAt }, 'chong'),
+    e => e.status === 409 && /was changed by badrul after you opened it/.test(e.message));
+  assert.equal((await f.data()).entries[0].remarks, 'first');
+
+  const both = await Promise.allSettled([f.save('entry', invoice({ invoiceNo: 'SAME-1' }), 'aina'), f.save('entry', invoice({ invoiceNo: 'SAME-1' }), 'badrul')]);
+  assert.deepEqual(both.map(r => r.status).sort(), ['fulfilled', 'rejected']);
+  assert.equal((await f.data()).entries.filter(e => e.invoiceNo === 'SAME-1').length, 1);
+  const log = await f.audit();
+  assert.equal(log.filter(l => l.ref === 'Invoice SAME-1').length, 1);                                  // the refused one left no audit line either
+});
+
+test('a big change is done in steps, each record with its own audit line', async () => {
+  const f = setup(), many = Array.from({ length: 320 }, (_, i) => invoice({ invoiceNo: `BULK-${i}` }));
+  assert.equal((await f.importRecords('entry', many, 'aina')).imported, 320);
+  const ids = (await f.data()).entries.map(e => e.id);
+  const paid = await f.setStatus(ids, 'paid', 'badrul');
+  assert.deepEqual([paid.changed, paid.records.length, paid.records.every(r => r.status === 'paid')], [320, 320, true]);
+  assert.equal((await f.remove('entry', ids.slice(0, 150), 'chong')).changed, 150);
+  const log = await f.audit({ limit: 5000 });
+  assert.deepEqual(['import', 'status', 'delete'].map(a => log.filter(l => l.action === a).length), [320, 320, 150]);
+});
+
+test('importing sanctioned amounts twice does not double them', async () => {
+  const f = setup(), row = (month, amount) => ({ ...base, month, currency: 'MYR', amount });
+  const file = [row('2025-08', '813000'), row('2025-09', '100000')];
+  assert.equal((await f.importRecords('sanctioned', file, 'aina')).imported, 2);
+  const preview = await f.importRecords('sanctioned', [...file, row('2025-10', '100000')], 'aina', { dryRun: true });
+  assert.deepEqual(preview.results.map(r => [r.ok, !!r.duplicate]), [[true, true], [true, true], [true, false]]);   // the preview says which are already entered
+  const again = await f.importRecords('sanctioned', [...file, row('2025-10', '100000')], 'aina');
+  assert.deepEqual([again.imported, again.results.map(r => r.added)], [1, [false, false, true]]);                  // left out unless asked for
+  assert.equal((await f.data()).sanctioned.length, 3);
+  const twice = await f.importRecords('sanctioned', [row('2025-08', '813000'), row('2025-08', '813000')], 'aina', { duplicates: 'add' });
+  assert.equal(twice.imported, 2);                                                                                  // a deliberate further amount is still possible
+  assert.equal(paymentTable((await f.data()).sanctioned, []).find(r => r.month === '2025-08').withTaxMinor, 87804000 * 3);
+});
+
+test('old tracker records are brought over once, however often it is run', async () => {
+  const f = setup(), where = { jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA' };
+  const invoices = [{ id: 'old1', vendor: 'Dialog', invoiceNo: '', date: '2026-03-15', currency: 'MYR', amount: 108, taxRate: 0.08, status: 'paid' },
+    { id: 'old2', vendor: 'Dialog', invoiceNo: '', date: '2026-03-16', currency: 'MYR', amount: 216, taxRate: 0.08 }].map(i => legacyEntryInput(i, where));
+  const wbs = [legacySanctionedInput({ id: 's1', description: 'M3', amount: 500, plannedDate: '2026-03-28' }, where, 'Dialog')];
+  assert.deepEqual([(await f.importRecords('entry', invoices, 'aina')).imported, (await f.importRecords('sanctioned', wbs, 'aina')).imported], [2, 1]);
+  const second = [await f.importRecords('entry', invoices, 'aina'), await f.importRecords('sanctioned', wbs, 'aina', { duplicates: 'add' })];
+  assert.deepEqual(second.map(r => r.imported), [0, 0]);                                                            // invoices with no number included
+  assert.match(second[0].results[0].errors.join(), /Already brought over/);
+  const d = await f.data();
+  assert.deepEqual([d.entries.length, d.sanctioned.length], [2, 1]);
+});
