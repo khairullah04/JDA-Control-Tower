@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'node:url';
-import invoice from './routes/invoice.js';
 import chat from './routes/chat.js';
 import drive from './routes/drive.js';
 import portal from './routes/portal.js';
@@ -30,7 +29,6 @@ app.use(cors({ origin: origins.includes('*') ? '*' : origins }));
 app.use(express.json({ limit: '25mb' }));
 app.use('/api/portal', portal); // passkey-gated, before the sign-in check: the portal has no login
 app.use('/api', requireUser);
-app.use('/api/invoice', invoice);
 app.use('/api/chat', rateLimit({ windowMs: 60_000, max: 20, what: 'questions' }), chat);
 app.use('/api/drive', rateLimit({ windowMs: 10 * 60_000, max: 300, what: 'Drive requests' }), drive); // a sync reads one file per request
 // CJI3 register and Payment Tables: signed in as above, and behind the Invoice Tracker passkey as well.

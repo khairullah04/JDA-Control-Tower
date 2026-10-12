@@ -1,6 +1,6 @@
 import { chat } from '../services/ai.js';
 import { config } from '../config/index.js';
-import { $ } from './dom.js';
+import { $, esc } from './dom.js';
 import { state } from './state.js';
 import { mdToHtml } from './markdown.js';
 
@@ -16,7 +16,7 @@ export function refreshCopilot() {
   const ctx = state.context();
   $('#copilot-context').textContent = `Viewing: ${ctx.page || 'Dashboard'}`;
   $('#copilot-chips').innerHTML = (config.copilotChips[state.page] || [])
-    .map(t => `<button type="button">${t.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))}</button>`).join('');
+    .map(t => `<button type="button">${esc(t)}</button>`).join('');
 }
 
 async function ask(text) {

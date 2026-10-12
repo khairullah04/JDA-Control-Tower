@@ -1,6 +1,6 @@
 // Minimal, safe markdown renderer for AI chat replies: escapes HTML first, then adds
 // bold/italic/code, bullet & numbered lists, headings and pipe tables. No external libraries.
-const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+import { esc as escHtml } from '../../../../shared/esc.js';
 
 function inline(s) {
   return s

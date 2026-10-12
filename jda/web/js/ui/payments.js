@@ -62,7 +62,7 @@ export function renderPayments(root, ctx, { jda, projectId = '' }) {
               <p class="legend">Total is the paid invoices only: ${money(r.actualMinor)} of ${money(r.invoicedMinor)} invoiced.</p>
               <button type="button" class="ghost btn-sm" data-add-e="${esc(r.key)}">+ Add invoice to this row</button></div>
           </div></td></tr>`;
-      }).join('') || '<tr><td colspan="15">Nothing here yet. Add a sanctioned amount, or enter an invoice in the CJI3 list below.</td></tr>'}
+      }).join('') || '<tr><td colspan="15">Nothing here yet. Add a sanctioned amount, or enter an invoice in the CJI3 register (Invoices (CJI3), above).</td></tr>'}
     </table></div>
     <p class="legend">Variance = Total (paid) − w TAX. <span class="flag over">Over sanctioned</span> <span class="flag within">Within sanctioned</span> <span class="flag under">Under sanctioned</span></p>
     ${gone.length ? `<details class="pt-gone"><summary>Deleted sanctioned amounts (${gone.length})</summary><table>

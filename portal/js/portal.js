@@ -1,10 +1,11 @@
 // The portal's main page: one card per JDA (live progress) and the Administration gateway.
-import { getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { JDAS, INVOICE_TRACKER_URL, SYNC_API_URL } from './config/app-config.js';
+import { getDoc } from '../../shared/vendor/firebase-firestore.js';
+import { JDAS, INVOICE_TRACKER_URL } from './config/app-config.js';
+import { portalApi } from './api.js';
+import { esc } from '../../shared/esc.js';
 import { isConfigured, reportRefFor } from './config/firebase.js';
 
 const $ = id => document.getElementById(id);
-const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const statusLabel = { green: 'On track', amber: 'At risk', red: 'Delayed' };
 const reportUrl = j => `jda-report.html#/${j.id}`; // hash, not ?jda=: see the note at the top of report.js
 
@@ -74,14 +75,8 @@ function wireAdmin() {
   $('adminLink').href = INVOICE_TRACKER_URL;
   const tryUnlock = async () => {
     $('adminMsg').textContent = '';
-    let res;
-    try {
-      res = await fetch(`${SYNC_API_URL}/api/portal/unlock`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jdaId: 'admin', passkey: $('adminPasskey').value }) });
-    } catch { $('adminMsg').textContent = `Couldn't reach the server at ${SYNC_API_URL || location.origin}. Is it running?`; return; }
-    const out = await res.json().catch(() => ({}));
-    if (!res.ok) { $('adminMsg').textContent = out.error || 'The passkey could not be checked.'; return; }
-    sessionStorage.setItem('jda-finance-token', out.token);
-    open();
+    try { sessionStorage.setItem('jda-finance-token', (await portalApi('unlock', { jdaId: 'admin', passkey: $('adminPasskey').value })).token); open(); }
+    catch (e) { $('adminMsg').textContent = e.message; }
   };
   $('adminUnlock').onclick = tryUnlock;
   $('adminPasskey').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });

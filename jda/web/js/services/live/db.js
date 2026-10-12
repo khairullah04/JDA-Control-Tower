@@ -1,5 +1,5 @@
 import { collection, getDocs, addDoc, updateDoc, doc, getDoc, setDoc, query, where, orderBy, limit, deleteField }
-  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+  from '../../../../../shared/vendor/firebase-firestore.js';
 import { db, auth } from './firebase.js';
 import { config } from '../../config/index.js';
 import { toMinor } from '../../finance/money.js';
@@ -30,7 +30,6 @@ export async function listJdas() {
   }
   return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
-export const getJda = async id => ({ id, ...(await getDoc(doc(db, 'jdas', id))).data() });
 export const addJda = j => addDoc(collection(db, 'jdas'), j);
 export const updateJda = (id, j) => updateDoc(doc(db, 'jdas', id), j);
 export const listProjectsByJda = jdaId => byField('projects', 'jdaId', jdaId).then(l => l.sort((a, b) => a.name.localeCompare(b.name)));
@@ -45,7 +44,6 @@ export async function listAllProjectsWithJda(jdaList) {
   return rows(projSnap).map(p => ({ ...p, jdaName: jmap[p.jdaId] || '—' })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export const getProject = async id => ({ id, ...(await getDoc(doc(db, 'projects', id))).data() });
 export const addProject = p => addDoc(collection(db, 'projects'), p);
 // A budget is kept in sen (budgetMinor). Saving one removes the whole-ringgit `budget` an older project may still carry, so there is one figure, not two.
 export const updateProject = (id, p) => updateDoc(doc(db, 'projects', id), 'budgetMinor' in p ? { ...p, budget: deleteField() } : p);

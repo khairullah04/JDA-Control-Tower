@@ -1,9 +1,9 @@
 import { config } from '../config/index.js';
 import { ringgit } from '../finance/money.js';
 export { checkDates, checkProject } from './checks.js';
+export { esc } from '../../../../shared/esc.js'; // the one escaping function, shared with the portal
 
 export const $ = (s, r = document) => r.querySelector(s);
-export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const rm = ringgit; // headline figures: whole ringgit, from an amount in sen
 export const pct = n => Math.round((n || 0) * 100) + '%';
 // Spend as a share of budget, drawn like the portal's progress bars: track, gradient fill and a mono % label.

@@ -4,7 +4,7 @@
 import { BLOCK_TYPES, COLUMNS, isText, newId, newBlock, cleanBlocks, cleanHtml, textOf, layout, placeStyle } from './blocks.js';
 
 const $ = id => document.getElementById(id);
-const SORTABLE_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js';
+const SORTABLE_URL = new URL('../../shared/vendor/Sortable.min.js', import.meta.url).href; // kept in the repository, not fetched from a CDN
 let sortableLoading;
 const loadSortable = () => sortableLoading ??= new Promise((resolve, reject) => {
   if (window.Sortable) return resolve();

@@ -2,7 +2,7 @@
 // { id, type: 'boxes', items: [{ title, text }] } for a row of boxes. This module is shared by the
 // page that shows them (report.js) and the page that edits them (block-editor.js), so what is
 // edited and what is published are drawn by the same code.
-const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+import { esc } from '../../shared/esc.js';
 
 export const BLOCK_TYPES = [
   { type: 'h1', label: 'Header', placeholder: 'Type a header…' },

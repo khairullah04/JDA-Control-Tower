@@ -32,7 +32,7 @@ export async function requireUser(req, res, next) {
     });
     if (!r.ok) {
       const reason = (await r.json().catch(() => ({}))).error?.message || '';
-      if (/API key/i.test(reason)) return res.status(500).json({ error: 'The server cannot check sign-ins: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in web/js/config/firebase-config.js.' });
+      if (/API key/i.test(reason)) return res.status(500).json({ error: 'The server cannot check sign-ins: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in shared/firebase-config.js.' });
       return res.status(401).json({ error: 'Session expired. Sign in again.' });
     }
     const email = ((await r.json()).users?.[0]?.email || '').toLowerCase();

@@ -1,10 +1,9 @@
 import ExcelJS from 'exceljs';
 import { parseCsv } from '../web/js/finance/sheets.js';
+import { cellText } from './cells.js';
 
 // Excel in and out for the CJI3 register and the Payment Tables. The browser decides what the
 // cells mean (web/js/finance/sheets.js); this only turns a file into rows of text and back.
-const cellText = v => v == null ? '' : v instanceof Date ? v.toISOString().slice(0, 10)
-  : typeof v !== 'object' ? String(v) : v.result !== undefined ? cellText(v.result) : v.text !== undefined ? String(v.text) : (v.richText || []).map(r => r.text).join('');
 
 // A .xlsx or .csv file -> [{ name, rows }], one per sheet, blank rows kept (a blank row ends a table).
 export async function readSheets(name, buffer) {

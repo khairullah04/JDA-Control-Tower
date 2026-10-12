@@ -1,8 +1,8 @@
 import { config } from '../config/index.js';
 const db = config.demoMode ? await import('./demo/db.js') : await import('./live/db.js');
 export const {
-  listJdas, getJda, addJda, updateJda, listProjectsByJda, listAllProjectsWithJda,
-  getProject, addProject, updateProject, listLegacyScope, listLegacyInvoices,
+  listJdas, addJda, updateJda, listProjectsByJda, listAllProjectsWithJda,
+  addProject, updateProject, listLegacyScope, listLegacyInvoices,
   listLog, listProcessedFileIds, markFileProcessed
 } = db;
 // A change-log line is written after the change it describes has been saved. If the line cannot be

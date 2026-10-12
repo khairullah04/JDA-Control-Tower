@@ -19,8 +19,9 @@ export const INVOICE_TRACKER_URL = '/tracker/';
 // The Administration card's passkey (the Invoice Tracker's) is not here either: it is "admin" in
 // jda/server/portal-passkeys.json, checked by the server like each JDA's.
 
-// Microsoft Calendar sync (Edit report). See the reference SETUP.md, section 5, for the Azure AD
-// app registration that produces a real client ID. Needs the page served over http(s).
+// Microsoft Calendar sync (Edit report). The card stays hidden until a real client ID is set here.
+// portal/README.md, "Microsoft Calendar", has the Azure AD app registration that produces one.
+// Needs the page served over http(s).
 export const MS_CLIENT_ID = 'YOUR_AZURE_AD_CLIENT_ID';
 export const MS_AUTHORITY = 'https://login.microsoftonline.com/organizations';
 

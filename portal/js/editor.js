@@ -5,9 +5,9 @@
 import { setupBlockEditor } from './block-editor.js';
 import { starterBlocks, cleanBlocks } from './blocks.js';
 import { withProjectIds, linkTasks, newId } from './progress.js';
+import { esc } from '../../shared/esc.js';
 
 const $ = id => document.getElementById(id);
-const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const newSolution = () => ({ title: '', tier: 'Tier 1', art: null, tags: [], blocks: starterBlocks() });
 const NEW_PRESS = { text: '', more: '', url: '', linkText: 'Read the full release →', img: '' };
 

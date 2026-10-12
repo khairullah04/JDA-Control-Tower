@@ -2,8 +2,9 @@
 // and Edit report, plus the Editor Page (#/<id>/edit) - the same Master Page made editable.
 // Behaviour is ported from the JDA3 reference file's inline script; what differs per JDA is its
 // content entry (config/jda-content.js) and where its report document lives (config/app-config.js).
-import { onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { JDAS, DEFAULT_JDA_ICON, MS_CLIENT_ID, MS_AUTHORITY, SYNC_API_URL } from './config/app-config.js';
+import { onSnapshot } from '../../shared/vendor/firebase-firestore.js';
+import { JDAS, DEFAULT_JDA_ICON, MS_CLIENT_ID, MS_AUTHORITY } from './config/app-config.js';
+import { portalApi } from './api.js';
 import { isConfigured, reportRefFor } from './config/firebase.js';
 import { contentFor, SOLUTION_ICONS } from './config/jda-content.js';
 import { startEditor } from './editor.js';
@@ -35,19 +36,7 @@ const TOKEN_KEY = `jda-edit-${jda.id}`;
 let token = sessionStorage.getItem(TOKEN_KEY) || '';
 sessionStorage.removeItem(TOKEN_KEY);
 const masterHash = `#/${jda.id}`;
-async function api(path, body = {}){
-  let res;
-  try {
-    res = await fetch(`${SYNC_API_URL}/api/portal/${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Portal-Token': token },
-      body: JSON.stringify({ jda: { id: jda.id, name: jda.name }, ...body })
-    });
-  } catch { throw new Error(`Couldn't reach the server at ${SYNC_API_URL || location.origin}. Is it running?`); }
-  const out = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(out.error || 'Request failed'), { status: res.status, changed: out.changed });
-  return out;
-}
+const api = (path, body = {}) => portalApi(path, { jda: { id: jda.id, name: jda.name }, ...body }, token);
 async function unlock(passkey){
   token = (await api('unlock', { jdaId: jda.id, passkey })).token;
 }
@@ -748,6 +737,20 @@ function setMsCalStatus(state, msg){
   }
 }
 
+// The card is shown only once a client ID has been configured (config/app-config.js); until then
+// there is nothing it could do. Microsoft's sign-in library is fetched when "Connect" is pressed,
+// not with every report view, and only if it is byte for byte the version this page was written for.
+const msCalConfigured = !!MS_CLIENT_ID && !MS_CLIENT_ID.startsWith('YOUR_');
+$('msCalCard').hidden = !msCalConfigured;
+const MSAL = { src: 'https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js', integrity: 'sha384-OJTwghM0Gh3Zc+gmd6l0lz1pFw9KuHHq0mSEZgmQEKgMnuSWWDb3bU9KzuD7w2hU' };
+let msalLoading;
+const loadMsal = () => msalLoading ??= new Promise((resolve, reject) => {
+  if (window.msal) return resolve();
+  const s = Object.assign(document.createElement('script'), { ...MSAL, crossOrigin: 'anonymous', onload: resolve });
+  s.onerror = () => { msalLoading = null; reject(new Error("Microsoft's sign-in library could not be loaded. Check the network and try again.")); };
+  document.head.append(s);
+});
+
 function ensureMsalInstance(){
   if (msalInstance) return msalInstance;
   if (!window.msal) return null;
@@ -762,20 +765,17 @@ function ensureMsalInstance(){
 }
 
 $('connectMsCalBtn').onclick = async () => {
-  if (MS_CLIENT_ID.startsWith("YOUR_")){
-    setMsCalStatus('error', "Microsoft Client ID isn't configured yet — see SETUP.md.");
+  if (!msCalConfigured){
+    setMsCalStatus('error', "Microsoft Client ID isn't configured yet — see portal/README.md, \"Microsoft Calendar\".");
     return;
   }
   if (location.protocol === 'file:'){
     setMsCalStatus('error', "Microsoft sign-in needs http(s) — run a local server or use the deployed URL, not the file:// path.");
     return;
   }
-  const app = ensureMsalInstance();
-  if (!app){
-    setMsCalStatus('error', "Microsoft sign-in library still loading — try again in a second.");
-    return;
-  }
   try {
+    await loadMsal();
+    const app = ensureMsalInstance();
     const resp = await app.loginPopup({ scopes: ['Calendars.ReadWrite'] });
     msAccessToken = resp.accessToken;
     setMsCalStatus('connected');

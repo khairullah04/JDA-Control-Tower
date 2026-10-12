@@ -1,4 +1,5 @@
 import mammoth from 'mammoth';
+import { cellText } from './cells.js';
 import ExcelJS from 'exceljs';
 import { drive, ALL } from './drive.js';
 
@@ -94,8 +95,6 @@ const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const IMAGES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const TEXTS = ['text/plain', 'text/csv', 'text/markdown', 'application/json'];
 
-const cellText = v => v == null ? '' : v instanceof Date ? v.toISOString().slice(0, 10)
-  : typeof v === 'object' ? String(v.result ?? v.text ?? (v.richText || []).map(r => r.text).join('') ?? '') : String(v);
 
 async function workbookText(buffer) {
   const wb = new ExcelJS.Workbook();
