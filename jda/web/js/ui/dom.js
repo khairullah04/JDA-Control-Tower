@@ -1,8 +1,9 @@
 import { config } from '../config/index.js';
+import { ringgit } from '../finance/money.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-export const rm = n => 'RM ' + Number(n || 0).toLocaleString('en-MY', { maximumFractionDigits: 0 });
+export const rm = ringgit; // headline figures: whole ringgit, from an amount in sen
 export const pct = n => Math.round((n || 0) * 100) + '%';
 // Spend as a share of budget, drawn like the portal's progress bars: track, gradient fill and a mono % label.
 export const spendBar = ratio => `<div class="spend-row"><div class="progress-track tall${ratio > 1 ? ' over' : ''}"><div class="progress-fill" style="width:${Math.min((ratio || 0) * 100, 100)}%"></div></div><div class="project-pct">${pct(ratio)}</div></div>`;

@@ -1,39 +1,39 @@
-import { listJdas, listProjectsByJda, listInvoices, listScope, addJda, addLog, listLog } from '../services/db.js';
-import { computeReport } from '../services/analytics.js';
+import { addJda, addLog, listLog } from '../services/db.js';
+import { audit } from '../services/finance.js';
+import { computeReport, ofProject } from '../services/analytics.js';
+import { money } from '../finance/money.js';
 import { $, esc, rm, spendBar, JDA_DATE_FIELDS, checkDates } from './dom.js';
 import { state } from './state.js';
 import { openForm } from './modal.js';
 import { runSync } from './sync.js';
 import { renderLog } from './log.js';
+import { loadCtx, storageNotice, auditLine } from './finance-ui.js';
 
 export async function renderDashboard() {
   const page = $('#page');
   page.innerHTML = '<p>Loading JDAs…</p>';
-  const jdas = await listJdas();
-  const allProjects = [];
-  const rollups = await Promise.all(jdas.map(async j => {
-    const projects = await listProjectsByJda(j.id);
-    allProjects.push(...projects.map(p => ({ ...p, jdaName: j.name })));
-    const reports = await Promise.all(projects.map(async p => computeReport(p, await listScope(p.id), await listInvoices(p.id))));
-    const r = reports.reduce((acc, rep) => ({
-      budget: acc.budget + rep.budget, actual: acc.actual + rep.actual, forecast: acc.forecast + rep.forecast,
-      needsReview: acc.needsReview + rep.counts.needsReview, projectCount: acc.projectCount + 1
-    }), { budget: 0, actual: 0, forecast: 0, needsReview: 0, projectCount: 0 });
-    return { j, r };
-  }));
-  const activity = await listLog();
-  const named = activity.map(a => {
-    const p = allProjects.find(x => x.id === a.projectId);
+  const ctx = await loadCtx(renderDashboard), { jdas, projects, fin } = ctx;
+  const rollups = jdas.map(j => {
+    const mine = projects.filter(p => p.jdaId === j.id);
+    const r = mine.map(p => computeReport(p, ofProject(fin.sanctioned, p.id), ofProject(fin.entries, p.id))).reduce((acc, rep) => ({
+      budget: acc.budget + rep.budget, actual: acc.actual + rep.actual, forecast: acc.forecast + rep.forecast, pending: acc.pending + rep.counts.pending
+    }), { budget: 0, actual: 0, forecast: 0, pending: 0 });
+    return { j, r: { ...r, projectCount: mine.length } };
+  });
+  // Changes to JDAs and projects are logged by the tracker; changes to invoices and payments by the audit log. One list shows both.
+  const named = [...await listLog(), ...(await audit()).map(auditLine)].sort((a, b) => b.ts.localeCompare(a.ts)).map(a => {
+    const p = projects.find(x => x.id === a.projectId);
     return { ...a, detail: p ? `${p.jdaName} / ${p.name}: ${a.detail}` : a.detail };
   });
 
-  page.innerHTML = `<div class="section-head"><h2>JDAs</h2><button class="primary" id="sync-drive">Sync from Drive</button></div><div class="grid-4">
+  page.innerHTML = `<div class="section-head"><h2>JDAs</h2><div class="row"><a class="ghost" href="#/cji3">CJI3 register</a><button class="primary" id="sync-drive">Sync from Drive</button></div></div>
+    ${storageNotice(ctx)}<div class="grid-4">
     ${rollups.map(({ j, r }) => `
       <a class="card" href="#/jda/${j.id}">
         <h3>${esc(j.name)}</h3>
-        <div>${rm(r.actual)} of ${rm(r.budget)}</div>
+        <div>${rm(r.actual)} paid of ${rm(r.budget)}</div>
         ${spendBar(r.budget ? r.actual / r.budget : 0)}
-        <small>${r.projectCount} project(s) · ${r.needsReview} need review</small>
+        <small>${r.projectCount} project(s) · ${r.pending} invoice(s) pending</small>
       </a>`).join('')}
     <div class="card add" id="add-jda" role="button" tabindex="0">+ Add JDA</div></div>
 
@@ -53,7 +53,7 @@ export async function renderDashboard() {
 
   state.page = 'dashboard';
   state.context = () => ({
-    page: 'Dashboard (all JDAs)',
-    jdas: rollups.map(({ j, r }) => ({ name: j.name, projects: r.projectCount, budget: r.budget, actual: r.actual, forecast: r.forecast, needsReview: r.needsReview }))
+    page: 'Dashboard (all JDAs)', note: 'Actual spend counts paid invoices only, in MYR after tax.',
+    jdas: rollups.map(({ j, r }) => ({ name: j.name, projects: r.projectCount, budget: money(r.budget), paid: money(r.actual), forecast: money(r.forecast), pendingInvoices: r.pending }))
   });
 }

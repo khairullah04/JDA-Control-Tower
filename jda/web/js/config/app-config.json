@@ -18,7 +18,9 @@
   "defaultJdaEnd": "2026-12-31",
   "copilotChips": {
     "dashboard": ["Summarise all JDAs", "Which JDA is most over budget?"],
-    "jda": ["Summarise this JDA", "Which of its projects needs review?"],
-    "project": ["Summarise this project", "Are we over budget?", "Which invoices need review?", "Forecast at completion?"]
+    "jda": ["Summarise this JDA", "Which months are over their sanctioned amount?"],
+    "project": ["Summarise this project", "Are we over budget?", "Which invoices are still pending?", "Forecast at completion?"],
+    "cji3": ["Summarise the register", "Which invoices are still pending?"],
+    "payments": ["Summarise this payment table", "Which months are over their sanctioned amount?"]
   }
 }

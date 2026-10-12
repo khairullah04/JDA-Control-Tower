@@ -16,17 +16,15 @@ export const DEFAULT_JDA_ICON = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 
 // (e.g. a relative path if deployed alongside, or a full https:// URL if hosted separately).
 export const INVOICE_TRACKER_URL = '/tracker/';
 
-// Gates Administration on the portal main page only. Friction, not security: anyone who opens dev
-// tools can read this. Each JDA's editing passkey is checked by the server instead, and lives in
-// jda/server/portal-passkeys.json.
-export const ADMIN_PASSKEY = '12345';
+// The Administration card's passkey (the Invoice Tracker's) is not here either: it is "admin" in
+// jda/server/portal-passkeys.json, checked by the server like each JDA's.
 
 // Microsoft Calendar sync (Edit report). See the reference SETUP.md, section 5, for the Azure AD
 // app registration that produces a real client ID. Needs the page served over http(s).
 export const MS_CLIENT_ID = 'YOUR_AZURE_AD_CLIENT_ID';
 export const MS_AUTHORITY = 'https://login.microsoftonline.com/organizations';
 
-// The JDA server (jda/server): checks each JDA's passkey, reads Drive and runs Claude for the
+// The JDA server (jda/server): checks every passkey, reads Drive and runs Claude for the
 // "Update from Google Drive" buttons on the Editor Page and Edit report.
 // Empty = the same address this page is served from (the usual setup: the server serves the portal).
 export const SYNC_API_URL = '';

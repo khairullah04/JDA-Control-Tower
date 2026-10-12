@@ -172,8 +172,8 @@ numbers, and never another JDA's content. To fill it in:
 
 1. Firestore rules: the `jdaReports` block in `firestore-rules-addition.txt` on the portal's
    project, and the `report` block from the reference `SETUP.md` on the JDA3 project.
-2. In `js/config/app-config.js`, set `INVOICE_TRACKER_URL` and change `ADMIN_PASSKEY`; change the
-   JDA passkeys in `jda/server/portal-passkeys.json`. In
+2. In `js/config/app-config.js`, set `INVOICE_TRACKER_URL`; change the JDA passkeys and the
+   Invoice Tracker's (`"admin"`) in `jda/server/portal-passkeys.json`. In
    `jda/web/js/config/app-config.json`, set `portalUrl` to wherever this portal is served.
 3. Run everything with one command: `cd jda/server && npm start`. The server serves this portal at
    http://localhost:8080 and the Invoice Tracker at http://localhost:8080/tracker/, alongside its API.
@@ -181,5 +181,6 @@ numbers, and never another JDA's content. To fill it in:
 4. Microsoft Calendar sync (Edit report) needs `MS_CLIENT_ID` in `js/config/app-config.js`; see
    section 5 of the reference `SETUP.md`.
 
-`ADMIN_PASSKEY` gates Administration on the main page only. It is friction, not security: it sits
-in client-side code.
+The Administration card's passkey is the Invoice Tracker's (`"admin"` in `portal-passkeys.json`). The
+server checks it and hands the tracker a session; without one the tracker's invoices and payments
+cannot be read, whichever way it is opened.

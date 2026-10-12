@@ -1,4 +1,4 @@
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, setDoc, query, where }
+import { collection, getDocs, addDoc, updateDoc, doc, getDoc, setDoc, query, where }
   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { db, auth } from './firebase.js';
 import { config } from '../../config/index.js';
@@ -46,12 +46,10 @@ export const getProject = async id => ({ id, ...(await getDoc(doc(db, 'projects'
 export const addProject = p => addDoc(collection(db, 'projects'), p);
 export const updateProject = (id, p) => updateDoc(doc(db, 'projects', id), p);
 
-export const listScope = id => byField('scope', 'projectId', id);
-export const listInvoices = id => byField('invoices', 'projectId', id);
-export const addScope = s => addDoc(collection(db, 'scope'), s);
-export const addInvoice = i => addDoc(collection(db, 'invoices'), i);
-export const updateInvoice = (id, data) => updateDoc(doc(db, 'invoices', id), data);
-export const deleteInvoice = id => deleteDoc(doc(db, 'invoices', id));
+// Invoices and sanctioned amounts now live behind the server (services/finance.js). These two read
+// the collections the tracker used before that, only so their records can be brought over once.
+export const listLegacyScope = () => getDocs(collection(db, 'scope')).then(rows);
+export const listLegacyInvoices = () => getDocs(collection(db, 'invoices')).then(rows);
 
 export const addLog = (projectId, action, detail) => addDoc(collection(db, 'activity'), { projectId, action, by: usernameOf(), detail, ts: new Date().toISOString() });
 export async function listLog(projectId) {

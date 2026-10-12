@@ -1,0 +1,119 @@
+/* CJI3 register and Payment Tables. Colours and shapes follow the portal's design (index5):
+   its status pills, glass cards and IBM Plex Mono figures. */
+:root{--ok:#1f9d6b;--ok-tint:#dff3ea;--warn:#c68a3f;--warn-tint:#f6ecd9;--bad:#b3453a;--bad-tint:#f6e0de;--info-tint:#dbeeec;--idle-tint:#eef0ef;
+  --glass-bg:linear-gradient(165deg,rgba(255,255,255,.96),rgba(231,244,243,.62));--glass-brd:rgba(0,133,124,.17)}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.banner.notice{margin-bottom:1rem}
+
+/* Status pills: payment status, and a Payment Table row against its sanctioned amount */
+.st,.flag{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.st.paid{background:var(--ok-tint);color:var(--ok)}
+.st.approved{background:var(--info-tint);color:var(--teal-700)}
+.st.pending{background:var(--warn-tint);color:var(--warn)}
+.st.rejected,.flag.over{background:var(--bad-tint);color:var(--bad)}
+.flag.under{background:var(--blue-tint);color:var(--blue)}
+.flag.within{background:var(--idle-tint);color:var(--muted)}
+select.st-select{appearance:none;width:auto;border:1px solid transparent;border-radius:20px;font-size:11.5px;font-weight:700;padding:3px 24px 3px 11px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 13px) center,calc(100% - 8px) center;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+select.st-select.paid{background-color:var(--ok-tint);color:var(--ok)}
+select.st-select.approved{background-color:var(--info-tint);color:var(--teal-700)}
+select.st-select.pending{background-color:var(--warn-tint);color:var(--warn)}
+select.st-select.rejected{background-color:var(--bad-tint);color:var(--bad)}
+
+/* The summary cells above a Payment Table */
+.pt-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;margin-bottom:1rem}
+.pt-summary>div{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:12px;padding:.7rem .9rem}
+.pt-summary small{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.pt-summary b{font-family:'IBM Plex Mono',monospace;font-size:1.02rem;color:var(--teal-800)}
+.pt-summary .over b{color:var(--bad)}
+
+/* Tables: a glass card that scrolls sideways, as wide as the sheet it mirrors */
+.pt-scroll{overflow-x:auto;border:1px solid var(--glass-brd);border-radius:14px;background:var(--glass-bg);container-type:inline-size}
+.pt-scroll table{font-size:.82rem;white-space:nowrap}
+.pt-scroll th{background:none;font-size:10.5px;border-bottom:1px solid var(--glass-brd)!important;border-radius:0!important}
+.pt-scroll td{border-bottom-color:var(--glass-brd)}
+td.actions{white-space:nowrap}
+td.actions button+button{margin-left:.3rem}
+
+/* fifteen columns: headings wrap and cells are tight, so the variance and status stay in view on a desktop screen */
+.pt-table th{white-space:normal;vertical-align:bottom;line-height:1.25}
+.pt-table th,.pt-table td{padding:.55rem .45rem}
+.pt-table td:first-child,.pt-table th:first-child{padding-left:.8rem}
+.pt-table .desc-cell{white-space:normal;min-width:110px}
+/* Total, Variance and Status stay in view while the rest of the sheet scrolls under them */
+@media (min-width:900px){
+  .pt-table .pin{position:sticky;z-index:1;background:#f5faf9}
+  .pt-table .pin.status{right:0;min-width:150px}
+  .pt-table .pin.var{right:var(--pin-var,150px);min-width:104px}
+  .pt-table .pin.total{right:var(--pin-total,254px);min-width:104px;box-shadow:-10px 0 10px -10px rgba(2,62,58,.3)}
+  .pt-row:hover td.pin,.pt-row.open td.pin{background:var(--teal-050)}
+}
+.pt-row{cursor:pointer}
+.pt-row td:first-child{border-left:3px solid var(--line)}
+.pt-row.over td:first-child{border-left-color:var(--bad)}
+.pt-row.under td:first-child{border-left-color:var(--blue)}
+.pt-row.over .variance{color:var(--bad);font-weight:700}
+.pt-row.under .variance{color:var(--blue)}
+.pt-row.open td{background:var(--teal-050)}
+.pt-row:focus-visible{outline:2px solid var(--teal-500);outline-offset:-2px}
+.pt-id{font-weight:700;color:var(--teal-800)}
+.pt-line{line-height:1.75}
+.pt-line.unpaid{color:var(--muted)}
+.pt-detail>td{background:rgba(255,255,255,.75);white-space:normal;padding:1rem}
+.pt-detail tr:hover td,.pt-detail:hover>td{background:none}
+.pt-detail:hover>td{background:rgba(255,255,255,.75)}
+/* an opened row's detail keeps to the visible width of the table, however far the sheet is scrolled */
+.pt-detail-grid{display:grid;gap:1.25rem;position:sticky;left:1rem;width:calc(100cqw - 2rem)}
+.pt-detail-grid>div{min-width:0;overflow-x:auto}
+.pt-detail h4{margin:0 0 .4rem;font-size:.85rem}
+.pt-detail table{margin-bottom:.6rem}
+.pt-detail .legend{margin:.2rem 0 .6rem}
+.pt-gone{margin-top:.75rem;font-size:.85rem}
+summary{cursor:pointer;font-weight:600;color:var(--teal-700)}
+
+/* The register */
+.reg-filters{margin-bottom:.6rem}
+.reg-filters select{max-width:14rem}
+.reg-filters input[type=search]{width:min(330px,100%);border-radius:999px;font-size:.82rem;padding:.4rem .9rem}
+label.check{display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;white-space:nowrap}
+input[type=checkbox]{width:auto;padding:0}
+.reg-bulk{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .8rem;margin-bottom:.6rem;background:var(--teal-050);border:1px solid var(--teal-100);border-radius:12px;font-size:.85rem}
+.reg-bulk select{width:auto;font-size:.8rem;padding:.3rem .6rem;border-radius:999px}
+button.sort{all:unset;cursor:pointer;white-space:nowrap}
+button.sort.on{color:var(--teal-700)}
+button.sort:focus-visible{outline:2px solid var(--teal-500);outline-offset:2px}
+tr.gone td{color:var(--muted)}
+tr.gone td b{text-decoration:line-through}
+.reg-total td{font-weight:600;border-top:2px solid var(--glass-brd);background:rgba(255,255,255,.6)}
+td.overdue{color:var(--bad);font-weight:700}
+
+/* The form an invoice or a sanctioned amount is entered in, and the other dialogs */
+dialog.wide{width:min(900px,95vw)}
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem}
+.rec-rate{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:.75rem;align-items:end;padding:.75rem;border:1px dashed var(--teal-100);border-radius:12px;background:var(--teal-050)}
+.rec-rate small{grid-column:1/-1}
+.rec-preview{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .9rem;padding:.75rem .9rem;border-radius:12px;background:var(--glass-bg);border:1px solid var(--glass-brd)}
+.rec-preview span{display:grid}
+.rec-preview small{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.rec-preview b{font-family:'IBM Plex Mono',monospace}
+.rec-preview .arrow{color:var(--muted)}
+.rec-form details{border:1px solid var(--line);border-radius:12px;padding:.6rem .8rem}
+.rec-form details[open] summary{margin-bottom:.6rem}
+.audit,.import-preview{max-height:55vh;overflow:auto}
+.audit td,.import-preview td{white-space:normal}
+tr.bad td{color:var(--bad)}
+@media (max-width:640px){.rec-rate{grid-template-columns:1fr}}
+
+/* The Payment Table and the CJI3 register have pages of their own that use the whole window */
+#page.wide{max-width:none}
+.scope-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:1rem}
+.scope-bar .ghost.on{background:var(--teal-700);border-color:var(--teal-700);color:var(--white)}
+.scope-bar select{width:auto;font-size:.85rem;padding:.45rem .8rem;border-radius:999px}
+/* However long a name, number or remark is, it stays inside its column: it is cut with … and shown in full on hover and in Edit */
+.pt-scroll td:not(.num):not(.actions){max-width:17rem;overflow:hidden;text-overflow:ellipsis}
+.pt-table td:not(.num):not(.actions){max-width:11rem}
+.clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.pt-scroll td.desc-cell{white-space:normal;overflow-wrap:anywhere}
+.pt-detail>td{max-width:none!important;overflow:visible!important}
+.rec-form input,.rec-form select{min-width:0}

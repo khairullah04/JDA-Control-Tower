@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --experimental-test-module-mocks --test portal-drive.test.mjs portal-sync.test.mjs"
+    "test": "node --experimental-test-module-mocks --test portal-drive.test.mjs portal-sync.test.mjs finance-core.test.mjs finance-api.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.60.0",
@@ -12,6 +12,7 @@
     "dotenv": "^16.4.5",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
+    "firebase-admin": "^14.5.0",
     "googleapis": "^144.0.0",
     "mammoth": "^1.13.0"
   }

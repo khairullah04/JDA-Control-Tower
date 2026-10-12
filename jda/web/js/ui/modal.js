@@ -2,6 +2,7 @@ import { $, esc } from './dom.js';
 
 export function openForm({ title, fields, submit = 'Save', onSubmit }) {
   const d = $('#modal');
+  d.className = '';
   d.innerHTML = `<form><h3>${esc(title)}</h3>
     ${fields.map(f => f.type === 'select'
       ? `<label>${esc(f.label)}<select name="${f.name}" ${f.required === false ? '' : 'required'}>

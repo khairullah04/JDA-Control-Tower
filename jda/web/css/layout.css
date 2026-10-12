@@ -43,4 +43,4 @@
 .copilot{width:390px;flex:none;position:sticky;top:var(--topbar-h);height:calc(100vh - var(--topbar-h));background:var(--white);
   border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(2,62,58,.08);display:flex;flex-direction:column}
 @media (max-width:900px){.copilot{position:fixed;right:0;top:var(--topbar-h);width:min(100%,390px);z-index:6}}
-@media (max-width:600px){#page{padding:1.25rem 1rem 3rem}.topbar{padding:.5rem 1rem}.brand{font-size:.9rem}}
+@media (max-width:600px){#page{padding:1.25rem 1rem 3rem}.topbar{padding:.5rem 1rem;flex-wrap:wrap}.brand{font-size:.9rem}}

@@ -1,8 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Signed-in users read and write the tracker's JDAs, projects and activity log directly.
+    // Invoices, sanctioned amounts and their audit log (the finance... collections) are not open to
+    // any browser: only the server touches them, with its service-account key, which these rules do
+    // not apply to. That is what makes the passkey, the validation and the audit log binding.
+    match /{collection}/{document=**} {
+      allow read, write: if request.auth != null && !collection.matches('finance.*');
+    }
+    // The portal's report pages for JDA 1, 2 and 4, which have no sign-in (see portal/firestore-rules-addition.txt).
+    match /jdaReports/{doc} {
+      allow read, write: if true;
     }
   }
 }

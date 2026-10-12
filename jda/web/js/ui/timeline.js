@@ -1,12 +1,14 @@
 import { $, esc, rm } from './dom.js';
-import { toMYR, verdictOf, paymentStatusOf, STATUS_LABEL } from '../services/analytics.js';
+import { money } from '../finance/money.js';
+import { live, isMonth, COUNTS_AS_ACTUAL } from '../finance/core.js';
 
 const LEVELS = ['all', 'month', 'week', 'day']; // zoom in = later in this list
 const LABEL = { all: 'All', month: 'Month', week: 'Week', day: 'Day' };
 const WIDTH = { month: 76, week: 42, day: 28 };
 const GAP = 2; // px between columns; matches .tl-chart's gap
 const VIEWS = { bars: 'Bar chart', curve: 'Cumulative spend' };
-let level = 'week'; // first glance is weekly; zoom in for days, out for months
+// Amounts are whole sen. A bar's height is only a share of the tallest one, so plain division is fine there.
+let level = 'month'; // sanctioned amounts are set by the month; zoom in for weeks and days
 let view = 'bars';
 // "All" is the month view with columns narrowed until the whole range fits without scrolling.
 const grain = () => level === 'all' ? 'month' : level;
@@ -36,27 +38,31 @@ const titleOf = (b, g) => g === 'month' ? fmt(b.start, { month: 'long', year: 'n
   : fmt(b.start, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
 
 // `range` is the owning JDA's start/end: the axis always covers it, plus anything dated outside it.
-export function renderTimeline(root, { project, scope, invoices, range }) {
-  const sc = scope.filter(s => okDate(s.plannedDate));
-  const inv = invoices.filter(i => verdictOf(i) !== 'rejected' && okDate(i.date));
+// Sanctioned amounts (with tax) sit on the first day of their month. A paid invoice sits in its
+// payment month - on its invoice date when that falls in the month, otherwise on the first - so
+// each month here adds up to the same figures as the Payment Table.
+export function renderTimeline(root, { project, sanctioned, entries, range }) {
+  const sc = sanctioned.filter(s => live(s) && isMonth(s.month)).map(s => ({ ...s, on: `${s.month}-01` }));
+  const inv = entries.filter(e => live(e) && e.status === COUNTS_AS_ACTUAL && isMonth(e.month))
+    .map(e => ({ ...e, on: okDate(e.documentDate) && e.documentDate.startsWith(e.month) ? e.documentDate : `${e.month}-01` }));
   const today = iso(new Date());
   // The axis runs to the end of the current month at least, so it grows by itself as months pass.
   const thisMonthEnd = iso(addDays(monthStart(parse(today), 1), -1));
-  const dates = [range?.start, range?.end, project.startDate, project.endDate, ...sc.map(s => s.plannedDate), ...inv.map(i => i.date)].filter(okDate);
-  if (!dates.length) { root.innerHTML = '<h3>Planned vs actual over time</h3><small>Set project dates to see the timeline.</small>'; return; }
+  const dates = [range?.start, range?.end, project.startDate, project.endDate, ...sc.map(s => s.on), ...inv.map(i => i.on)].filter(okDate);
+  if (!dates.length) { root.innerHTML = '<h3>Sanctioned vs paid over time</h3><small>Set project dates to see the timeline.</small>'; return; }
   dates.push(thisMonthEnd); dates.sort();
   const from = dates[0], to = dates[dates.length - 1];
   const months = buckets(from, to, 'month');
 
   root.innerHTML = `
-    <div class="section-head"><h3>Planned vs actual over time</h3>
+    <div class="section-head"><h3>Sanctioned vs paid over time</h3>
       <div class="tl-controls">
         <select id="tl-jump" aria-label="Jump to month">${months.map(m => `<option value="${m.key}">${fmt(m.start, { month: 'long', year: 'numeric' })}</option>`).join('')}</select>
         <div class="seg" id="tl-view">${Object.entries(VIEWS).map(([v, l]) => `<button type="button" data-view="${v}">${esc(l)}</button>`).join('')}</div>
         <div class="seg" id="tl-level">${LEVELS.map(l => `<button type="button" data-level="${l}">${LABEL[l]}</button>`).join('')}</div>
         <button type="button" id="tl-out" aria-label="Zoom out">-</button><button type="button" id="tl-in" aria-label="Zoom in">+</button>
       </div></div>
-    <div class="legend"><span class="a">■</span> Planned <span class="b">■</span> Actual · <span id="tl-max"></span> · Ctrl + scroll to zoom · click a bar for details</div>
+    <div class="legend"><span class="a">■</span> Sanctioned (w TAX) <span class="b">■</span> Paid · <span id="tl-max"></span> · Ctrl + scroll to zoom · click a bar for details</div>
     <div class="tl-scroll" id="tl-scroll"><div class="tl-chart" id="tl-chart"></div></div>
     <div class="tl-detail" id="tl-detail"></div>`;
 
@@ -66,8 +72,8 @@ export function renderTimeline(root, { project, scope, invoices, range }) {
   function draw(focusDate) {
     const list = buckets(from, to, grain());
     cur = Object.fromEntries(list.map(b => [b.key, { ...b, planned: 0, actual: 0, scope: [], inv: [] }]));
-    sc.forEach(s => { const b = cur[keyOf(s.plannedDate, grain())]; b.planned += s.amount; b.scope.push(s); });
-    inv.forEach(i => { const b = cur[keyOf(i.date, grain())]; b.actual += toMYR(i); b.inv.push(i); });
+    sc.forEach(s => { const b = cur[keyOf(s.on, grain())]; b.planned += s.grossMyrMinor; b.scope.push(s); });
+    inv.forEach(i => { const b = cur[keyOf(i.on, grain())]; b.actual += i.grossMyrMinor; b.inv.push(i); });
     let cp = 0, ca = 0;
     list.forEach(({ key }) => { cp += cur[key].planned; ca += cur[key].actual; cur[key].cp = cp; cur[key].ca = ca; });
 
@@ -88,7 +94,7 @@ export function renderTimeline(root, { project, scope, invoices, range }) {
       }
       prevMon = mon;
       const label = grain() === 'month' ? fmt(b.start, { month: w < 34 ? 'narrow' : 'short' }) : b.start.slice(8);
-      const tip = [titleOf(b, grain()), `Planned ${rm(b.planned)} (cumulative ${rm(b.cp)})`, `Actual ${rm(b.actual)} (cumulative ${rm(b.ca)})`].join('\n');
+      const tip = [titleOf(b, grain()), `Sanctioned ${rm(b.planned)} (cumulative ${rm(b.cp)})`, `Paid ${rm(b.actual)} (cumulative ${rm(b.ca)})`].join('\n');
       return `<div class="tl-col ${newMonth && idx ? 'month-start' : ''} ${key === todayKey ? 'today' : ''}" data-key="${key}" data-month="${mon}" data-start="${b.start}" title="${esc(tip)}">
         <span class="tl-top">${esc(top)}</span>
         <div class="tl-pair"><i style="height:${h(b.planned)}%"></i><i class="act" style="height:${h(b.actual)}%"></i></div>
@@ -116,10 +122,10 @@ export function renderTimeline(root, { project, scope, invoices, range }) {
         ${dots(b => b.ca, 'curve-actual-dot')}
       </svg>`);
 
-    $('#tl-max', root).textContent = view === 'curve' ? `cumulative total: planned ${rm(cp)}, actual ${rm(ca)}` : `tallest bar ${rm(max)} per ${grain()}`;
+    $('#tl-max', root).textContent = view === 'curve' ? `cumulative total: sanctioned ${rm(cp)}, paid ${rm(ca)}` : `tallest bar ${rm(max)} per ${grain()}`;
     root.querySelectorAll('#tl-level button').forEach(btn => btn.classList.toggle('on', btn.dataset.level === level));
     root.querySelectorAll('#tl-view button').forEach(btn => btn.classList.toggle('on', btn.dataset.view === view));
-    detail.innerHTML = '<small class="legend">Click a bar to see what is due and what was invoiced.</small>';
+    detail.innerHTML = '<small class="legend">Click a bar to see what was sanctioned and what was paid.</small>';
 
     const f = focusDate < from ? from : focusDate > to ? to : focusDate; // keep the view where the user was
     const target = chart.querySelector(`[data-key="${keyOf(f, grain())}"]`) || chart.firstElementChild;
@@ -150,8 +156,8 @@ export function renderTimeline(root, { project, scope, invoices, range }) {
     const b = cur[col.dataset.key];
     const li = (arr, f) => arr.length ? `<ul>${arr.map(f).join('')}</ul>` : '<div class="legend">None</div>';
     detail.innerHTML = `<b>${esc(titleOf(b, grain()))}</b>
-      <div>Planned due: ${rm(b.planned)}${li(b.scope, s => `<li>${esc(s.description)} - ${rm(s.amount)}</li>`)}</div>
-      <div>Invoiced: ${rm(b.actual)}${li(b.inv, i => `<li>${esc(i.vendor)} ${esc(i.invoiceNo)} - ${esc(i.currency)} ${Number(i.amount).toLocaleString()} (${esc(STATUS_LABEL[paymentStatusOf(i)])})</li>`)}</div>`;
+      <div>Sanctioned (w TAX): ${rm(b.planned)}${li(b.scope, s => `<li>${esc(s.projectCode)} ${esc(s.partner)} ${esc(s.description)} - ${money(s.grossMyrMinor)}</li>`)}</div>
+      <div>Paid: ${rm(b.actual)}${li(b.inv, i => `<li>${esc(i.projectCode)} ${esc(i.partner)} ${esc(i.invoiceNo)} - ${esc(money(i.netMinor, i.currency))}, ${money(i.grossMyrMinor)} taxed</li>`)}</div>`;
   };
 
   draw(today);
