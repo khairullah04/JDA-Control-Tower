@@ -1,8 +1,8 @@
-// The JDA Control Tower landing page: one tab per JDA, each showing at a glance its progress and
-// latest key update (from the JDA's report, i.e. Overall and Weekly progress), its documents, key
-// insights, challenges and cost (from the Invoice Tracker). What edit mode writes (/api/site/
-// controlTower) overrides a derived value and is labelled as an override. The Drive sync and Add JDA
-// are the Invoice Tracker's own, run from here.
+// The JDA Control Tower landing page: one tab per JDA, each showing at a glance its progress, cost and
+// latest key update (from the JDA's report, i.e. Overall and Weekly progress, and from the Invoice
+// Tracker), its documents, key insights and challenges. What edit mode writes (/api/site/controlTower)
+// overrides a derived value and is labelled as an override. The Drive sync and Add JDA are the Invoice
+// Tracker's own, run from here.
 import { getDoc } from '../../shared/vendor/firebase-firestore.js';
 import { esc } from '../../shared/esc.js';
 import { toLogin } from '../../shared/session.js';
@@ -11,20 +11,33 @@ import { contentFor } from './config/jda-content.js';
 import { isConfigured, reportRefFor } from './config/firebase.js';
 import './account.js';
 
-const T = '/control-tower/tracker/js/';
-const [{ listJdas, addJda, addLog, listLog }, finance, { paymentTable, tableTotals }, { ringgit }, { runSync }, { openForm }, { renderLog, LOG_LINES }, { auditLine }, { JDA_DATE_FIELDS, checkDates }] = await Promise.all([
-  import(`${T}services/db.js`), import(`${T}services/finance.js`), import(`${T}finance/core.js`), import(`${T}finance/money.js`),
-  import(`${T}ui/sync.js`), import(`${T}ui/modal.js`), import(`${T}ui/log.js`), import(`${T}ui/finance-ui.js`), import(`${T}ui/dom.js`)
-]);
-
 const $ = id => document.getElementById(id);
 const FAILED = { failed: true };
 const SEVERITY = { high: 'High', medium: 'Medium', low: 'Low' };
 const STATUS = { green: 'On track', amber: 'At risk', red: 'Delayed' };
 const SHOWN = 4; // boxes shown before "Show all"
+const STALE_DAYS = 14; // a latest key update older than this is marked
 const reportUrl = (j, screen = '') => `jda-report.html#/${encodeURIComponent(j.id)}${screen}`;
 const fmtDate = iso => { const d = new Date(`${iso}T00:00:00`); return isNaN(d) ? esc(iso || '') : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
+const daysAgo = iso => { const d = new Date(`${iso}T00:00:00`); return isNaN(d) ? null : Math.floor((Date.now() - d) / 86_400_000); };
+const age = n => n === null ? '' : n <= 0 ? 'today' : n === 1 ? 'yesterday' : n < 14 ? `${n} days ago` : n < 60 ? `${Math.round(n / 7)} weeks ago` : `${Math.round(n / 30)} months ago`;
 const svg = (paths, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const notice = (text, warn = false) => { $('ctNotice').textContent = text; $('ctNotice').hidden = !text; $('ctNotice').classList.toggle('warn', warn); };
+
+// The Invoice Tracker's own modules. If they cannot be loaded, the report-based parts still work.
+const T = '/control-tower/tracker/js/';
+let tracker = null;
+try {
+  const [db, finance, core, money, sync, modal, log, financeUi, dom] = await Promise.all([
+    import(`${T}services/db.js`), import(`${T}services/finance.js`), import(`${T}finance/core.js`), import(`${T}finance/money.js`),
+    import(`${T}ui/sync.js`), import(`${T}ui/modal.js`), import(`${T}ui/log.js`), import(`${T}ui/finance-ui.js`), import(`${T}ui/dom.js`)
+  ]);
+  tracker = { ...db, finance, ...core, ...money, ...sync, ...modal, ...log, auditLine: financeUi.auditLine, ...dom };
+} catch (e) {
+  console.error('The Invoice Tracker could not be loaded:', e);
+  notice('The Invoice Tracker could not be loaded just now, so cost figures, Sync from Drive, Add JDA and Recent activity are unavailable. Reload to try again.', true);
+  for (const id of ['syncBtn', 'addJdaBtn']) $(id).disabled = true;
+}
 
 async function getJson(url) {
   const res = await fetch(url);
@@ -38,13 +51,16 @@ async function loadReport(j) {
   try { const snap = await getDoc(reportRefFor(j)); return snap.exists() ? snap.data() : null; }
   catch (e) { console.error(`Could not load ${j.name}'s report:`, e); return FAILED; }
 }
-// Paid (with tax, MYR) against sanctioned (with tax) for each JDA in the Invoice Tracker, by its name.
+// For each JDA in the Invoice Tracker, by its name: paid (with tax, MYR) against sanctioned (with tax),
+// and how many invoices are waiting (Pending).
 async function loadCosts() {
-  const [trackerJdas, fin] = await Promise.all([listJdas(), finance.data()]);
+  if (!tracker) throw new Error('the Invoice Tracker is not loaded');
+  const [trackerJdas, fin] = await Promise.all([tracker.listJdas(), tracker.finance.data()]);
   return Object.fromEntries(trackerJdas.map(tj => {
     const mine = r => r.jdaId === tj.id;
-    const t = tableTotals(paymentTable(fin.sanctioned.filter(mine), fin.entries.filter(mine)));
-    return [tj.name.trim().toLowerCase(), { trackerId: tj.id, spentMinor: t.actualMinor, sanctionedMinor: t.sanctionedMinor }];
+    const t = tracker.tableTotals(tracker.paymentTable(fin.sanctioned.filter(mine), fin.entries.filter(mine)));
+    const pending = fin.entries.filter(e => mine(e) && tracker.live(e) && e.status === 'pending').length;
+    return [tj.name.trim().toLowerCase(), { trackerId: tj.id, spentMinor: t.actualMinor, sanctionedMinor: t.sanctionedMinor, pending }];
   }));
 }
 
@@ -58,52 +74,57 @@ function figures(j, report, written, costs) {
   const tracked = costs?.[j.name.trim().toLowerCase()];
   const cost = written.costOverride
     ? { spent: written.costOverride.spent, sanctioned: written.costOverride.sanctioned, override: true }
-    : tracked && { spent: tracked.spentMinor / 100, sanctioned: tracked.sanctionedMinor / 100, trackerId: tracked.trackerId };
+    : tracked && { spent: tracked.spentMinor / 100, sanctioned: tracked.sanctionedMinor / 100 };
   return {
     failed, projects: projects.length, status: STATUS[r?.overallStatus] ? r.overallStatus : null,
     progress: written.progressOverride ?? avg, progressOverride: written.progressOverride !== null && written.progressOverride !== undefined,
     latest: updates[0] || null, updates: updates.length,
     challenges: written.challenges ?? (Array.isArray(r?.challenges) ? r.challenges.map(c => ({ title: c.title, text: c.description, severity: c.severity })) : []),
     challengesOverride: Array.isArray(written.challenges),
-    cost, trackerId: tracked?.trackerId,
+    cost, trackerId: tracked?.trackerId, pending: tracked?.pending ?? null,
     tagline: r?.overview?.tagline || contentFor(j).tagline || ''
   };
 }
 
-const ring = (pct, label, cls = '') => {
+const ring = (pct, label, aria, cls = '') => {
   const p = pct === null || pct === undefined ? null : Math.max(0, Math.min(100, pct));
-  return `<div class="ct-ring ${cls}" role="img" aria-label="${esc(label)}: ${p === null ? 'not known yet' : `${pct}%`}">
+  return `<div class="ct-ring ${cls}" role="img" aria-label="${esc(aria)}: ${p === null ? 'not known yet' : `${pct}%`}">
     <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="ct-ring-bg" cx="60" cy="60" r="50"/><circle class="ct-ring-fg" cx="60" cy="60" r="50" pathLength="100" style="--p:${p ?? 0}"/></svg>
     <span class="ct-ring-label"><b>${p === null ? '—' : `${pct}%`}</b><small>${esc(label)}</small></span>
   </div>`;
 };
-const boxes = (list, kind, empty) => list.length ? `<div class="ct-boxes ${kind}">${list.map((b, i) => `
-  <article class="ct-box${b.severity ? ` sev-${esc(b.severity)}` : ''}"${i >= SHOWN ? ' hidden data-more' : ''}>
-    ${b.severity ? `<span class="ct-sev">${esc(SEVERITY[b.severity] || b.severity)}</span>` : ''}
-    <h5>${esc(b.title || 'Untitled')}</h5>${b.text ? `<p>${esc(b.text)}</p>` : ''}
-  </article>`).join('')}</div>
+// A box shows its title and the start of its text; a long one opens to the rest.
+const box = (b, hidden) => {
+  const head = `${b.severity ? `<span class="ct-sev">${esc(SEVERITY[b.severity] || b.severity)}</span>` : ''}<h5>${esc(b.title || 'Untitled')}</h5>`;
+  const long = (b.text || '').length > 160;
+  return `<article class="ct-box${b.severity ? ` sev-${esc(b.severity)}` : ''}"${hidden ? ' hidden data-more' : ''}>
+    ${head}${b.text ? (long ? `<details><summary><span class="ct-box-start">${esc(b.text.slice(0, 150).replace(/\s+\S*$/, ''))}…</span><span class="ct-box-more">Read all</span></summary><p>${esc(b.text)}</p></details>` : `<p>${esc(b.text)}</p>`) : ''}
+  </article>`;
+};
+const boxes = (list, kind, empty) => list.length ? `<div class="ct-boxes ${kind}">${list.map((b, i) => box(b, i >= SHOWN)).join('')}</div>
   ${list.length > SHOWN ? `<button type="button" class="ct-more" data-more-toggle aria-expanded="false">Show all ${list.length}</button>` : ''}`
   : `<p class="ct-empty">${empty}</p>`;
 const tag = text => `<span class="ct-tag" title="Written in edit mode instead of the figure worked out from the data">${text}</span>`;
 
-function panel(j, f, written) {
+function panel(j, f, written, costsFailed) {
   const pctCost = f.cost && f.cost.sanctioned > 0 ? Math.round(f.cost.spent / f.cost.sanctioned * 100) : null;
-  const detailCost = f.trackerId ? `tracker/#/jda/${encodeURIComponent(f.trackerId)}` : 'tracker/#/payments';
+  const stale = f.latest ? daysAgo(f.latest.date) : null;
   return `
   <div class="ct-panel-head">
-    <button type="button" class="ct-info-btn" data-info="${esc(j.id)}" aria-haspopup="dialog">${svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>')}<span>Agreement &amp; BRD</span></button>
     <div class="ct-panel-title"><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}</div>
     <nav class="ct-links" aria-label="${esc(j.name)} pages">
-      <a href="${reportUrl(j)}">Master Page</a><a href="${reportUrl(j, '/progress')}">Overall progress</a><a href="${reportUrl(j, '/weekly')}">Weekly progress</a>
+      <a href="${reportUrl(j)}">Master Page</a><a href="${reportUrl(j, '/progress')}">Overall progress</a><a href="${reportUrl(j, '/weekly')}">Weekly progress &amp; tasks</a>
       <a href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener">Public page ↗</a>
+      <button type="button" class="ct-info-btn" data-info="${esc(j.id)}" aria-haspopup="dialog">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></button>
     </nav>
   </div>
   ${f.failed ? `<p class="ct-notice warn">${esc(j.name)}'s report could not be read just now, so its progress, update and challenges are missing. Reload to try again.</p>` : ''}
 
-  <section class="ct-card ct-status" aria-label="Progress and latest update">
-    <div class="ct-status-ring">
-      ${ring(f.progress, 'complete')}
-      <div class="ct-status-meta">
+  <section class="ct-card ct-status" aria-label="${esc(j.name)} at a glance">
+    <div class="ct-gauge">
+      <h4>Progress</h4>
+      ${ring(f.progress, 'complete', 'Progress')}
+      <div class="ct-gauge-meta">
         ${f.status ? `<span class="status-pill ${f.status}">${STATUS[f.status]}</span>` : ''}
         <span>${f.projects ? `${f.projects} project${f.projects === 1 ? '' : 's'}` : 'No projects yet'}</span>
         ${f.progressOverride ? tag('Set by hand') : '<span class="ct-hint">Average of its projects</span>'}
@@ -111,49 +132,45 @@ function panel(j, f, written) {
     </div>
     <div class="ct-latest">
       <h4>Latest key update</h4>
-      ${f.latest ? `<time datetime="${esc(f.latest.date || '')}">${fmtDate(f.latest.date)}</time><p class="ct-clamp">${esc(f.latest.text)}</p>`
+      ${f.latest ? `<p class="ct-when"><time datetime="${esc(f.latest.date || '')}">${fmtDate(f.latest.date)}</time><span class="${stale !== null && stale > STALE_DAYS ? 'ct-stale' : 'ct-hint'}">${age(stale)}</span></p><p class="ct-clamp">${esc(f.latest.text)}</p>`
         : `<p class="ct-empty">No key updates yet. They come from the Weekly progress page.</p>`}
-      <a class="ct-arrow" href="${reportUrl(j, '/weekly')}">Weekly progress${f.updates > 1 ? ` (${f.updates} updates)` : ''} →</a>
+      <a class="ct-arrow" href="${reportUrl(j, '/weekly')}">All updates and tasks${f.updates > 1 ? ` (${f.updates} updates)` : ''} →</a>
+    </div>
+    <div class="ct-gauge cost">
+      <h4>Cost ${f.cost?.override ? tag('Set by hand') : ''}</h4>
+      ${ring(pctCost, 'paid', 'Cost: paid of sanctioned', `cost${pctCost !== null && pctCost > 100 ? ' over' : ''}`)}
+      <div class="ct-gauge-meta">
+        ${f.cost ? `<span><b class="mono">${esc(tracker.ringgit(Math.round(f.cost.spent * 100)))}</b> paid</span><span class="ct-hint">of <b class="mono">${esc(tracker.ringgit(Math.round(f.cost.sanctioned * 100)))}</b> sanctioned, with tax</span>`
+          : `<span class="ct-hint">${costsFailed ? 'Cost figures could not be read just now. Reload to try again.' : 'Not in the Invoice Tracker yet.'}</span>`}
+        ${f.pending ? `<a class="ct-pending" href="tracker/#/cji3/${encodeURIComponent(f.trackerId)}">${f.pending} invoice${f.pending === 1 ? '' : 's'} pending →</a>` : ''}
+        ${f.trackerId ? `<a class="ct-btn ghost small" href="tracker/#/jda/${encodeURIComponent(f.trackerId)}">Invoices &amp; payments →</a>` : ''}
+      </div>
     </div>
   </section>
 
   <div class="ct-two">
     <section class="ct-card" aria-labelledby="ins-${esc(j.id)}">
       <h4 id="ins-${esc(j.id)}">Key insights</h4>
-      ${boxes(written.keyInsights, 'insights', 'No key insights written yet. Add them with Edit page.')}
+      ${boxes(written.keyInsights || [], 'insights', 'No key insights written yet. Add them with Edit page.')}
     </section>
     <section class="ct-card" aria-labelledby="ch-${esc(j.id)}">
       <h4 id="ch-${esc(j.id)}">Challenges ${f.challengesOverride ? tag('Written by hand') : '<span class="ct-hint">from Overall progress</span>'}</h4>
       ${boxes(f.challenges, 'challenges', 'No challenges recorded.')}
     </section>
-  </div>
-
-  <section class="ct-card ct-cost" aria-label="Cost">
-    ${ring(pctCost, 'spent', pctCost !== null && pctCost > 100 ? 'over' : '')}
-    <div class="ct-cost-text">
-      <h4>Cost ${f.cost?.override ? tag('Figures set by hand') : ''}</h4>
-      ${f.cost ? `<p><b>${esc(ringgit(Math.round(f.cost.spent * 100)))}</b> paid of <b>${esc(ringgit(Math.round(f.cost.sanctioned * 100)))}</b> sanctioned</p>
-        <p class="ct-hint">Paid invoices against sanctioned amounts, both with tax, in MYR.${f.cost.sanctioned > 0 ? '' : ' Nothing is sanctioned yet.'}</p>`
-        : '<p class="ct-empty">No Invoice Tracker record for this JDA yet.</p>'}
-    </div>
-    <a class="ct-btn ghost small" href="${detailCost}">Detail cost →</a>
-  </section>`;
+  </div>`;
 }
 
 /* ---------- Page ---------- */
-let state = { jdas: JDAS, reports: [], written: {}, costs: null };
-const notice = (text, warn = false) => { $('ctNotice').textContent = text; $('ctNotice').hidden = !text; $('ctNotice').classList.toggle('warn', warn); };
+let state = { jdas: JDAS, reports: [], written: {}, costs: null, costsFailed: false };
 
 function draw(selected = location.hash.slice(1)) {
   const { jdas } = state;
   const at = Math.max(0, jdas.findIndex(j => j.id === selected));
-  $('ctTabs').innerHTML = jdas.map((j, i) => {
-    const f = figures(j, state.reports[i], state.written[j.id] || {}, state.costs);
-    return `<button type="button" role="tab" id="tab-${esc(j.id)}" aria-controls="panel-${esc(j.id)}" aria-selected="${i === at}" tabindex="${i === at ? 0 : -1}">
-      <span>${esc(j.name)}</span><small>${f.progress === null ? '—' : `${f.progress}%`}</small></button>`;
-  }).join('');
-  $('ctPanels').innerHTML = jdas.map((j, i) => `<section class="ct-panel" role="tabpanel" id="panel-${esc(j.id)}" aria-labelledby="tab-${esc(j.id)}" tabindex="0"${i === at ? '' : ' hidden'}>
-    ${panel(j, figures(j, state.reports[i], state.written[j.id] || {}, state.costs), state.written[j.id] || { keyInsights: [] })}</section>`).join('');
+  const all = jdas.map((j, i) => figures(j, state.reports[i], state.written[j.id] || {}, state.costs));
+  $('ctTabs').innerHTML = jdas.map((j, i) => `<button type="button" role="tab" id="tab-${esc(j.id)}" aria-controls="panel-${esc(j.id)}" aria-selected="${i === at}" tabindex="${i === at ? 0 : -1}">
+      <span>${esc(j.name)}</span><small aria-label="progress">${all[i].progress === null ? '—' : `${all[i].progress}%`}</small></button>`).join('');
+  $('ctPanels').innerHTML = jdas.map((j, i) => `<section class="ct-panel" role="tabpanel" id="panel-${esc(j.id)}" aria-labelledby="tab-${esc(j.id)}"${i === at ? '' : ' hidden'}>
+    ${panel(j, all[i], state.written[j.id] || {}, state.costsFailed)}</section>`).join('');
 }
 
 function select(tab, focus) {
@@ -177,6 +194,16 @@ function openInfo(j) {
   d.showModal();
 }
 
+// The Invoice Tracker's own Drive sync, with the whole button held while it runs (a second click would read the same files again).
+async function sync() {
+  const btn = $('syncBtn');
+  if (btn.disabled) return;
+  btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+  try { await tracker.runSync(btn.querySelector('span'), refreshCosts); }
+  catch (e) { notice(`Sync from Drive failed: ${e.message}`, true); }
+  finally { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.querySelector('span').textContent = 'Sync invoices from Drive'; }
+}
+
 function wire() {
   $('ctTabs').addEventListener('click', e => { const t = e.target.closest('[role="tab"]'); if (t) select(t, false); });
   $('ctTabs').addEventListener('keydown', e => {
@@ -195,34 +222,39 @@ function wire() {
       more.setAttribute('aria-expanded', open); more.textContent = open ? 'Show fewer' : `Show all ${more.previousElementSibling.children.length}`;
     }
   });
-  // The Invoice Tracker's own Drive sync (its loading, success and error states included), then the cost figures again.
-  $('syncBtn').onclick = () => runSync($('syncBtn').querySelector('span'), refreshCosts).catch(e => notice(`Sync from Drive failed: ${e.message}`, true));
-  $('addJdaBtn').onclick = () => openForm({
+  if (!tracker) return;
+  $('syncBtn').onclick = sync;
+  $('addJdaBtn').onclick = () => tracker.openForm({
     title: 'Add JDA (Invoice Tracker)',
-    fields: [{ name: 'name', label: 'Name, in the form JDA <number>' }, ...JDA_DATE_FIELDS()],
+    fields: [{ name: 'name', label: 'Name, in the form JDA <number>' }, ...tracker.JDA_DATE_FIELDS()],
     onSubmit: async v => {
-      checkDates(v);
-      const created = await addJda(v);
-      await addLog(created.id, 'jda', `JDA "${v.name}" created, ${v.startDate} to ${v.endDate}`);
-      notice(`${v.name} was added to the Invoice Tracker. To give it a tab and report here, it must also be added to the JDA list (portal/js/config/app-config.js).`);
+      tracker.checkDates(v);
+      const created = await tracker.addJda(v);
+      await tracker.addLog(created.id, 'jda', `JDA "${v.name}" created, ${v.startDate} to ${v.endDate}`);
+      notice(`${v.name} was added to the Invoice Tracker, where its projects and invoices can be entered now. To give it a tab, report and public page here, ask the Control Tower administrator to add it to the JDA list.`);
       refreshCosts();
     }
   });
-  $('ctActivity').addEventListener('toggle', loadActivity, { once: true });
-  window.addEventListener('hashchange', () => { const t = $(`tab-${location.hash.slice(1)}`); if (t) select(t, false); });
+  $('ctActivity').addEventListener('toggle', () => { if ($('ctActivity').open) loadActivity(); });
 }
 
 async function refreshCosts() {
-  try { state.costs = await loadCosts(); }
-  catch (e) { state.costs = null; notice(`Cost figures could not be read from the Invoice Tracker: ${e.message}`, true); }
-  const open = $('ctTabs').querySelector('[aria-selected="true"]')?.id.slice(4);
-  draw(open);
+  try { state.costs = await loadCosts(); state.costsFailed = false; }
+  catch (e) { state.costs = null; state.costsFailed = true; console.error(e); }
+  draw($('ctTabs').querySelector('[aria-selected="true"]')?.id.slice(4));
+  if ($('ctActivity').open) loadActivity();
 }
 
+// Each line says which JDA and project it is about, as the tracker's old front page did.
 async function loadActivity() {
+  if (!tracker) return;
   try {
-    const lines = [...await listLog(null, LOG_LINES), ...(await finance.audit({ limit: LOG_LINES })).map(auditLine)].sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
-    $('activityBody').innerHTML = renderLog(lines);
+    const [projects, jdas, own, audit] = await Promise.all([tracker.listAllProjectsWithJda(), tracker.listJdas(), tracker.listLog(null, tracker.LOG_LINES), tracker.finance.audit({ limit: tracker.LOG_LINES })]);
+    const lines = [...own, ...audit.map(tracker.auditLine)].sort((a, b) => String(b.ts).localeCompare(String(a.ts))).map(l => {
+      const p = projects.find(x => x.id === l.projectId), j = jdas.find(x => x.id === (l.jdaId || l.projectId));
+      return { ...l, detail: p ? `${p.jdaName} / ${p.name}: ${l.detail}` : j ? `${j.name}: ${l.detail}` : l.detail };
+    });
+    $('activityBody').innerHTML = tracker.renderLog(lines);
   } catch (e) { $('activityBody').innerHTML = `<p class="ct-empty">Recent activity could not be read: ${esc(e.message)}</p>`; }
 }
 
@@ -231,9 +263,9 @@ async function start() {
   const [reports, written, costs] = await Promise.all([
     Promise.all(JDAS.map(loadReport)),
     getJson('/api/site/controlTower').then(c => c.jdas).catch(e => { notice(`The Control Tower's own content could not be read: ${e.message}`, true); return {}; }),
-    loadCosts().catch(e => { notice(`Cost figures could not be read from the Invoice Tracker: ${e.message}`, true); return null; })
+    tracker ? loadCosts().catch(e => { console.error(e); return FAILED; }) : FAILED
   ]);
-  state = { jdas: JDAS, reports, written, costs };
+  state = { jdas: JDAS, reports, written, costs: costs === FAILED ? null : costs, costsFailed: costs === FAILED };
   draw();
 }
 start();
