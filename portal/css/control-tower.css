@@ -38,6 +38,7 @@
 /* ---- one JDA ---- */
 .ct-panel{display:grid;gap:18px;outline:none}
 .ct-panel-head{display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px}
+.ct-panel-title{display:flex;align-items:center;gap:16px;min-width:0}
 .ct-info-btn{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--glass-brd);background:#fff;color:var(--teal-800);font:700 13.5px/1 var(--font);cursor:pointer;box-shadow:var(--elev-1)}
 .ct-info-btn svg{width:18px;height:18px}
 .ct-info-btn:hover{background:var(--teal-050)}
@@ -92,7 +93,9 @@
 .ct-box details summary{list-style:none;cursor:pointer;font-size:13.5px;color:#3b4f54;line-height:1.5}
 .ct-box details summary::-webkit-details-marker{display:none}
 .ct-box-more{display:inline-block;margin-left:6px;font-weight:700;color:var(--teal-700);text-decoration:underline}
-.ct-box details[open] summary{display:none}
+.ct-box details[open] .ct-box-start{display:none}
+.ct-box details[open] .ct-box-more{font-size:0}
+.ct-box details[open] .ct-box-more::after{content:'Show less';font-size:13.5px}
 .ct-boxes.insights .ct-box{border-left:4px solid var(--teal-500)}
 .ct-boxes.challenges .ct-box{border-left:4px solid var(--amber)}
 .ct-box.sev-high{border-left-color:var(--red)!important}

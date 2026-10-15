@@ -7,7 +7,7 @@ import { PORTAL_MASTER_SYSTEM, PORTAL_OVERALL_SYSTEM, portalWeeklySystem, PORTAL
 // when something in a folder actually changed.
 // Each result is { at: when it was last used, data }. One not used for KEEP_DAYS is dropped, so the
 // file does not grow for ever as files in Drive are replaced.
-const CACHE_FILE = new URL('./.portal-cache.json', import.meta.url), KEEP_DAYS = 60;
+const CACHE_FILE = new URL('./.portal-cache.json', import.meta.url), KEEP_DAYS = 60, PROMPT_VERSION = 'v2';
 let cache = {};
 try { cache = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8')); } catch { /* first run */ }
 export function pruned(all, now = Date.now()) {
@@ -31,7 +31,8 @@ async function extract(kind, files, system, ask_, extraKey = '') {
     catch (e) { skipped.push(`${f.name}: ${e.message}`); }
   }
   if (!used.length) return { data: null, used, skipped };
-  const key = `${kind}|${extraKey}|${used.map(f => `${f.id}@${f.modifiedTime}`).join(',')}`;
+  // PROMPT_VERSION: files read with an older prompt are read again (v2: the richer task fields).
+  const key = `${PROMPT_VERSION}|${kind}|${extraKey}|${used.map(f => `${f.id}@${f.modifiedTime}`).join(',')}`;
   cache = pruned(cache);
   if (!cache[key]) {
     const text = await ask({ system, maxTokens: 16000, messages: [{ role: 'user', content: [...blocks, { type: 'text', text: ask_ }] }] });
@@ -122,8 +123,7 @@ export async function syncJda(jda, { scope, currentProjects = [] } = {}) {
       // the richer task fields, when the report states them (portal/js/progress.js reads any that are missing as blank)
       description: str(t.description), priority: oneOf(t.priority, ['High', 'Medium', 'Low', ''], ''), start: isoDate(t.start), completed: isoDate(t.completed),
       progress: num(t.progress),
-      checklist: list(t.checklist).map(c => ({ text: str(c?.text), done: !!c?.done })).filter(c => c.text), notes: str(t.notes),
-      updatedAt: latest.date
+      checklist: list(t.checklist).map(c => ({ text: str(c?.text), done: !!c?.done })).filter(c => c.text), notes: str(t.notes)
     })).filter(t => t.task);
     const seen = new Set();
     patch.updates = weeks.flatMap(w => list(w.data.updates).map(u => ({ date: isoDate(u.date) || w.date, text: str(u.text) })))

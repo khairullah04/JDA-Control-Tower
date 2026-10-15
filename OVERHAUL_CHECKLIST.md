@@ -102,19 +102,19 @@ written beside it. Review findings are logged under each phase.
 
 - [x] Replaces the old portal main page and the tracker dashboard (`portal/index.html`, `portal/js/control-tower.js`; `portal/js/portal.js` and `jda/web/js/ui/dashboard.js` deleted; the tracker's own front-page address leads to it). *Checked: browser, `/control-tower/tracker/` redirects to `/control-tower/`.*
 - [x] Top tab bar to switch JDAs (each tab shows its progress %; arrow keys; `#jda2` opens a tab). *Checked: browser, ArrowRight moved to JDA 2 and set `#jda2`.*
-- [x] Sync from Drive button, top right (the tracker's own `runSync`, not rewritten): the button shows "Syncing: <file>" while it runs, then a result dialog, or the error in the same dialog. *Checked: browser in demo mode, 6 files, "6 invoice(s) created".*
+- [x] Sync from Drive button, top right (the tracker's own `runSync`, not rewritten): the button shows "Syncing: <file>" while it runs, then a result dialog, or the error in the same dialog. *Checked: browser in demo mode (sample Drive files), 6 files, "6 invoice(s) created"; the button is held while it runs.*
 - [x] Per JDA: progress circle (left; average of its projects' %, A1) and the latest key update with its date, from Weekly progress (right). *Checked: browser with JDA 1's and JDA 3's real reports (44%, 24%).*
-- [x] Info button ("Agreement & BRD", left corner) opens a dialog with the Agreement and BRD links (written in edit mode, Phase 6; "not linked yet" until then). *Checked: browser.*
+- [x] Info button ("Agreement & BRD", left corner, before the JDA's name) opens a dialog with the Agreement and BRD links (written in edit mode, Phase 6; "not linked yet" until then). *Checked: browser.*
 - [x] Key Insights boxes and Challenges boxes (challenges from Overall progress with severity, unless written in edit mode; four shown, then "Show all"). *Checked: browser.*
-- [x] Cost circle: paid / sanctioned, both with tax (A2), from the Invoice Tracker's Payment Table totals; red over 100%; Detail cost opens that JDA's page in the tracker (CJI3, payment tables, projects). *Checked: browser, JDA 3 33%, Detail cost → `tracker/#/jda/j2` opened JDA 2.*
+- [x] Cost circle: paid / sanctioned, both with tax (A2), from the Invoice Tracker's Payment Table totals; red over 100%; "Invoices & payments →" (the brief's Detail cost) opens that JDA's page in the tracker (CJI3, payment tables, projects); the number of pending invoices is shown. *Checked: browser in demo mode (sample finance data), JDA 3 33%, the button opened JDA 2's page. The live Firestore and Drive paths are not tried in this Codespace (no key).*
 - [x] CJI3 to Payment Table flow verified after the move (tax, forex, status, sanctioned checks). *Checked: `npm test` (finance-core, finance-api, finance-store: hand-worked tax and forex, status, duplicates, sanctioned-over checks, Excel in and out); CJI3, Payment Table and project pages loaded in a browser under `/control-tower/tracker/` with no console errors.*
 
 ## Phase 5 (Priority 5): richer Weekly Progress tasks
 
-- [x] Task fields: title, description, owner, status (badge), priority (badge), start, due and completed dates, progress % or a checklist (progress then worked out from it), project, notes and blockers, last updated, and a stable id. Completed is set when a task is marked Done; last updated is set on save for every task that changed. *Checked: `portal-pages.test.mjs` (normalizeTask, taskProgress, stampTasks); the editor in a browser.*
-- [x] Older tasks read without error (missing fields read as blank, `normalizeTask` in `portal/js/progress.js`), with a migration that writes the fields into the stored reports and a way back: `jda/server/scripts/migrate-tasks.mjs` (dry run by default, `--apply`, `--revert`; backup first; each save also keeps the previous version). *Checked: `task-migration.test.mjs` (old → new → revert gives back the old tasks exactly, keeps anything typed since). Not run on the real database: needs the key.*
-- [x] Filter by status (and Overdue) and owner; sort by due date, priority, status, owner or last updated; each row opens to its details (description, checklist, notes and blockers, dates, progress, last updated). *Checked: `portal-pages.test.mjs` (viewTasks); browser: sort by status, filter Not started (2 of 5), rows open and close.*
-- [x] Editable in the existing editor (every task shown in stored order with its details as a form: description, notes, start, completed, checklist items; priority and status by clicking their badges; progress as a number when there is no checklist); the Drive sync reads the new fields when a weekly report states them. *Checked: browser (typed a description, added a checklist item, set priority; "Unsaved changes"); `portal-sync.test.mjs`.*
+- [x] Task fields: title, description, owner, status (badge), priority (badge), start, due and completed dates, progress % or a checklist (progress then worked out from it), project, notes and blockers, last updated, and a stable id (worked out from title and project for tasks that have none, so the same every time). Completed is set when a task is marked Done in an edit; last updated is set on save for every task that changed. Stored values are read as they are (an unknown status is shown as written). *Checked: `portal-pages.test.mjs` (normalizeTask, taskProgress, stampTasks); the editor in a browser.*
+- [x] Older tasks read without error (missing fields read as blank, `normalizeTask` in `portal/js/progress.js`), with a migration that writes the fields into the stored reports and a way back: `jda/server/scripts/migrate-tasks.mjs` (dry run by default, `--apply`, `--revert`; backup first; each save also keeps the previous version). *Checked: `task-migration.test.mjs` (only adds; old → new → revert gives back the stored tasks exactly, odd values included; keeps anything typed since). The script re-reads after a backup that must contain the reports it changes, and saves only if nobody changed them meanwhile. Not run on the real database: needs the key.*
+- [x] Filter by status, due date (overdue, next 7 days, next 30 days, no date) and owner, with Clear filters; sort by due date, priority, status, owner or last updated; each row opens to its details (description, checklist, notes and blockers, dates, progress, last updated). *Checked: `portal-pages.test.mjs` (viewTasks); browser: sort by status, filter Not started (2 of 5), rows open and close.*
+- [x] Editable in the existing editor (every task shown in stored order with its details as a form: description, notes, start, completed, checklist items; priority and status by clicking their badges; progress as a number when there is no checklist); the Drive sync reads the new fields when a weekly report states them, and its tasks are merged into the existing ones (ids and typed details kept), both on Edit report and in the editor. *Checked: browser (typed a description, added a checklist item, set priority; "Unsaved changes"); `portal-sync.test.mjs`.*
 
 ## Phase 6 (Priority 6): edit mode
 
@@ -154,6 +154,11 @@ written beside it. Review findings are logged under each phase.
 | A21 | The landing page's text in `PUBLIC_DEFAULTS` (`jda/server/site-content.js`) is draft copy for the user to rewrite in edit mode; contacts are empty ("To be announced") until written. | No real copy or contacts were supplied. |
 | A22 | The tracker's old front page (a card per JDA, Sync from Drive, Add JDA, Recent activity) is replaced by the Control Tower landing page, which carries Sync from Drive, Add JDA and Recent activity; the tracker's own address now leads there. | The brief scraps that page; its tools stay reachable. |
 | A23 | A JDA added with Add JDA exists only in the Invoice Tracker until it is also added to `portal/js/config/app-config.js` (`JDAS`), which gives it a tab, a report and an Info page. The page says so after adding. | The two JDA lists are separate records (A8). |
+| A24 | Task statuses stay the three in use (Not started, In progress, Done); "Completed" is read as Done, and any other status is kept and shown as written. | The JDA 3 feed and older reports use these; a new status would need its own rules. |
+| A25 | Done counts as 100% when a task has no checklist and no % written; a checklist, when present, decides the %. | The simplest reading of "progress % or sub-tasks". |
+| A26 | A completed date is only set when a task is marked Done in an edit; tasks that were Done before keep a blank date. Leaving Done clears it. | A made-up date is worse than none. |
+| A27 | A weekly report from Drive still decides which tasks are on the list, but each matching task keeps its id and every detail the report does not state. | Before the overhaul the sync replaced the list; typed details must not be lost. |
+| A28 | The JDA 3 Excel → Power Automate feed writes tasks in the old shape; its tasks get ids worked out from their titles, and details typed in the editor for JDA 3 are overwritten by the feed's next run. | The feed is outside this repository (Known issues). |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
 | A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
 | A11 | An invoice or sanctioned amount filed under another JDA (e.g. Unsorted) but against a JDA 4+ project is deleted with that project. | It would otherwise point at a project that no longer exists. |
@@ -186,6 +191,9 @@ Kept, because the Master Page has always shown them publicly (the old portal had
 - `REQUIRE_AUTH=false` is only refused when `NODE_ENV=production` is set; a server deployed without it and with `false` would be open (the start-up log says so loudly).
 - The tracker's top bar (seven items) wraps to three rows on a phone and its buttons are under 44px; not changed in this overhaul yet.
 - `app.set('trust proxy', 1)` assumes one proxy in front; reached directly, a caller can set `X-Forwarded-For` and dodge the public rate limit (the one-minute cache limits the cost). Set it to match the real deployment.
+- JDA 3's tasks are rewritten by its Excel → Power Automate feed in the old shape, so details typed in the editor for JDA 3 do not survive the feed's next run (A28). The feed would have to update tasks field by field.
+- The tracker's own JDA page keeps its Sync from Drive button as a second way to the same sync (A22).
+- Microsoft Calendar sync still keys its events by task title, so renaming a task makes a second event. Changing the key would duplicate every event already synced, so it is left.
 - No Content-Security-Policy header yet on the public pages (all output is escaped; a CSP would be a second line of defence).
 
 ## Review findings
@@ -277,3 +285,25 @@ No High findings.
 | designer, member | Low | Selected tab badge contrast; top-bar link contrast; summary had no disclosure sign; low severity looked like an insight; small touch targets; title after the button; import failure left "Loading" forever; stale update not marked; "Detail cost" wording; back links lost the tab; "Sync from Drive" ambiguous. | Fixed. |
 | designer | Low | Shared `#modal` has no accessible name; refresh resets "Show all". | Logged for the final pass. |
 | member | Low | Tracker Copilot's all-JDA question chips went with the old front page. | Logged. |
+
+### Phase 4 again and Phase 5 (all four)
+
+| Who | Sev. | Finding | Done |
+|---|---|---|---|
+| dev, lead, member | High | Drive update replaced the task list: typed details and ids lost. | Fixed: `mergeTasks` (match by id, then title and project), in Edit report and the editor; tested. |
+| dev, lead, member | High | First save gave every old Done task today's completed date. | Fixed: only a task marked Done in this edit; tested (A26). |
+| member | High | Sign out from the editor lost unsaved work. | Fixed: Sign out asks first when there are unsaved changes (editor and landing-page edit mode). |
+| designer | High | Priority and status in the editor were mouse-only. | Fixed: real buttons with names; checked by keyboard. |
+| dev, lead | Med | `normalizeTask` and the migration rewrote stored values; revert could not undo them. | Fixed: values read as stored; migration only adds; round-trip test with odd values. |
+| dev, lead | Med | Migration's backup check weaker than the removal script's; plan made before the backup; saved with force. | Fixed: one shared `backup-first.mjs` (both scripts) requires the reports it changes in the backup; re-read after it; saved with the read version; `--revert` is a dry run without `--apply`. |
+| lead | Med | Random ids for id-less tasks changed on every read. | Fixed: ids worked out from title and project (A28 for JDA 3's feed). |
+| lead | Med | No due-date filter; Phase 5 choices not logged. | Fixed: Due filter; A24 to A28. |
+| lead | Med | Agreement & BRD button was on the right. | Fixed: left, before the name. |
+| dev | Med | Page stuck on "Loading" if drawing failed (e.g. cost override with the tracker unavailable). | Fixed: money formatted locally; drawing errors shown. |
+| member | Med | Completed date accepted on a task not Done, then dropped; untitled task dropped on save; dates redrawn mid-typing; no way into editing tasks. | Fixed: disabled until Done; kept as "Untitled task"; dates taken without a redraw; "Edit tasks" on Weekly progress and in the Control Tower. |
+| designer | Med | Phone table needed sideways scrolling; toggle had no name; Done and OVERDUE contrast; every form open at once; "Show less" missing. | Fixed: cards on phones; named toggle; darker text; editor rows open one at a time; Read all / Show less. |
+| designer | Med | Gauges still apart; Sync disabled button loses focus. | Gauges share one card (progress left, cost right, per the brief's layout); disabled kept so a second sync cannot start. |
+| member | Med | Concurrent saves of progress overwrite as a whole. | Logged: the save is refused first and says so (existing behaviour); per-field saving not built. |
+| dev, lead, member | Low | Nothing-sanctioned case; duplicate tracker names; dead catch; pending link wording; unused export and function; status list repeated; tracker back links; Edit report button name; prompt cache; sort direction; Clear filters; empty detail sections; open rows by position; owner in mono. | Fixed. |
+| dev | Low | Calendar events keyed by title. | Logged (Known issues). |
+| member | Low | Last updated does not say who; no undo for Delete task; "Live report, backed by Firestore" wording. | Logged for the final pass. |

@@ -22,6 +22,8 @@ const fmtDate = iso => { const d = new Date(`${iso}T00:00:00`); return isNaN(d) 
 const daysAgo = iso => { const d = new Date(`${iso}T00:00:00`); return isNaN(d) ? null : Math.floor((Date.now() - d) / 86_400_000); };
 const age = n => n === null ? '' : n <= 0 ? 'today' : n === 1 ? 'yesterday' : n < 14 ? `${n} days ago` : n < 60 ? `${Math.round(n / 7)} weeks ago` : `${Math.round(n / 30)} months ago`;
 const svg = (paths, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+// Whole ringgit, without needing the Invoice Tracker's code (the page still works if that fails to load).
+const rm = myr => `RM ${Math.round(myr).toLocaleString('en-MY')}`;
 const notice = (text, warn = false) => { $('ctNotice').textContent = text; $('ctNotice').hidden = !text; $('ctNotice').classList.toggle('warn', warn); };
 
 // The Invoice Tracker's own modules. If they cannot be loaded, the report-based parts still work.
@@ -56,12 +58,17 @@ async function loadReport(j) {
 async function loadCosts() {
   if (!tracker) throw new Error('the Invoice Tracker is not loaded');
   const [trackerJdas, fin] = await Promise.all([tracker.listJdas(), tracker.finance.data()]);
-  return Object.fromEntries(trackerJdas.map(tj => {
-    const mine = r => r.jdaId === tj.id;
+  // Two tracker JDAs with the same name (e.g. one added twice) are added together, and the page says so.
+  const out = {};
+  for (const tj of trackerJdas) {
+    const mine = r => r.jdaId === tj.id, key = tj.name.trim().toLowerCase();
     const t = tracker.tableTotals(tracker.paymentTable(fin.sanctioned.filter(mine), fin.entries.filter(mine)));
     const pending = fin.entries.filter(e => mine(e) && tracker.live(e) && e.status === 'pending').length;
-    return [tj.name.trim().toLowerCase(), { trackerId: tj.id, spentMinor: t.actualMinor, sanctionedMinor: t.sanctionedMinor, pending }];
-  }));
+    const was = out[key];
+    out[key] = was ? { ...was, spentMinor: was.spentMinor + t.actualMinor, sanctionedMinor: was.sanctionedMinor + t.sanctionedMinor, pending: was.pending + pending, twice: true }
+      : { trackerId: tj.id, spentMinor: t.actualMinor, sanctionedMinor: t.sanctionedMinor, pending };
+  }
+  return out;
 }
 
 /* ---------- One JDA ---------- */
@@ -81,7 +88,7 @@ function figures(j, report, written, costs) {
     latest: updates[0] || null, updates: updates.length,
     challenges: written.challenges ?? (Array.isArray(r?.challenges) ? r.challenges.map(c => ({ title: c.title, text: c.description, severity: c.severity })) : []),
     challengesOverride: Array.isArray(written.challenges),
-    cost, trackerId: tracked?.trackerId, pending: tracked?.pending ?? null,
+    cost, trackerId: tracked?.trackerId, pending: tracked?.pending ?? null, twice: !!tracked?.twice,
     tagline: r?.overview?.tagline || contentFor(j).tagline || ''
   };
 }
@@ -108,14 +115,17 @@ const tag = text => `<span class="ct-tag" title="Written in edit mode instead of
 
 function panel(j, f, written, costsFailed) {
   const pctCost = f.cost && f.cost.sanctioned > 0 ? Math.round(f.cost.spent / f.cost.sanctioned * 100) : null;
+  const unsanctioned = f.cost && !(f.cost.sanctioned > 0) && f.cost.spent > 0; // paid with nothing sanctioned: over
   const stale = f.latest ? daysAgo(f.latest.date) : null;
   return `
   <div class="ct-panel-head">
-    <div class="ct-panel-title"><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}</div>
+    <div class="ct-panel-title">
+      <button type="button" class="ct-info-btn" data-info="${esc(j.id)}" aria-haspopup="dialog">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></button>
+      <div><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}</div>
+    </div>
     <nav class="ct-links" aria-label="${esc(j.name)} pages">
       <a href="${reportUrl(j)}">Master Page</a><a href="${reportUrl(j, '/progress')}">Overall progress</a><a href="${reportUrl(j, '/weekly')}">Weekly progress &amp; tasks</a>
-      <a href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener">Public page ↗</a>
-      <button type="button" class="ct-info-btn" data-info="${esc(j.id)}" aria-haspopup="dialog">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></button>
+      <a href="${reportUrl(j, '/edit/weekly')}">Edit tasks</a><a href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener">Public page ↗</a>
     </nav>
   </div>
   ${f.failed ? `<p class="ct-notice warn">${esc(j.name)}'s report could not be read just now, so its progress, update and challenges are missing. Reload to try again.</p>` : ''}
@@ -138,11 +148,11 @@ function panel(j, f, written, costsFailed) {
     </div>
     <div class="ct-gauge cost">
       <h4>Cost ${f.cost?.override ? tag('Set by hand') : ''}</h4>
-      ${ring(pctCost, 'paid', 'Cost: paid of sanctioned', `cost${pctCost !== null && pctCost > 100 ? ' over' : ''}`)}
+      ${ring(unsanctioned ? 100 : pctCost, unsanctioned ? 'unsanctioned' : 'paid', 'Cost: paid of sanctioned', `cost${unsanctioned || (pctCost !== null && pctCost > 100) ? ' over' : ''}`)}
       <div class="ct-gauge-meta">
-        ${f.cost ? `<span><b class="mono">${esc(tracker.ringgit(Math.round(f.cost.spent * 100)))}</b> paid</span><span class="ct-hint">of <b class="mono">${esc(tracker.ringgit(Math.round(f.cost.sanctioned * 100)))}</b> sanctioned, with tax</span>`
+        ${f.cost ? `<span><b class="mono">${esc(rm(f.cost.spent))}</b> paid</span><span class="ct-hint">${f.cost.sanctioned > 0 ? `of <b class="mono">${esc(rm(f.cost.sanctioned))}</b> sanctioned, with tax` : 'Nothing is sanctioned yet.'}</span>${f.twice ? '<span class="ct-stale">Two Invoice Tracker JDAs have this name: their figures are added together.</span>' : ''}`
           : `<span class="ct-hint">${costsFailed ? 'Cost figures could not be read just now. Reload to try again.' : 'Not in the Invoice Tracker yet.'}</span>`}
-        ${f.pending ? `<a class="ct-pending" href="tracker/#/cji3/${encodeURIComponent(f.trackerId)}">${f.pending} invoice${f.pending === 1 ? '' : 's'} pending →</a>` : ''}
+        ${f.pending ? `<a class="ct-pending" href="tracker/#/cji3/${encodeURIComponent(f.trackerId)}">${f.pending} invoice${f.pending === 1 ? '' : 's'} pending: open the register →</a>` : ''}
         ${f.trackerId ? `<a class="ct-btn ghost small" href="tracker/#/jda/${encodeURIComponent(f.trackerId)}">Invoices &amp; payments →</a>` : ''}
       </div>
     </div>
@@ -199,9 +209,8 @@ async function sync() {
   const btn = $('syncBtn');
   if (btn.disabled) return;
   btn.disabled = true; btn.setAttribute('aria-busy', 'true');
-  try { await tracker.runSync(btn.querySelector('span'), refreshCosts); }
-  catch (e) { notice(`Sync from Drive failed: ${e.message}`, true); }
-  finally { btn.disabled = false; btn.removeAttribute('aria-busy'); btn.querySelector('span').textContent = 'Sync invoices from Drive'; }
+  try { await tracker.runSync(btn.querySelector('span'), refreshCosts); } // it shows its own result, errors included
+  finally { btn.disabled = false; btn.removeAttribute('aria-busy'); }
 }
 
 function wire() {
@@ -241,7 +250,7 @@ function wire() {
 async function refreshCosts() {
   try { state.costs = await loadCosts(); state.costsFailed = false; }
   catch (e) { state.costs = null; state.costsFailed = true; console.error(e); }
-  draw($('ctTabs').querySelector('[aria-selected="true"]')?.id.slice(4));
+  safeDraw($('ctTabs').querySelector('[aria-selected="true"]')?.id.slice(4));
   if ($('ctActivity').open) loadActivity();
 }
 
@@ -266,6 +275,11 @@ async function start() {
     tracker ? loadCosts().catch(e => { console.error(e); return FAILED; }) : FAILED
   ]);
   state = { jdas: JDAS, reports, written, costs: costs === FAILED ? null : costs, costsFailed: costs === FAILED };
-  draw();
+  safeDraw();
+}
+// A drawing error must not leave the page on "Loading…".
+function safeDraw(selected) {
+  try { draw(selected); }
+  catch (e) { console.error(e); notice(`Part of this page could not be drawn: ${e.message}. Reload to try again.`, true); }
 }
 start();

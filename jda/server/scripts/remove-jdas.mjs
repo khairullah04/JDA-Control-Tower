@@ -17,11 +17,9 @@
 // The first JDA to remove is FROM (default 4, never less): `--from 5` keeps JDA 4. Stop the server first. The backup is
 // scripts/backup.mjs; if it cannot save the main project, nothing is deleted.
 import 'dotenv/config';
-import fs from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { adminDb } from '../firebase-admin.js';
 import { planRemoval } from '../jda-removal.js';
+import { backupFirst } from './backup-first.mjs';
 
 const args = process.argv.slice(2), apply = args.includes('--apply');
 const from = args.includes('--from') ? Number(args[args.indexOf('--from') + 1]) : 4;
@@ -42,20 +40,7 @@ console.log(`Kept: ${kept.join(', ') || 'none'}`);
 if (!count(plan)) console.log('\nNothing to remove.');
 else if (!apply) console.log(`\n${count(plan)} documents would be deleted. Nothing has been changed. Stop the server, then run again with --apply to back up and delete them.`);
 else {
-  console.log('\nBacking up first...');
-  const started = new Date().toISOString();
-  spawnSync(process.execPath, [fileURLToPath(new URL('./backup.mjs', import.meta.url))], { stdio: 'inherit' });
-  // The backup counts only if it is the one just made and it saved the main project's collections.
-  let latest, manifest;
-  try {
-    const dir = new URL('../../../backups/', import.meta.url);
-    latest = fs.readdirSync(dir).sort().at(-1);
-    manifest = JSON.parse(fs.readFileSync(new URL(`${latest}/MANIFEST.json`, dir), 'utf8'));
-  } catch { manifest = null; }
-  if (!manifest || !(manifest.at >= started) || !manifest.saved.some(m => m.startsWith('firestore-main/'))) {
-    console.error('The backup did not save the main Firebase project. Nothing was deleted.');
-    process.exit(1);
-  }
+  const latest = backupFirst(['firestore-main/']).replace('backups/', '');
   plan = await planRemoval(db, from); // again, after the backup: whatever was written meanwhile is included
   const docs = Object.values(plan).flat(); // children first, the JDAs last (jda-removal.js)
   for (let i = 0; i < docs.length; i += 400) {

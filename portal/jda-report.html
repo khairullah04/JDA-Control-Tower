@@ -378,9 +378,11 @@
       <p class="block-intro" id="tasksIntro"></p>
       <div class="task-toolbar" id="taskToolbar">
         <label>Status <select id="taskStatus"><option value="">All</option><option>Not started</option><option>In progress</option><option>Done</option><option value="overdue">Overdue</option></select></label>
+        <label>Due <select id="taskDue"><option value="">Any time</option><option value="overdue">Overdue</option><option value="week">In the next 7 days</option><option value="month">In the next 30 days</option><option value="none">No due date</option></select></label>
         <label>Owner <select id="taskOwner"><option value="">Everyone</option></select></label>
-        <label>Sort by <select id="taskSort"><option value="due">Due date</option><option value="priority">Priority</option><option value="status">Status</option><option value="owner">Owner</option><option value="updated">Last updated</option></select></label>
+        <label>Sort by <select id="taskSort"><option value="due">Due date (soonest first)</option><option value="priority">Priority (high first)</option><option value="status">Status</option><option value="owner">Owner (A to Z)</option><option value="updated">Last updated (newest first)</option></select></label>
         <span class="task-count" id="taskCount" role="status"></span>
+        <a class="task-edit-link" id="editTasksLink" href="#">Edit tasks</a>
       </div>
       <div class="table-card">
         <table class="tasks">
@@ -522,8 +524,8 @@
 
         <div class="edit-card">
           <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 19a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6-1.8A4 4 0 0 1 17 19"/><path d="M12 12v8M9 17l3 3 3-3"/></svg></span><h3>Update progress from Google Drive</h3></div>
-          <p class="hint">Reads this JDA's Drive folder and replaces each section with what its files say: <b>Overall Progress</b> fills projects, status, challenges and the S-curve, and <b>Weekly Progress</b> fills the week label, tasks and key updates. A section whose folder is empty is left as it is. The Master Page is not touched here; it has its own editor, opened from the icon on the Master Page.</p>
-          <button class="save" id="driveSyncBtn">Sync from Drive</button>
+          <p class="hint">Reads this JDA's Drive folder and replaces each section with what its files say: <b>Overall Progress</b> fills projects, status, challenges and the S-curve, and <b>Weekly Progress</b> fills the week label, tasks and key updates. Tasks are merged: each keeps the details typed in the editor (description, checklist, notes, priority, dates) unless the report states them. A section whose folder is empty is left as it is. The Master Page is not touched here; it has its own editor, opened from the icon on the Master Page.</p>
+          <button class="save" id="driveSyncBtn">Update progress and tasks from Drive</button>
           <div class="cal-status" id="driveSyncStatus"></div>
           <div class="entry-list" id="driveSyncSkipped"></div>
         </div>

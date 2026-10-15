@@ -14,7 +14,7 @@ import { logoFor, contentFromOverview as overviewContent, overviewFromContent as
 import { esc } from '../../shared/esc.js';
 import { digest, digests } from '../../shared/digest.js';
 import { localToday } from '../../shared/dates.js';
-import { withProjectIds, linkTasks, tasksOf, normalizeTask, taskProgress, viewTasks, isOverdue as taskOverdue } from './progress.js';
+import { withProjectIds, linkTasks, tasksOf, normalizeTasks, mergeTasks, stampTasks, taskProgress, viewTasks, isOverdue as taskOverdue, TASK_STATUSES } from './progress.js';
 
 const $ = id => document.getElementById(id);
 // An image field holds an address (https://..., /..., assets/..., data:image/...). Anything else typed into it is not drawn as a broken image.
@@ -52,7 +52,7 @@ const starterData = baseContent.starter; // only a JDA with its own starter data
 
 const statusColor = { green:"green", amber:"amber", red:"red" };
 const statusLabel = { green:"On track", amber:"At risk", red:"Delayed" };
-const taskStatusClass = { "Done":"done", "In progress":"progress", "Not started":"notstarted" };
+const taskStatusClass = Object.fromEntries(TASK_STATUSES.map((s, i) => [s, ["notstarted", "progress", "done"][i]]));
 const sevLabel = { high:"HIGH", medium:"MEDIUM", low:"LOW" };
 
 let chart, currentData = starterData || {};
@@ -195,9 +195,6 @@ function formatDueDate(iso){
   const d = new Date(iso + "T00:00:00");
   if (isNaN(d)) return iso;
   return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-}
-function isOverdue(iso, status){
-  return !!iso && status !== 'Done' && iso < todayISO;
 }
 
 // Which index in scurve.months/actual corresponds to the real calendar's
@@ -499,62 +496,64 @@ function handleInitialRoute(){
 // values stay blank - no zeros, no sample numbers.
 /* ---------- Weekly progress: the tasks. Filtered and sorted for reading; in the editor every task is
    shown in its stored order with its details open, so each row is the task it edits. ---------- */
-const taskView = { status: '', owner: '', sort: 'due' }, openTasks = new Set();
+const taskView = { status: '', owner: '', due: '', sort: 'due' }, openTasks = new Set(); // open rows, by task id
 const PRIORITY_CLASS = { High: 'high', Medium: 'medium', Low: 'low' };
 function taskDetails(t){
-  const pct = taskProgress(t);
   const date = (label, iso, field) => `<div><dt>${label}</dt><dd class="mono" data-field="${field}">${iso ? esc(formatDueDate(iso)) : '—'}</dd></div>`;
+  // Only what is filled in; what the row above already shows (project, due, progress) is not repeated.
+  const main = [
+    t.description && `<h5>Description</h5><p class="task-desc">${esc(t.description)}</p>`,
+    t.checklist.length && `<h5>Checklist <span class="muted">${t.checklist.filter(c => c.done).length} of ${t.checklist.length} done</span></h5>
+      <ul class="task-checklist">${t.checklist.map(c => `<li class="${c.done ? 'done' : ''}"><span class="tick" aria-hidden="true">${c.done ? '✓' : ''}</span><span class="visually-hidden">${c.done ? 'Done: ' : 'To do: '}</span>${esc(c.text)}</li>`).join('')}</ul>`,
+    t.notes && `<h5>Notes and blockers</h5><p class="task-notes">${esc(t.notes)}</p>`
+  ].filter(Boolean).join('') || '<p class="muted">No details yet. They can be added with Edit tasks.</p>';
   return `
     <div class="task-detail-grid">
-      <div class="task-detail-main">
-        <h5>Description</h5><p class="task-desc" data-field="description">${esc(t.description) || '<span class="muted">No description.</span>'}</p>
-        <h5>Checklist${t.checklist.length ? ` <span class="muted">${t.checklist.filter(c => c.done).length} of ${t.checklist.length} done</span>` : ''}</h5>
-        <ul class="task-checklist" data-field="checklist">${t.checklist.map(c => `<li class="${c.done ? 'done' : ''}"><span class="tick" aria-hidden="true">${c.done ? '✓' : ''}</span><span class="visually-hidden">${c.done ? 'Done: ' : 'To do: '}</span>${esc(c.text)}</li>`).join('') || '<li class="muted">No checklist.</li>'}</ul>
-        <h5>Notes and blockers</h5><p class="task-notes" data-field="notes">${esc(t.notes) || '<span class="muted">None.</span>'}</p>
-      </div>
+      <div class="task-detail-main">${main}</div>
       <dl class="task-facts">
-        <div><dt>Project</dt><dd>${esc(t.project) || '—'}</dd></div>
-        ${date('Start', t.start, 'start')}${date('Due', t.due, 'due')}${date('Completed', t.completed, 'completed')}
-        <div><dt>Progress</dt><dd class="mono" data-field="progress">${pct === null ? '—' : pct + '%'}${t.checklist.length ? ' <span class="muted">(checklist)</span>' : ''}</dd></div>
+        ${date('Start', t.start, 'start')}${date('Completed', t.completed, 'completed')}
         <div><dt>Last updated</dt><dd class="mono">${t.updatedAt ? esc(formatDueDate(t.updatedAt)) : '—'}</dd></div>
       </dl>
     </div>`;
 }
 function renderTasks(raw){
-  const tasks = (raw || []).map((t, i) => ({ ...normalizeTask(t), _i: i }));
+  const tasks = normalizeTasks(raw).map((t, i) => ({ ...t, _i: i }));
   const owners = [...new Set(tasks.map(t => t.owner).filter(Boolean))].sort();
   $('taskOwner').innerHTML = '<option value="">Everyone</option>' + owners.map(o => `<option${o === taskView.owner ? ' selected' : ''}>${esc(o)}</option>`).join('');
   if (!owners.includes(taskView.owner)) taskView.owner = '';
   $('taskToolbar').hidden = editing;
+  $('editTasksLink').href = `${masterHash}/edit/weekly`;
   const shown = editing ? tasks : viewTasks(tasks, taskView, todayISO);
   $('taskCount').textContent = editing || !tasks.length ? '' : `${shown.length} of ${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
   const tbody = $('tasksBody');
   tbody.innerHTML = !tasks.length ? `<tr><td colspan="6">${empty('No tasks yet.')}</td></tr>`
-    : !shown.length ? `<tr><td colspan="6">${empty('No tasks match these filters.')}</td></tr>` : shown.map(t => {
-      const overdue = taskOverdue(t, todayISO), open = editing || openTasks.has(t._i), pct = taskProgress(t);
-      return `<tr class="task-row${open ? ' open' : ''}" data-index="${t._i}">
-        <td data-cell="task"><button type="button" class="task-toggle" aria-expanded="${open}" aria-controls="task-detail-${t._i}"${editing ? ' hidden' : ''}><span class="chev" aria-hidden="true">›</span><span class="visually-hidden">Details of </span></button><span class="task-name">${esc(t.task)}</span>${t.project ? `<span class="task-project">${esc(t.project)}</span>` : ''}</td>
-        <td class="mono" data-cell="owner">${esc(t.owner)}</td>
-        <td data-cell="priority">${t.priority ? `<span class="prio ${PRIORITY_CLASS[t.priority]}">${esc(t.priority)}</span>` : '<span class="prio none">—</span>'}</td>
-        <td class="mono${overdue ? ' overdue' : ''}" data-cell="due">${esc(formatDueDate(t.due))}${overdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</td>
-        <td data-cell="progress">${pct === null ? '<span class="muted">—</span>' : `<span class="task-bar" role="img" aria-label="${pct}% done"><span style="width:${pct}%"></span></span><span class="mono task-pct">${pct}%</span>`}</td>
-        <td data-cell="status"><span class="task-status ${taskStatusClass[t.status] || 'notstarted'}">${esc(t.status)}</span></td>
+    : !shown.length ? `<tr><td colspan="6">${empty('No tasks match these filters.')} <button type="button" class="link-like" id="clearTaskFilters">Clear filters</button></td></tr>` : shown.map(t => {
+      const overdue = taskOverdue(t, todayISO), open = openTasks.has(t.id) || (editing && !t.task), pct = taskProgress(t);
+      return `<tr class="task-row${open ? ' open' : ''}" data-index="${t._i}" data-id="${esc(t.id)}">
+        <td data-cell="task" data-label="Task"><button type="button" class="task-toggle" aria-expanded="${open}" aria-controls="task-detail-${t._i}" aria-label="Details of ${esc(t.task || 'this task')}"><span class="chev" aria-hidden="true">›</span></button><span class="task-name">${esc(t.task)}</span>${t.project ? `<span class="task-project">${esc(t.project)}</span>` : ''}</td>
+        <td data-cell="owner" data-label="Owner">${esc(t.owner) || '<span class="muted">—</span>'}</td>
+        <td data-cell="priority" data-label="Priority">${t.priority ? `<span class="prio ${PRIORITY_CLASS[t.priority]}">${esc(t.priority)}</span>` : '<span class="prio none">—</span>'}</td>
+        <td class="mono${overdue ? ' overdue' : ''}" data-cell="due" data-label="Due">${esc(formatDueDate(t.due))}${overdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</td>
+        <td data-cell="progress" data-label="Progress">${pct === null ? '<span class="muted">—</span>' : `<span class="task-bar" role="img" aria-label="${pct}% done"><span style="width:${pct}%"></span></span><span class="mono task-pct">${pct}%</span>`}</td>
+        <td data-cell="status" data-label="Status"><span class="task-status ${taskStatusClass[t.status] || 'other'}">${esc(t.status)}</span></td>
       </tr>
-      <tr class="task-detail" id="task-detail-${t._i}" data-index="${t._i}"${open ? '' : ' hidden'}><td colspan="6">${taskDetails(t)}</td></tr>`;
+      <tr class="task-detail" id="task-detail-${t._i}" data-index="${t._i}"${open ? '' : ' hidden'}><td colspan="6">${editing ? '' : taskDetails(t)}</td></tr>`;
     }).join('');
 }
 // Reading: a row opens and closes its details; the toolbar filters and sorts.
+// In the editor only the arrow opens a row (the rest of the row is being edited).
 $('tasksBody').addEventListener('click', e => {
-  if (editing || e.target.closest('a, select, input')) return;
+  if (e.target.id === 'clearTaskFilters'){ Object.assign(taskView, { status: '', owner: '', due: '' }); for (const id of ['taskStatus', 'taskOwner', 'taskDue']) $(id).value = ''; renderTasks(currentData.tasks); return; }
+  if (e.target.closest('a, select, input, textarea, .ed-btn, .ed-pill') || (editing && !e.target.closest('.task-toggle'))) return;
   const row = e.target.closest('.task-row');
   if (!row) return;
-  const i = Number(row.dataset.index), open = !openTasks.has(i);
-  open ? openTasks.add(i) : openTasks.delete(i);
+  const id = row.dataset.id, open = !openTasks.has(id);
+  open ? openTasks.add(id) : openTasks.delete(id);
   row.classList.toggle('open', open);
   row.querySelector('.task-toggle').setAttribute('aria-expanded', open);
   row.nextElementSibling.hidden = !open;
 });
-for (const [id, key] of [['taskStatus', 'status'], ['taskOwner', 'owner'], ['taskSort', 'sort']]) $(id).onchange = e => { taskView[key] = e.target.value; renderTasks(currentData.tasks); };
+for (const [id, key] of [['taskStatus', 'status'], ['taskDue', 'due'], ['taskOwner', 'owner'], ['taskSort', 'sort']]) $(id).onchange = e => { taskView[key] = e.target.value; renderTasks(currentData.tasks); };
 
 function render(data){
   const hasReport = !!data;
@@ -691,7 +690,11 @@ $('driveSyncBtn').onclick = async () => {
     if (Object.keys(sections).length){
       // Projects from Drive keep the ids they had here, and tasks stay tied to them (progress.js).
       if (out.patch.projects) out.patch.projects = withProjectIds(out.patch.projects, currentData.projects || []);
-      if (out.patch.tasks) out.patch.tasks = linkTasks(out.patch.tasks, out.patch.projects || currentData.projects || []);
+      // Tasks are merged into the ones there: each keeps its id and every detail typed in the editor that the report does not state.
+      if (out.patch.tasks){
+        const was = normalizeTasks(currentData.tasks);
+        out.patch.tasks = stampTasks(linkTasks(mergeTasks(out.patch.tasks, was), out.patch.projects || currentData.projects || []), was, todayISO);
+      }
       await saveReport(out.patch);
       const n = out.counts, parts = [];
       if (n.overall && sections.challenges) parts.push(`overall progress (${files(n.overall)})`);
@@ -939,7 +942,7 @@ if (editing){
       })),
       showProgress(progress){ render({ ...currentData, ...progress }); },
       saveProgress: progress => saveDraft(progress),
-      statusLabel, taskStatuses: ['Not started', 'In progress', 'Done'], today: todayISO,
+      statusLabel, taskStatuses: TASK_STATUSES, today: todayISO, openTask: id => openTasks.add(id),
       artKeys: Object.keys(SOLUTION_ICONS),
       draft: overviewFromContent(),
       sectionOrder: () => [...c.sectionOrder],

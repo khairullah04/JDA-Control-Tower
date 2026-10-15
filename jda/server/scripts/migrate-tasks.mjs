@@ -1,51 +1,51 @@
-// node scripts/migrate-tasks.mjs            (run from jda/server) says which reports have tasks in the old shape
-// node scripts/migrate-tasks.mjs --apply    backs up, then writes the new task fields into them
-// node scripts/migrate-tasks.mjs --revert   backs up, then takes the new fields out again where they are blank
+// node scripts/migrate-tasks.mjs                    (run from jda/server) lists the reports whose tasks are in the old shape
+// node scripts/migrate-tasks.mjs --apply            backs up, then adds the new task fields to them
+// node scripts/migrate-tasks.mjs --revert           lists what a revert would take out
+// node scripts/migrate-tasks.mjs --revert --apply   backs up, then takes the new fields out again where they are blank
 //
 // The Weekly progress tasks gained fields in the overhaul (description, priority, start and completed
 // dates, progress, checklist, notes, last updated, and an id). The pages read old tasks without this
 // (missing fields are blank), so it is optional: it makes the stored documents match what the pages show.
-// Each save also keeps the version before it in the report's versions (report-store.js).
+// Only missing fields are added; nothing stored is changed, so a revert gives back exactly what was there.
+// A report changed by someone between the backup and the save is not overwritten: run it again.
 // Needs the service-account key of each report's project; a JDA whose key is missing is skipped and named.
 import 'dotenv/config';
-import fs from 'node:fs';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { JDAS } from '../../../portal/js/config/app-config.js';
+import { digest } from '../../../shared/digest.js';
 import { hasKey } from '../firebase-admin.js';
 import { reports } from '../report-store.js';
 import { sourceOf } from '../report-reader.js';
 import { needsMigration, migrateTasks, revertTasks } from '../task-migration.js';
+import { backupFirst } from './backup-first.mjs';
 
 const apply = process.argv.includes('--apply'), revert = process.argv.includes('--revert');
-if (apply && revert) { console.error('Choose --apply or --revert, not both.'); process.exit(1); }
+const change = tasks => revert ? revertTasks(tasks) : migrateTasks(tasks);
+const differs = tasks => revert ? JSON.stringify(revertTasks(tasks)) !== JSON.stringify(tasks) : needsMigration(tasks);
+// Where the backup keeps each report: the main project's collections, or JDA 3's own project.
+const backedUpAs = s => s.project === 'portal' ? `firestore-main/${s.collection}` : `firestore-${s.project}/${s.collection}`;
 
-const todo = [];
-for (const jda of JDAS) {
-  const s = sourceOf(jda);
-  if (!hasKey(s.project)) { console.log(`${jda.name}: skipped, no service-account key for its project (${s.project}).`); continue; }
-  const doc = await reports().read(s);
-  const tasks = doc?.tasks || [];
-  const next = revert ? revertTasks(tasks) : migrateTasks(tasks);
-  const changes = revert ? JSON.stringify(next) !== JSON.stringify(tasks) : needsMigration(tasks);
-  console.log(`${jda.name}: ${tasks.length} task(s), ${changes ? (revert ? 'new fields to take out' : 'in the old shape') : 'nothing to do'}.`);
-  if (changes) todo.push({ jda, s, next });
+async function plan() {
+  const todo = [];
+  for (const jda of JDAS) {
+    const s = sourceOf(jda);
+    if (!hasKey(s.project)) { console.log(`${jda.name}: skipped, no service-account key for its project (${s.project}).`); continue; }
+    const tasks = (await reports().read(s))?.tasks || [];
+    const yes = differs(tasks);
+    console.log(`${jda.name}: ${tasks.length} task(s), ${yes ? (revert ? 'new fields to take out' : 'in the old shape') : 'nothing to do'}.`);
+    if (yes) todo.push({ jda, s, tasks });
+  }
+  return todo;
 }
 
+const todo = await plan();
 if (!todo.length) console.log('\nNothing to change.');
-else if (!apply && !revert) console.log(`\n${todo.length} report(s) would change. Nothing has been changed. Run again with --apply (or --revert).`);
+else if (!apply) console.log(`\n${todo.length} report(s) would change. Nothing has been changed. Add --apply to do it.`);
 else {
-  console.log('\nBacking up first...');
-  const started = new Date().toISOString();
-  spawnSync(process.execPath, [fileURLToPath(new URL('./backup.mjs', import.meta.url))], { stdio: 'inherit' });
-  let manifest = null;
-  try {
-    const dir = new URL('../../../backups/', import.meta.url), latest = fs.readdirSync(dir).sort().at(-1);
-    manifest = JSON.parse(fs.readFileSync(new URL(`${latest}/MANIFEST.json`, dir), 'utf8'));
-  } catch { /* checked below */ }
-  if (!manifest || !(manifest.at >= started)) { console.error('No new backup was written. Nothing was changed.'); process.exit(1); }
-  for (const { jda, s, next } of todo) {
-    await reports().save(s, { patch: { tasks: next }, force: true });
-    console.log(`${jda.name}: saved.`);
+  const at = backupFirst([...new Set(todo.map(t => backedUpAs(t.s)))]);
+  for (const { jda, s } of await plan()) { // read again: the reports as they are now, after the backup
+    const tasks = (await reports().read(s))?.tasks || [];
+    try { await reports().save(s, { patch: { tasks: change(tasks) }, base: { tasks: digest(tasks) } }); console.log(`${jda.name}: saved.`); }
+    catch (e) { console.error(`${jda.name}: not saved (${e.message}). Run the script again.`); }
   }
+  console.log(`\nBackup: ${at}`);
 }

@@ -11,8 +11,6 @@ export const JDAS = [
 // A JDA added without an icon gets this pencil.
 export const DEFAULT_JDA_ICON = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
 
-// The Invoice Tracker, served by the JDA server behind the same sign-in as these pages.
-export const INVOICE_TRACKER_URL = '/control-tower/tracker/';
 
 // Microsoft Calendar sync (Edit report). The card stays hidden until a real client ID is set here.
 // portal/README.md, "Microsoft Calendar", has the Azure AD app registration that produces one.

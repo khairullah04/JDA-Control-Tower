@@ -4,17 +4,17 @@
 // "Save changes"; the "Update from Google Drive" buttons load the Drive folders into those drafts.
 import { setupBlockEditor } from './block-editor.js';
 import { starterBlocks, cleanBlocks } from './blocks.js';
-import { withProjectIds, linkTasks, newId, normalizeTask, stampTasks, taskProgress, PRIORITIES } from './progress.js';
+import { withProjectIds, linkTasks, newId, normalizeTask, normalizeTasks, stampTasks, mergeTasks, PRIORITIES } from './progress.js';
 import { esc } from '../../shared/esc.js';
 
 const $ = id => document.getElementById(id);
 const newSolution = () => ({ title: '', tier: 'Tier 1', art: null, tags: [], blocks: starterBlocks() });
 const NEW_PRESS = { text: '', more: '', url: '', linkText: 'Read the full release →', img: '' };
 
-export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today }){
+export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today, openTask }){
   let d = draft, p = progress;
   // Tasks are tied to their project by its id, not its name (progress.js), so a rename keeps them together.
-  p.projects = withProjectIds(p.projects); p.tasks = linkTasks(p.tasks.map(normalizeTask), p.projects);
+  p.projects = withProjectIds(p.projects); p.tasks = linkTasks(normalizeTasks(p.tasks), p.projects);
   let savedTasks = JSON.parse(JSON.stringify(p.tasks)); // as last saved: what changed since gets today as its last-updated date
   const dirty = { master: false, progress: false };
   let part = 'master'; // which draft the controls being built right now belong to
@@ -309,11 +309,23 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
   /* ---------- Overall progress and Weekly progress ---------- */
   const cycle = (list, v) => list[(list.indexOf(v) + 1) % list.length];
   const RAG = ['green', 'amber', 'red'], SEVERITY = ['low', 'medium', 'high'];
-  function dateInput(value, set){
+  // Dates are taken when the field is left, without redrawing the screen (a redraw while a year is
+  // still being typed would cut it short).
+  function dateInput(value, set, label = 'Date'){
     const input = document.createElement('input');
     input.type = 'date'; input.value = value || ''; input.className = 'ed-date';
-    input.onchange = changeP(() => set(input.value));
+    input.setAttribute('aria-label', label);
+    input.addEventListener('change', () => { set(input.value); touched('progress'); });
     return input;
+  }
+  // A badge that is changed by clicking it: a real button, so the keyboard can change it too.
+  function pillButton(pill, label, onClick){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = `${pill.className} ed-pill`; b.innerHTML = pill.innerHTML;
+    b.setAttribute('aria-label', `${label}: ${pill.textContent.trim() || 'not set'}. Press to change.`);
+    b.onclick = onClick;
+    pill.replaceWith(b);
+    return b;
   }
   // The project choices on each task row, kept in step with the project names as they are typed on the other screen.
   const projectOptions = () => '<option value="">Not linked to a project</option>' + p.projects.filter(x => x.name).map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
@@ -385,9 +397,9 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
       text(name, v => t.task = v, 'Task title');
       text(cell('owner'), v => t.owner = v, 'Owner');
       const prio = cell('priority').firstElementChild;
-      prio.classList.add('ed-click'); prio.title = 'Click to change the priority';
-      prio.onclick = changeP(() => t.priority = cycle(['', ...PRIORITIES], t.priority));
-      cell('due').replaceChildren(dateInput(t.due, v => t.due = v));
+      if (!t.priority) prio.textContent = 'Set';
+      pillButton(prio, 'Priority', changeP(() => t.priority = cycle(['', ...PRIORITIES], t.priority)));
+      cell('due').replaceChildren(dateInput(t.due, v => t.due = v, 'Due date'));
       if (!t.checklist.length) {
         const pct = document.createElement('input');
         pct.type = 'number'; pct.min = 0; pct.max = 100; pct.className = 'ed-date ed-pct'; pct.value = t.progress ?? ''; pct.placeholder = '%';
@@ -395,9 +407,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
         pct.onchange = changeP(() => { const v = pct.value === '' ? null : Math.max(0, Math.min(100, Math.round(Number(pct.value)))); t.progress = Number.isFinite(v) ? v : null; });
         cell('progress').replaceChildren(pct);
       }
-      const tag = cell('status').querySelector('.task-status');
-      tag.classList.add('ed-click'); tag.title = 'Click to change the status';
-      tag.onclick = changeP(() => t.status = cycle(taskStatuses, t.status));
+      pillButton(cell('status').querySelector('.task-status'), 'Status', changeP(() => t.status = cycle(taskStatuses, t.status)));
       // The details row: everything else about the task.
       const details = row.nextElementSibling?.firstElementChild;
       if (!details) return;
@@ -410,33 +420,40 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
         const item = document.createElement('div');
         item.className = 'ed-check';
         const box = Object.assign(document.createElement('input'), { type: 'checkbox', checked: c.done });
-        box.setAttribute('aria-label', 'Done');
-        box.onchange = changeP(() => { c.done = box.checked; });
+        box.setAttribute('aria-label', `Done: ${c.text || `item ${ci + 1}`}`);
+        box.onchange = () => { c.done = box.checked; touched('progress'); };
         const label = Object.assign(document.createElement('input'), { value: c.text, placeholder: 'Checklist item' });
+        label.setAttribute('aria-label', `Checklist item ${ci + 1}`);
         label.oninput = () => { c.text = label.value; touched('progress'); };
         item.append(box, label, button('Remove', changeP(() => t.checklist.splice(ci, 1)), 'danger'));
         list.append(item);
       });
-      list.append(button('+ Add checklist item', changeP(() => t.checklist.push({ text: '', done: false }))));
+      list.append(button('+ Add checklist item', () => {
+        t.checklist.push({ text: '', done: false }); touched('progress'); openTask(t.id); redrawProgress();
+        $('tasksBody').querySelector(`tr.task-detail[data-index="${i}"] .ed-check:last-of-type input:not([type])`)?.focus();
+      }));
       const dates = document.createElement('div');
       dates.className = 'task-edit-dates';
       for (const [label, key] of [['Start', 'start'], ['Completed', 'completed']]) {
-        const wrap = document.createElement('div');
-        wrap.innerHTML = `<label>${label}</label>`;
-        wrap.append(dateInput(t[key], v => t[key] = v));
+        const wrap = document.createElement('label');
+        wrap.textContent = label;
+        const input = dateInput(t[key], v => t[key] = v, `${label} date`);
+        // a completed date belongs to a task that is Done (marking it Done fills it in)
+        if (key === 'completed' && t.status !== 'Done') { input.disabled = true; input.title = 'Mark the task Done first'; }
+        wrap.append(input);
         dates.append(wrap);
       }
       form.append(
         field('Description', t.description, v => t.description = v, { area: true, hint: 'What the task is' }),
         field('Notes and blockers', t.notes, v => t.notes = v, { area: true, hint: 'Anything in the way, or worth knowing' }),
         dates, list,
-        Object.assign(document.createElement('p'), { className: 'muted', textContent: `Last updated: ${t.updatedAt || 'not yet'}. Saving sets it to today for every task changed; marking a task Done sets its completed date.` })
+        Object.assign(document.createElement('p'), { className: 'muted', textContent: `Last updated: ${t.updatedAt ? new Date(`${t.updatedAt}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'not yet'}. Saving sets it to today for every task you changed; marking a task Done sets its completed date.` })
       );
       details.replaceChildren(form);
     });
     const addTask = document.createElement('tr');
     addTask.innerHTML = '<td colspan="6"></td>';
-    addTask.firstChild.append(bar(button('+ Add task', changeP(() => p.tasks.push(normalizeTask({ status: 'Not started' }))))));
+    addTask.firstChild.append(bar(button('+ Add task', changeP(() => { const t = normalizeTask({ id: newId(), status: 'Not started' }); p.tasks.push(t); openTask(t.id); }))));
     $('tasksBody').append(addTask);
 
     $('updatesLog').querySelectorAll('.update-item').forEach((item, i) => {
@@ -476,9 +493,11 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
       if (!Object.keys(sections).length) sayP("Nothing to load: no readable files in this JDA's Overall Progress or Weekly Progress folders.");
       else {
         // Each section the files cover replaces that section of the draft; the others stay as they are.
-        const before = p.projects;
+        const before = p.projects, tasksBefore = p.tasks;
         Object.assign(p, sections);
-        p.projects = withProjectIds(p.projects, before); p.tasks = linkTasks(p.tasks, p.projects); // projects from Drive keep the ids they had
+        p.projects = withProjectIds(p.projects, before); // projects from Drive keep the ids they had
+        // tasks from Drive are merged into the draft's: each keeps its id and every detail typed that the report does not state
+        p.tasks = linkTasks(sections.tasks ? mergeTasks(sections.tasks, tasksBefore) : p.tasks, p.projects);
         openDescriptions.clear(); touched('progress'); redrawProgress();
         const parts = [];
         if (out.counts.overall) parts.push(`overall progress (${count(out.counts.overall, 'file')})`);
@@ -553,7 +572,9 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
     o.projects = o.projects.filter(x => x.name);
     o.tasks = linkTasks(o.tasks, o.projects); // each linked task carries its project's current name; one whose project is gone keeps only the text
     o.challenges = o.challenges.filter(x => x.title || x.description);
-    o.tasks = stampTasks(o.tasks.filter(x => x.task).map(normalizeTask), savedTasks, today);
+    // a task with details but no title is kept as "Untitled task" rather than dropped
+    const hasDetail = x => x.description || x.notes || x.checklist?.length || x.owner || x.due;
+    o.tasks = stampTasks(o.tasks.filter(x => x.task || hasDetail(x)).map(x => normalizeTask({ ...x, task: x.task || 'Untitled task' })), savedTasks, today);
     o.updates = o.updates.filter(x => x.text);
     return o;
   }
@@ -584,6 +605,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
 
   /* ---------- Leaving ---------- */
   window.addEventListener('beforeunload', e => { if (dirty.master || dirty.progress) e.preventDefault(); });
+  window.hasUnsavedChanges = () => dirty.master || dirty.progress; // Sign out asks first (account.js)
   $('editorBackTop').onclick = e => { e.preventDefault(); toMaster(); };
   $('editorBack').onclick = e => { e.preventDefault(); leave(); };
 

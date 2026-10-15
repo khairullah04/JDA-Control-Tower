@@ -78,7 +78,7 @@ test('progress scope assembles overall and weekly, and leaves the home page alon
 
   // weekly: latest week by date wins the label and tasks; updates accumulate, deduplicated, newest first
   assert.equal(patch.weekLabel, 'Week 2');
-  const blank = { description: '', priority: '', start: '', completed: '', progress: null, checklist: [], notes: '', updatedAt: '2026-09-14' };
+  const blank = { description: '', priority: '', start: '', completed: '', progress: null, checklist: [], notes: '' };
   assert.deepEqual(patch.tasks, [{ task: 'new task', project: '', owner: 'y', due: '', status: 'Not started', ...blank },
     { task: 'rich task', project: 'Alpha', owner: 'z', due: '2026-09-20', status: 'In progress', ...blank, description: 'Why', priority: 'High', start: '2026-09-01', progress: 100, checklist: [{ text: 'a', done: true }], notes: 'Waiting on IT' }]);
   assert.deepEqual(patch.updates, [{ date: '2026-09-15', text: 'Second' }, { date: '2026-09-08', text: 'First' }]);

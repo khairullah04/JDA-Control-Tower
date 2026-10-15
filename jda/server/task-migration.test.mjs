@@ -21,6 +21,14 @@ test('revert keeps what was written into a new field since', () => {
   assert.deepEqual([back.notes, back.priority, back.id, 'description' in back], ['Waiting on IT', 'High', t.id, false]);
 });
 
+test('the migration only adds: odd stored values survive a round trip exactly', () => {
+  const odd = [{ task: 'X', status: 'Blocked', due: '2026-09-05T00:00:00Z', owner: 7 }, { task: 'X', status: 'In Progress' }];
+  const now = migrateTasks(odd);
+  assert.deepEqual([now[0].status, now[0].due, now[0].owner, now[1].status], ['Blocked', '2026-09-05T00:00:00Z', 7, 'In Progress']);
+  assert.notEqual(now[0].id, now[1].id);                                              // same title: still two ids
+  assert.deepEqual(revertTasks(now), odd);
+});
+
 test('no tasks, or not a list: nothing to do', () => {
   assert.equal(needsMigration(undefined), false);
   assert.deepEqual(migrateTasks(null), []);

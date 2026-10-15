@@ -154,16 +154,25 @@ test('cleanHtml: what is typed or pasted into a block cannot carry script, style
   assert.equal(twice, '<b><a href="https://ok.test" target="_blank" rel="noopener">x</a></b>');     // cleaning what is already clean changes nothing
 });
 
-const { normalizeTask, taskProgress, stampTasks, viewTasks, isOverdue } = await import('../../portal/js/progress.js');
+const { normalizeTask, normalizeTasks, taskProgress, stampTasks, viewTasks, isOverdue, mergeTasks, stableId } = await import('../../portal/js/progress.js');
 
-test('a task from an older report reads with every new field blank', () => {
-  const t = normalizeTask({ task: 'Pilot', project: 'P1', owner: 'IBM', due: '2026-09-12', status: 'In progress' });
-  assert.match(t.id, /^[a-z0-9]{8}$/);
+test('a task from an older report reads with every new field blank, and the same id every time', () => {
+  const old = { task: 'Pilot', project: 'P1', owner: 'IBM', due: '2026-09-12', status: 'In progress' };
+  const t = normalizeTask(old);
+  assert.equal(t.id, stableId(old));
+  assert.equal(normalizeTask({ ...old }).id, t.id);
   assert.deepEqual({ ...t, id: 'x' }, { id: 'x', task: 'Pilot', description: '', project: 'P1', owner: 'IBM', status: 'In progress', priority: '', start: '', due: '2026-09-12',
     completed: '', progress: null, checklist: [], notes: '', updatedAt: '' });
   assert.equal(normalizeTask({ id: 'keep', task: 'x' }).id, 'keep');
-  const odd = normalizeTask({ status: 'Finished', priority: 'Urgent', due: '12/9/2026', progress: '140', checklist: [{ text: 'a', done: 1 }, { text: ' ' }, null] });
-  assert.deepEqual([odd.status, odd.priority, odd.due, odd.progress, odd.checklist], ['Not started', '', '', 100, [{ text: 'a', done: true }]]);
+});
+
+test('stored values are read, not rewritten', () => {
+  const t = normalizeTask({ task: 'x', status: 'IN PROGRESS', due: '2026-09-05T00:00:00Z', owner: 42, priority: 'high', progress: '140', checklist: [{ text: 'a', done: 1 }, { text: ' ' }, null] });
+  assert.deepEqual([t.status, t.due, t.owner, t.priority, t.progress, t.checklist], ['In progress', '2026-09-05', '42', 'High', 100, [{ text: 'a', done: true }]]);
+  assert.equal(normalizeTask({ status: 'Completed' }).status, 'Done');
+  assert.equal(normalizeTask({ status: 'Blocked' }).status, 'Blocked');                  // unknown: kept as written
+  const twins = normalizeTasks([{ task: 'Same' }, { task: 'Same' }]);
+  assert.notEqual(twins[0].id, twins[1].id);
 });
 
 test('progress: the checklist, else the % written, else 100 when done', () => {
@@ -173,25 +182,41 @@ test('progress: the checklist, else the % written, else 100 when done', () => {
   assert.equal(taskProgress({ checklist: [], progress: null, status: 'In progress' }), null);
 });
 
-test('saving stamps what changed, and the completed date follows Done', () => {
+test('saving stamps what changed; a completed date only for a task marked Done now', () => {
   const a = normalizeTask({ id: 'a', task: 'A', status: 'In progress', updatedAt: '2026-10-01' });
   const b = normalizeTask({ id: 'b', task: 'B', status: 'Done', completed: '2026-09-30', updatedAt: '2026-09-30' });
-  const [a2, b2, c2] = stampTasks([a, { ...b, status: 'In progress' }, normalizeTask({ id: 'c', task: 'C', status: 'Done' })], [a, b], '2026-10-15');
+  const old = normalizeTask({ id: 'o', task: 'Old', status: 'Done', due: '2026-08-01' });   // Done before completed dates existed
+  const [a2, b2, o2, c2] = stampTasks([a, { ...b, status: 'In progress' }, old, normalizeTask({ id: 'c', task: 'C', status: 'Done' })], [a, b, old], '2026-10-15');
   assert.equal(a2.updatedAt, '2026-10-01');                                    // untouched
   assert.deepEqual([b2.completed, b2.updatedAt], ['', '2026-10-15']);           // taken out of Done
+  assert.deepEqual([o2.completed, o2.updatedAt], ['', '']);                     // already Done, untouched: no made-up date
   assert.deepEqual([c2.completed, c2.updatedAt], ['2026-10-15', '2026-10-15']); // new, and done today
   const [done] = stampTasks([{ ...a, status: 'Done' }], [a], '2026-10-16');
   assert.deepEqual([done.completed, done.updatedAt], ['2026-10-16', '2026-10-16']);
 });
 
-test('the Weekly progress view filters by status, overdue and owner, and sorts', () => {
+test('a weekly report from Drive is merged in: ids and typed details are kept', () => {
+  const current = normalizeTasks([{ id: 'k1', task: 'Pilot', project: 'P1', owner: 'IBM', status: 'In progress', description: 'Typed by hand', checklist: [{ text: 'step', done: true }], notes: 'Waiting', priority: 'High' },
+    { id: 'k2', task: 'Gone', status: 'Not started' }]);
+  const merged = mergeTasks([{ task: 'pilot', project: 'P1', owner: 'IBM', status: 'Done', due: '2026-10-20' }, { task: 'Brand new', status: 'Not started' }], current);
+  assert.deepEqual(merged.map(t => t.id), ['k1', stableId({ task: 'Brand new' })]);
+  assert.deepEqual([merged[0].status, merged[0].due, merged[0].description, merged[0].notes, merged[0].priority, merged[0].checklist], ['Done', '2026-10-20', 'Typed by hand', 'Waiting', 'High', [{ text: 'step', done: true }]]);
+  const stated = mergeTasks([{ task: 'Pilot', project: 'P1', status: 'Done', notes: 'From the report', priority: 'Low' }], current);
+  assert.deepEqual([stated[0].notes, stated[0].priority, stated[0].description], ['From the report', 'Low', 'Typed by hand']);
+});
+
+test('the Weekly progress view filters by status, due date and owner, and sorts', () => {
   const T = (task, extra) => normalizeTask({ task, ...extra });
   const list = [T('late', { due: '2026-10-01', status: 'In progress', owner: 'IBM', priority: 'Low' }), T('soon', { due: '2026-10-20', owner: 'TAI', priority: 'High' }),
-    T('none', { owner: 'IBM' }), T('done', { due: '2026-09-01', status: 'Done', owner: 'TAI', priority: 'Medium' })];
+    T('none', { owner: 'IBM' }), T('done', { due: '2026-09-01', status: 'Done', owner: 'TAI', priority: 'Medium' }), T('later', { due: '2026-11-01' })];
   const names = v => v.map(t => t.task);
-  assert.deepEqual(names(viewTasks(list, {}, '2026-10-15')), ['done', 'late', 'soon', 'none']);       // by due date, undated last
-  assert.deepEqual(names(viewTasks(list, { status: 'overdue' }, '2026-10-15')), ['late']);
-  assert.deepEqual(names(viewTasks(list, { owner: 'TAI' }, '2026-10-15')), ['done', 'soon']);
-  assert.deepEqual(names(viewTasks(list, { sort: 'priority' }, '2026-10-15')), ['soon', 'done', 'late', 'none']);
-  assert.ok(isOverdue(list[0], '2026-10-15') && !isOverdue(list[3], '2026-10-15'));
+  const today = '2026-10-15';
+  assert.deepEqual(names(viewTasks(list, {}, today)), ['done', 'late', 'soon', 'later', 'none']);    // by due date, undated last
+  assert.deepEqual(names(viewTasks(list, { status: 'overdue' }, today)), ['late']);
+  assert.deepEqual(names(viewTasks(list, { due: 'week' }, today)), ['soon']);
+  assert.deepEqual(names(viewTasks(list, { due: 'month' }, today)), ['soon', 'later']);
+  assert.deepEqual(names(viewTasks(list, { due: 'none' }, today)), ['none']);
+  assert.deepEqual(names(viewTasks(list, { owner: 'TAI' }, today)), ['done', 'soon']);
+  assert.deepEqual(names(viewTasks(list, { sort: 'priority' }, today)), ['soon', 'done', 'late', 'later', 'none']);
+  assert.ok(isOverdue(list[0], today) && !isOverdue(list[3], today));
 });
