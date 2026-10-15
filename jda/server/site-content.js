@@ -213,3 +213,83 @@ export async function controlTowerContent(store) {
     updatedAt: text(saved.updatedAt), updatedBy: text(saved.updatedBy)
   };
 }
+
+/* ---------- Edit mode: what a save may store ---------- */
+// Whatever a page sends is rebuilt from what the page is known to hold: only known sections and
+// fields, as text of a sensible length, so nothing unexpected (or huge) is ever stored or published.
+const MAX_TEXT = 6000, MAX_LIST = 50;
+const cut = (v, n = MAX_TEXT) => text(v).slice(0, n);
+const short = v => cut(v, 300);
+const peopleIn = list => (Array.isArray(list) ? list : []).filter(isObj).slice(0, MAX_LIST).map(p => ({ name: short(p.name), title: short(p.title) }));
+const wholeOrNull = (v, max) => Number.isInteger(v) && v >= 0 && v <= max ? v : null;
+
+export function cleanPublic(input) {
+  const out = {};
+  for (const [k, def] of Object.entries(PUBLIC_DEFAULTS)) {
+    if (k === 'jdas' || !isObj(def)) continue;
+    out[k] = Object.fromEntries(Object.keys(def).map(f => [f, cut(input?.[k]?.[f] ?? def[f])]));
+  }
+  out.jdas = Object.fromEntries(JDAS.map(j => {
+    const w = isObj(input?.jdas?.[j.id]) ? input.jdas[j.id] : {};
+    return [j.id, {
+      title: short(w.title), status: STATUSES.includes(w.status) ? w.status : '', pressRelease: cut(w.pressRelease),
+      projects: (Array.isArray(w.projects) ? w.projects : []).map(short).map(p => p.trim()).filter(Boolean).slice(0, MAX_LIST),
+      projectCount: wholeOrNull(w.projectCount, 999), programLeads: peopleIn(w.programLeads), businessChampions: peopleIn(w.businessChampions)
+    }];
+  }));
+  return out;
+}
+
+export function cleanControlTower(input) {
+  return {
+    jdas: Object.fromEntries(JDAS.map(j => {
+      const w = isObj(input?.jdas?.[j.id]) ? input.jdas[j.id] : {};
+      const cost = w.costOverride;
+      return [j.id, {
+        agreement: links(w.agreement).slice(0, MAX_LIST), brd: links(w.brd).slice(0, MAX_LIST),
+        keyInsights: boxes(w.keyInsights).slice(0, MAX_LIST).map(b => ({ title: short(b.title), text: cut(b.text, 2000) })),
+        challenges: Array.isArray(w.challenges) ? boxes(w.challenges).slice(0, MAX_LIST).map(b => ({ title: short(b.title), text: cut(b.text, 2000), severity: b.severity || 'medium' })) : null,
+        progressOverride: pct(w.progressOverride),
+        costOverride: isObj(cost) && myr(cost.spent) !== null && myr(cost.sanctioned) !== null ? { spent: cost.spent, sanctioned: cost.sanctioned } : null
+      }];
+    }))
+  };
+}
+
+// A save: the page sends what it edited and the `updatedAt` it started from. If someone else saved in
+// between, it is refused (409) unless `force`, so nobody overwrites another person's edit unknowingly.
+export async function savePage(store, page, { content, base = '', force = false } = {}, by = 'unknown', now = new Date().toISOString()) {
+  const clean = { public: cleanPublic, controlTower: cleanControlTower }[page];
+  if (!clean) throw Object.assign(new Error('There is no such page.'), { status: 404 });
+  const current = await store.get(page);
+  if (!force && text(current?.updatedAt) !== text(base)) {
+    throw Object.assign(new Error(`${text(current?.updatedBy) || 'Someone'} saved this page after you opened it. Reload to see their changes, or save again to overwrite them.`), { status: 409 });
+  }
+  return store.put(page, { ...clean(content), updatedAt: now, updatedBy: by });
+}
+
+// What edit mode starts from: what is written (over the defaults), with the stamp a save must quote.
+export async function editablePublic(store) {
+  const saved = await store.get('public') || {};
+  const content = withDefaults(saved, PUBLIC_DEFAULTS);
+  // each JDA from what is shown before anything is written (its placeholder people), so edit mode starts from what the public sees
+  const jdas = Object.fromEntries(JDAS.map(j => [j.id, { ...JDA_DEFAULTS(), ...(isObj(content.jdas[j.id]) ? content.jdas[j.id] : {}) }]));
+  return { content: { ...content, jdas: cleanPublic({ jdas }).jdas }, updatedAt: text(saved.updatedAt), updatedBy: text(saved.updatedBy) };
+}
+
+// The Roles picture, uploaded in edit mode: a JPEG, PNG or WebP of up to 8 MB, recognised by its
+// first bytes (not by what the browser says it is). It replaces whichever roles picture was there.
+const KINDS = [['jpg', b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff], ['png', b => b.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))],
+  ['webp', b => b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP']];
+export const MAX_IMAGE = 8 * 1024 * 1024;
+export function saveRolesImage(base64, dir = PUBLIC_DIR) {
+  const bytes = Buffer.from(text(base64), 'base64');
+  if (!bytes.length) throw Object.assign(new Error('No picture was sent.'), { status: 400 });
+  if (bytes.length > MAX_IMAGE) throw Object.assign(new Error('The picture is larger than 8 MB.'), { status: 413 });
+  const kind = KINDS.find(([, is]) => is(bytes))?.[0];
+  if (!kind) throw Object.assign(new Error('Use a JPEG, PNG or WebP picture.'), { status: 415 });
+  fs.mkdirSync(dir, { recursive: true });
+  for (const ext of ['jpg', 'jpeg', 'png', 'webp']) fs.rmSync(`${dir}roles.${ext}`, { force: true });
+  fs.writeFileSync(`${dir}roles.${kind}`, bytes);
+  return rolesImage(dir);
+}

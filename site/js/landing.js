@@ -193,11 +193,25 @@ async function account() {
   $('signInBtn').lastChild.textContent = ' Open Control Tower';
   if ($('footSignIn')) $('footSignIn').textContent = 'Open Control Tower';
   document.querySelector('.side-note').textContent = who.signInOff ? 'Sign-in is off (local)' : `Signed in as ${String(who.email).split('@')[0]}`;
+  // Edit mode: everything on this page that is written rather than worked out (edit.js).
+  const editBtn = Object.assign(document.createElement('button'), { type: 'button', id: 'editPageBtn', className: 'btn ghost small side-edit', textContent: 'Edit page' });
+  editBtn.onclick = async () => {
+    editBtn.disabled = true;
+    try { (await import('/site/js/edit.js')).start({ site: current, show, reload }); }
+    catch (e) { alert(`Edit mode could not open: ${e.message}`); }
+    finally { editBtn.disabled = false; }
+  };
+  $('sideFoot').append(editBtn);
   if (!who.signInOff) {
     const out = Object.assign(document.createElement('button'), { type: 'button', className: 'btn ghost small side-signout', textContent: 'Sign out' });
-    out.onclick = () => endSession();
+    out.onclick = () => { if (!window.hasUnsavedChanges?.() || confirm('You have unsaved changes. Sign out anyway and lose them?')) endSession(); };
     $('sideFoot').append(out);
   }
+}
+// After a save: the page as the public now sees it.
+async function reload() {
+  const res = await fetch('/api/public/site');
+  if (res.ok) await show(await res.json());
 }
 
 let current;

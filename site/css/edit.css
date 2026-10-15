@@ -1,0 +1,52 @@
+/* Edit mode on the two landing pages (site/js/edit-kit.js, site/js/edit.js, portal/js/control-tower-edit.js). */
+body.editing{padding-bottom:96px}
+.edit-bar{position:fixed;left:0;right:0;bottom:0;z-index:90;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px clamp(16px,4vw,32px);background:#fff;border-top:3px solid #6b4fc7;box-shadow:0 -8px 24px rgba(2,62,58,.14);font-family:"Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif}
+.edit-bar-text{display:grid;gap:2px;min-width:0}
+.edit-bar-text b{color:#3b2a83;font-size:15px}
+.edit-status{font-size:13.5px;color:#4a5b60}
+.edit-bar-actions{display:flex;gap:10px}
+.eb-btn{min-height:44px;padding:0 20px;border-radius:12px;border:1px solid transparent;font:700 14px/1 inherit;font-family:inherit;cursor:pointer}
+.eb-btn.primary{background:linear-gradient(135deg,#00857c,#015149);color:#fff}
+.eb-btn.primary:disabled{opacity:.55;cursor:default}
+.eb-btn.ghost{background:#fff;border-color:#d7dfe1;color:#015149}
+.eb-btn:focus-visible,.le-btn:focus-visible,.le-add:focus-visible{outline:3px solid #00a19c;outline-offset:2px}
+/* text edited where it stands */
+.ed-inline{outline:1.5px dashed #8a74d6;outline-offset:3px;border-radius:4px;white-space:pre-wrap;cursor:text;min-width:2ch}
+.ed-inline:hover{background:rgba(107,79,199,.06)}
+.ed-inline:focus{outline:2px solid #6b4fc7;background:rgba(107,79,199,.05)}
+.ed-inline:empty::before{content:attr(data-ph);color:#8b979a;font-style:italic}
+.hero .ed-inline{outline-color:rgba(255,255,255,.7)}
+.hero .ed-inline:empty::before{color:rgba(255,255,255,.7)}
+/* forms */
+.jda-edit,.roles-edit,.ct-edit{display:grid;gap:14px;padding:18px;border-radius:16px;border:1.5px dashed #8a74d6;background:#fbfaff}
+.roles-edit{margin-top:14px}
+.ef{display:grid;gap:6px}
+.ef-label{font-size:13px;font-weight:700;color:#24363b}
+.ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #d7dfe1;border-radius:10px;background:#fff;width:100%;color:#16242a}
+.ef textarea{min-height:90px;resize:vertical}
+.ef input:focus,.ef textarea:focus,.ef select:focus,.le-field input:focus,.le-field textarea:focus{outline:none;border-color:#6b4fc7;box-shadow:0 0 0 3px rgba(107,79,199,.18)}
+.edit-hint{margin:0;font-size:12.5px;color:#566a6f}
+.ct-edit h4,.jda-edit h3,.jda-edit h4{margin:6px 0 0}
+/* list editor */
+.le{display:grid;gap:8px}
+.le-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px;padding:10px;border-radius:12px;background:#fff;border:1px solid #e2e8ea}
+.le-field{display:grid;gap:4px;flex:1 1 180px;font-size:12px;font-weight:700;color:#566a6f}
+.le-field.wide{flex-basis:100%}
+.le-field textarea{min-height:64px}
+.le-tools{display:flex;gap:6px}
+.le-btn{min-height:36px;min-width:36px;padding:0 10px;border-radius:9px;border:1px solid #d7dfe1;background:#fff;font:600 13px inherit;font-family:inherit;color:#015149;cursor:pointer}
+.le-btn:disabled{opacity:.4;cursor:default}
+.le-btn:last-child{color:#a33a30}
+.le-add{justify-self:start;min-height:40px;padding:0 14px;border-radius:10px;border:1.5px dashed #8a74d6;background:#fff;font:700 13.5px inherit;font-family:inherit;color:#3b2a83;cursor:pointer}
+.side-edit{border-color:rgba(255,255,255,.4)!important}
+@media (prefers-reduced-motion:reduce){.edit-bar{transition:none}}
+.ct-override{display:grid;gap:8px}
+.ef-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#24363b;cursor:pointer}
+.ef-check input{width:18px;height:18px;margin:0}
+.ct-cost-fields{display:flex;flex-wrap:wrap;gap:12px}
+.ct-cost-fields .ef{flex:1 1 180px}
+.ct-edit h4{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#3b2a83}
+.ct-edit > h4:first-child{font-size:15px;letter-spacing:0;text-transform:none}
+.ef-check,.ef,.le-field{text-transform:none;letter-spacing:0}
+.ct-override > input[type=number]{max-width:180px;font:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #d7dfe1;border-radius:10px}

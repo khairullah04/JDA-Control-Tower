@@ -44,6 +44,7 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
   open its Master Page, Overall progress, Weekly progress and public Info page. **Sync from Drive** (the
   tracker's invoice inbox) and **+ Add JDA (finance)** sit top right; Recent activity is at the bottom.
 - Top bar: CJI3 register, Payment tables, the public site, and Sign out.
+- **Edit page** (top right): per JDA, its Agreement and BRD links, key insights, challenges, and the progress and cost figures when they must be set by hand (shown as "Set by hand"). The public TriCipta AI page has the same button in its sidebar for anyone signed in. Both save on the server (`/api/site/...`), and a save made after someone else's is refused until confirmed.
 - A JDA -> Control Tower: the "Control Tower" tab or the logo. Invoice Tracker -> Control Tower:
   "← Control Tower" or its logo. The tracker's old front page (a card per JDA) is gone: its address
   leads to the Control Tower.

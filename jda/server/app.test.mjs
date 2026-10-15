@@ -132,3 +132,17 @@ test('sign in trades a Firebase token for the cookie; me and sign out', async ()
     assert.match((await post('/api/auth/logout')).headers.get('set-cookie'), /^ct_session=; Max-Age=0;/);
   } finally { globalThis.fetch = realFetch; }
 });
+
+test('edit mode: a signed-in save is stored under that person, and the public page shows it', async () => {
+  const put = (page, body, headers = {}) => fetch(`${base}/api/site/${page}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  assert.equal((await put('public', { content: {} })).status, 401);                               // signed out
+  const ok = await put('public', { content: { header: { title: 'TRICIPTA AI', tagline: 'New tagline' } } }, as('aina@jda.app'));
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).updatedBy, 'aina');
+  const stale = await put('public', { content: {}, base: '' }, as('aina@jda.app'));
+  assert.equal(stale.status, 409);                                                                  // someone saved since this page opened
+  const pub = await (await fetch(`${base}/api/public/site`)).json();
+  assert.equal(pub.header.tagline, 'New tagline');
+  assert.doesNotMatch(JSON.stringify(pub), /"aina"|updatedBy|updatedAt/);
+  assert.equal((await put('nonsense', { content: {} }, as('aina@jda.app'))).status, 404);
+});

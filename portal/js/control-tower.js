@@ -221,6 +221,20 @@ function wire() {
     if (i < 0 || to === undefined) return;
     e.preventDefault(); select(tabs[(to + tabs.length) % tabs.length], true);
   });
+  // Edit mode (control-tower-edit.js): what is written for each JDA; then the page is drawn again from the server's copy.
+  $('editPageBtn').onclick = async () => {
+    $('editPageBtn').disabled = true;
+    const open = () => $('ctTabs').querySelector('[aria-selected="true"]')?.id.slice(4);
+    try {
+      (await import('./control-tower-edit.js')).start({
+        jdas: state.jdas,
+        figures: j => figures(j, state.reports[state.jdas.indexOf(j)], state.written[j.id] || {}, state.costs),
+        redraw: () => safeDraw(open()),
+        saved: async () => { const at = open(); state.written = (await getJson('/api/site/controlTower')).jdas; safeDraw(at); notice('Saved. The Control Tower shows the new content.'); }
+      });
+    } catch (e) { notice(`Edit mode could not open: ${e.message}`, true); }
+    finally { $('editPageBtn').disabled = false; }
+  };
   $('ctPanels').addEventListener('click', e => {
     const info = e.target.closest('[data-info]');
     if (info) return openInfo(state.jdas.find(j => j.id === info.dataset.info));

@@ -118,10 +118,10 @@ written beside it. Review findings are logged under each phase.
 
 ## Phase 6 (Priority 6): edit mode
 
-- [ ] Edit page button on both landing pages, only for signed-in people.
-- [ ] Every displayed piece of content editable (texts, roles image, JDA tab content, people add/remove/reorder, status, counts where not derived, contacts, insights, challenges, document links, cost figures).
-- [ ] Saved on the server (Firestore, or the local file without a key), shown after reload.
-- [ ] Derived values shown as derived; manual overrides labelled as overrides.
+- [x] Edit page button on both landing pages, only for signed-in people (public page: in the sidebar once signed in; Control Tower: top right). Saves are refused signed out (401) and must be JSON (415). *Checked: `app.test.mjs` (signed-out PUT 401, signed-in save, 409); browser on both pages.*
+- [x] Every displayed piece of content editable: on the public page every header, subheader and body text, the eyebrow, tagline, contacts and footer in place; the Roles picture (upload, JPEG/PNG/WebP up to 8 MB, checked by its bytes) and its description; per JDA its title, status, press release overview, projects, number of projects, Program Leads and Business Champions (add, remove, reorder). On the Control Tower per JDA: Agreement and BRD links, key insights, challenges, progress and cost figures. Not editable here: JDA names (the JDA list, A23) and the Info pages, which copy each JDA's Master Page and are edited in its report editor. *Checked: browser, both pages saved and redrawn; `site-edit.test.mjs`.*
+- [x] Saved on the server (Firestore `site/public` and `site/controlTower`, or `jda/server/.site-content.json` without a key), shown at once and after reload; who saved and when is kept but never published; a save made after someone else's is refused unless confirmed ("Save anyway"). *Checked: `site-edit.test.mjs`, `app.test.mjs`; browser.*
+- [x] Derived values shown as derived (the public form shows the worked-out value as the field's placeholder with "Leave empty to use …"; status "Automatic: …"); overrides labelled ("Set by hand", "Written by hand" on the Control Tower; a written public value simply replaces the derived one). *Checked: browser (progress override shown "Set by hand").*
 
 ## Definition of done
 
@@ -159,6 +159,8 @@ written beside it. Review findings are logged under each phase.
 | A26 | A completed date is only set when a task is marked Done in an edit; tasks that were Done before keep a blank date. Leaving Done clears it. | A made-up date is worse than none. |
 | A27 | A weekly report from Drive still decides which tasks are on the list, but each matching task keeps its id and every detail the report does not state. | Before the overhaul the sync replaced the list; typed details must not be lost. |
 | A28 | The JDA 3 Excel → Power Automate feed writes tasks in the old shape; its tasks get ids worked out from their titles, and details typed in the editor for JDA 3 are overwritten by the feed's next run. | The feed is outside this repository (Known issues). |
+| A29 | Every signed-in person may use edit mode on both landing pages (open question 5). | No roles exist besides the access list. |
+| A30 | The roles picture is stored as a file on the server (`site/public/`), not in the database. | A picture is large; one server serves the site (see "One process only"). A second server would need the file copied. |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
 | A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
 | A11 | An invoice or sanctioned amount filed under another JDA (e.g. Unsorted) but against a JDA 4+ project is deleted with that project. | It would otherwise point at a project that no longer exists. |

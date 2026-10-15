@@ -35,6 +35,23 @@ To look around with sample data and no Firebase accounts, on your own computer o
 `jda/server/.env` (which opens every private page, so never on a network), then open
 http://localhost:8080/control-tower/.
 
+## Editing the two landing pages
+
+Sign in, open the page and press **Edit page** (in the sidebar of the public page, top right on the
+Control Tower). Text with a dashed outline is edited where it stands; each JDA has a form. Nothing is
+published until **Save changes**. The Roles picture is uploaded from the public page's edit mode (or put
+in `site/public/` as `roles.jpg` or `roles.png`). Each JDA's public Info page copies its Master Page, which
+is edited in the JDA report's editor.
+
+## Scripts that change the database
+
+Run from `jda/server`; each lists what it would do and changes nothing without `--apply`, and each takes
+a full backup first (`scripts/backup.mjs`) and stops if the backup did not save what it is about to change.
+
+- `node scripts/remove-jdas.mjs` removes JDA 4 and above with everything that hangs off them.
+- `node scripts/migrate-tasks.mjs` writes the new Weekly progress task fields into the stored reports
+  (`--revert` takes them out again).
+
 ## Check that everything still works
 
     cd jda/server
