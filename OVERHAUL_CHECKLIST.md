@@ -345,3 +345,66 @@ No High findings.
 | lead | Low | 401 test missed the new routes. | Fixed. |
 | designer | Low | Invalid font shorthands; placeholder contrast; small touch targets and iOS zoom; status wording; "Title" for people. | Fixed. |
 | designer, member | Low | Groups not collapsible on the Control Tower form; check-and-write not one transaction; no undo for a single removal. | Logged (A31; Cancel undoes everything unsaved). |
+
+---
+
+# Round 2: fixes, restructure and visual refresh
+
+Brief pasted 2026-10-15. Decisions asked of the user that day: the Master Page is edited **on the public Info page** by signed-in staff (no private copy); **Overall progress stays as its own private page** next to Weekly progress. Open-question defaults: hero images are the largest existing ones; colours keep the teal primary with one accent; Agreement/BRD are Drive (or SharePoint) links with an embedded preview where the link allows it.
+
+## R2 Phase 1: restructure (no behaviour change)
+
+Audit of the tree before the move (2026-10-15):
+
+- **Three front-end roots with no shared shape**: `site/` (public), `portal/` (private Control Tower and report pages), `jda/web/` (Invoice Tracker), plus `shared/` at the top, and the server buried in `jda/server/` beside the database rules in `jda/`.
+- **Three `package.json` files** (`portal/`, `jda/web/`, `shared/`) that only say `"type": "module"`.
+- **Design tokens defined four times**: `:root` colours in `site/css/site.css`, `portal/css/styles.css`, `jda/web/css/base.css` and `jda/web/css/finance.css`, already drifting (`--muted`, `--green`, `--amber`, `--red` differ).
+- **Business logic in components**: progress % (average of projects), cost % (paid / sanctioned), latest key update and challenge selection live inside `portal/js/control-tower.js` (`figures`, `loadCosts`).
+- **Misplaced and leftover code**: `SYNC_API_URL` (`portal/js/config/app-config.js`, `portal/js/api.js`) for a cross-origin setup the single sign-in no longer supports; `portal/js/config/jda-content.js` (private starter data) beside public config; the architecture diagram markup and styles (`arch2-*`, `archModal`) used by no public page and only by the private master page that Round 2 removes; the private master page itself (`portal/jda-report.html` overview screen, `masterEditBtn`, `editorTop`).
+- **Local leftovers**: `jda/server/portal-passkeys.json` (passkeys were removed in Phase 2; not in git).
+- **Docs spread** over `README.md`, `jda/README.md`, `portal/README.md`, `portal/firestore-rules-addition.txt`, `portal/assets/README.md`, `site/public/README.md`.
+- Not ours, left alone: `graphify-out/`, `.gitattributes` and the git hooks that stage them (another tool on this machine).
+
+- [x] Target structure in place (the tree in `README.md`): one front-end root `web/` whose folders are the addresses: `web/public` → `/public` (public), `web/shared` → `/shared` (public, code and pictures only), `web/control-tower` → `/control-tower` (private), with the Invoice Tracker at `web/control-tower/invoices` (`/control-tower/invoices/`; the old `/tracker/` and `/control-tower/tracker/` redirect there). 175 files moved with git (history kept); their relative imports recomputed by script from each file's new place. *Checked: `npm test` 140/140; every page loaded in a browser with no console errors.*
+- [x] Server in `server/` (its local `.env`, `node_modules` and data files moved with it), database rules in `firebase/`, docs in `docs/`. *Checked: server starts; tests pass from `server/`.*
+- [x] One component per file; modules named in kebab-case (the repository's convention: no framework, so no PascalCase component files); routes in kebab-case. The JDA's private built-in content (`jda-content.js`) is under `web/control-tower/config`, outside every public folder. *Checked: `app.test.mjs` requests every file under `web/control-tower` signed out (302) and tries `..` out of `/public` and `/shared` (refused).*
+- [x] Business logic moved out of the page code: progress %, cost %, latest key update, challenges and tracker totals into `web/control-tower/lib/jda-figures.js` (private: it uses the tracker's rules); report, task and picture-path logic in `web/shared/lib/` (`overview.js`, `progress.js`, `assets.js`). Drive sync stays where it was: the server (`server/portal-sync.js`) and the tracker's service (`invoices/js/services/sync.js`). *Checked: `jda-figures.test.mjs` (4 tests).*
+- [x] Design tokens in one file (`web/shared/styles/tokens.css`), loaded first by all six pages; the four `:root` blocks are gone; the tracker's `--green` (which meant teal) now uses the teal tokens. *Checked: grep finds one `:root`; screenshots.*
+- [x] Dead code and orphaned files deleted, each listed:
+  - `portal/package.json`, `shared/package.json`, `jda/web/package.json` → one `web/package.json`.
+  - `SYNC_API_URL` (`jdas.js`, `portal-api.js`): a cross-origin setting the single sign-in cannot use.
+  - Four duplicate `:root` token blocks (`site.css`, `styles.css`, tracker `base.css`, `finance.css`).
+  - The tracker's own web fonts (Inter, Manrope, JetBrains Mono): every page now uses the token fonts.
+  - Server routes for `/site/...` and `/lib/blocks.js` (replaced by `/public` and `/shared`).
+  - Not deleted, for the user: `server/portal-passkeys.json` (a local, ignored file of the passkeys removed in Phase 2; unused).
+  - Removed in R2 Phase 3 instead (they are behaviour): the private master page and the architecture diagram.
+- [x] No behaviour change: sign-in (route and session tests), Drive sync (portal and tracker sync tests; tracker page loads), invoice flow (finance tests; CJI3 and Payment Table pages load), weekly progress (page and editor load) checked after the move. One visible change: the tracker's fonts are now the shared ones. *Checked: `npm test` 140/140; browser pass over all pages.*
+
+## R2 Phase 2: scale down and visual refresh
+
+- [ ] UI about 20% smaller through the tokens (type, spacing, radii, component sizes), body text at least 14px, tap targets usable.
+- [ ] Public landing: hero carousel (TRICIPTA AI, slides Overview / What is JDA / each JDA, slide titles as tabs), latest press releases (one featured, smaller dated cards), JDA status pillar cards, a key-figures strip, image-led project highlights, a subtle pattern in sidebar and footer, a clean footer.
+- [ ] Same card, type and spacing system in the Control Tower.
+- [ ] Collapsible sidebar (icon rail with tooltips, remembered per browser, drawer on phones) on both sides.
+- [ ] Overview and What is JDA in faint section boxes.
+
+## R2 Phase 3: master page only public
+
+- [ ] Private master page routes, components and links removed; no references left.
+- [ ] Master Page edited on the public Info page by signed-in staff; Info pages still render.
+
+## R2 Phase 4: Agreement & BRD page
+
+- [ ] `/control-tower/<jda>/documents`: Agreement and BRD with preview/embed, open/download, metadata (title, version, date, source), edit mode to add, replace, remove and edit metadata.
+- [ ] Mapping of what the private master page linked to → its new home, listed here.
+
+## R2 Phase 5: Control Tower top bar, no per-card action bar
+
+- [ ] Per-card link bar removed; every action mapped (table below) and discoverable.
+- [ ] Top bar: title and JDA tabs left; Sync from Drive, Edit page, View public site, user menu right.
+- [ ] Sub-pages (documents, overall progress, weekly progress, invoices): breadcrumb and JDA tabs that keep the sub-page.
+
+## R2 Phase 6: review
+
+- [ ] Four review agents run with the Round 2 checks; High findings fixed; others logged.
+- [ ] Tests and syntax checks pass; no console errors; signed out, every private route redirects to /login.

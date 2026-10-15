@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);color:var(--ink);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1100px 500px at 15% -10%,rgba(0,161,156,.07),transparent 60%),
+    radial-gradient(900px 500px at 100% 0%,rgba(1,61,57,.05),transparent 55%),
+    var(--bg);
+  background-attachment:fixed}
+h1,h2,h3{margin:0 0 .5rem;line-height:1.2;font-family:var(--display);letter-spacing:-.01em}
+a{color:var(--teal-700)}
+:focus-visible{outline:2px solid var(--teal-500);outline-offset:2px}
+::selection{background:var(--teal-100)}
+*{scrollbar-width:thin;scrollbar-color:var(--teal-100) transparent}
+[hidden]{display:none!important}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

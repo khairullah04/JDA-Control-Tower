@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>JDA Control Tower</title>
+<link rel="icon" href="/shared/assets/brand/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/styles/tokens.css">
+<link rel="stylesheet" href="../shared/styles/report.css">
+<link rel="stylesheet" href="styles/control-tower.css">
+<link rel="stylesheet" href="/shared/styles/edit.css">
+</head>
+<body>
+<div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+
+<div class="app">
+<div class="topbar">
+ <div class="topbar-inner">
+  <div class="brand">
+    <a href="index.html" aria-label="JDA Control Tower, home"><img class="brand-logo" src="../shared/assets/brand/carigali-logo.png" alt="Petronas Carigali"></a>
+    <div><div class="mark">TriCipta AI</div><h1>JDA Control Tower</h1></div>
+  </div>
+  <nav class="ct-topnav" aria-label="Control Tower">
+    <a href="invoices/#/cji3">CJI3 register</a>
+    <a href="invoices/#/payments">Payment tables</a>
+    <a href="/" target="_blank" rel="noopener">Public site ↗</a>
+  </nav>
+  <div class="topbar-account"><span class="whoami" id="whoami"></span><button type="button" class="signout-btn" id="signOutBtn">Sign out</button></div>
+ </div>
+</div>
+
+<main class="page-wrap ct" id="main">
+  <header class="ct-head">
+    <div>
+      <div class="ct-eyebrow">TriCipta AI · Joint Development Agreements</div>
+      <h2>JDA Control Tower</h2>
+      <p class="ct-lead">Each JDA at a glance: progress, cost, the latest update, insights and challenges.</p>
+    </div>
+    <div class="ct-actions" id="ctActions">
+      <button type="button" class="ct-btn ghost" id="editPageBtn" title="Edit the documents, key insights, challenges and figures shown here">Edit page</button>
+      <button type="button" class="ct-btn ghost" id="addJdaBtn" title="Adds a JDA to the Invoice Tracker, for its projects and invoices">+ Add JDA (invoices)</button>
+      <button type="button" class="ct-btn primary" id="syncBtn" title="Reads new invoices from the Drive inbox into the CJI3 register">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+        <span>Sync invoices from Drive</span>
+      </button>
+    </div>
+  </header>
+
+  <p class="ct-notice" id="ctNotice" role="status" hidden></p>
+
+  <div class="ct-tabs" role="tablist" aria-label="JDAs" id="ctTabs"></div>
+  <div id="ctPanels"><p class="ct-loading" role="status">Loading the JDAs…</p></div>
+
+  <details class="ct-activity" id="ctActivity">
+    <summary>Recent activity <span class="ct-hint">changes to JDAs, projects, invoices and payments</span></summary>
+    <div id="activityBody"><p class="ct-hint">Opening…</p></div>
+  </details>
+</main>
+
+<footer class="site-footer">
+  <div class="foot-inner">
+    <div><div class="foot-brand"><img src="../shared/assets/brand/carigali-logo.png" alt="Petronas Carigali"><span>JDA Control Tower</span></div></div>
+    <div class="foot-note">Private to TriCipta AI staff. Progress comes from each JDA's report; cost from the Invoice Tracker.</div>
+  </div>
+</footer>
+</div>
+
+<!-- The Invoice Tracker's own dialogs (Drive sync result, Add JDA) open here -->
+<dialog id="modal" class="ct-dialog"></dialog>
+<!-- A JDA's documents: its signed Agreement and its Business Requirement Document -->
+<dialog id="infoDialog" class="ct-dialog" aria-labelledby="infoTitle"></dialog>
+
+<script type="module" src="components/control-tower.js"></script>
+</body>
+</html>

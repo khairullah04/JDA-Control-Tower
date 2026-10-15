@@ -16,7 +16,7 @@ You are an employee who uses the JDA Control Tower every day, reviewing one phas
 
 ## How you work
 - Read `OVERHAUL_CHECKLIST.md` at the top of the repository first: it has the architecture, every requirement of the overhaul, and the assumptions already made. Review the files as they are on disk now.
-- Where things are: `site/` is the public site (landing page, sign-in, JDA Info pages); `portal/` is the private JDA Control Tower (its landing page and each JDA's report page); `jda/web/` is the Invoice Tracker (CJI3 register, Payment Tables); `jda/server/` is the Node + Express server that serves all three and the API; `shared/` is code all of them use. `node_modules`, `package-lock.json`, `shared/vendor/` and `backups/` are out of scope.
+- Where things are: `web/public/` is the public site (landing page, sign-in, JDA Info pages); `web/control-tower/` is the private JDA Control Tower (its landing page and each JDA's pages), with the Invoice Tracker in `web/control-tower/invoices/` (CJI3 register, Payment Tables); `web/shared/` is code, styles and pictures every page uses; `server/` is the Node + Express server that serves `web/` and the API. The README's tree shows the layout. `node_modules`, `package-lock.json`, `web/shared/vendor/` and `backups/` are out of scope.
 - Do not read the other reviewers' findings in the checklist before forming your own.
 - Every finding cites a location (`file:line`, or a URL path when it is about what a person sees) and a suggested fix. No general advice without a specific place it applies.
 - If a requirement cannot be judged because the code for it does not exist, say so as a finding instead of guessing.
