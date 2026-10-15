@@ -149,6 +149,9 @@ function showScreen(id){
     topTabs.forEach(a => { a.href = a.href.replace(/[^/]+$/, page); });
   }
   window.scrollTo({top:0, behavior:'smooth'});
+  // a chart drawn while its screen was hidden is measured again now that it shows
+  if (id === 'screen-progress') requestAnimationFrame(() => chart?.resize());
+  if (id === 'screen-project-detail') requestAnimationFrame(() => detailChart?.resize());
   updateScrollProgress();
 }
 document.querySelectorAll('.btn[data-target], .back-link').forEach(btn => {
@@ -203,7 +206,9 @@ function animateCount(el, target, duration){
 }
 
 const scurveOptions = {
-  responsive: true,
+  // The chart fills a box of fixed height (.chart-box) instead of keeping its own width:height ratio:
+  // a chart sized by its own ratio can measure itself while hidden or mid-layout and stay tiny.
+  responsive: true, maintainAspectRatio: false,
   plugins: { legend: { position:'top', align:'end', labels:{ font:{family:"Segoe UI", size:13}, boxWidth:14, usePointStyle:true } } },
   scales: {
     y: { min:0, max:100, ticks:{ callback:v=>v+'%', font:{family:"'IBM Plex Mono'", size:11} }, grid:{color:'#dde6e5'} },
