@@ -86,7 +86,7 @@
   /* ---------- jump-nav stepper (floating over hero, scrolls within the page) ---------- */
 
   .progress-ring{position:relative;width:calc(84px * var(--space-scale));height:calc(84px * var(--space-scale));flex-shrink:0;}
-  .progress-ring svg{transform:rotate(-90deg);}
+  .progress-ring svg{display:block;width:100%;height:100%;transform:rotate(-90deg);} /* the drawing fills the box, so the % sits in its middle */
   .ring-bg{fill:none;stroke:var(--teal-100);stroke-width:7;}
   .ring-fg{fill:none;stroke:var(--teal-600);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.65,0,.35,1);}
   .ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:max(min(17px, 14px), calc(17px * var(--type-scale)));color:var(--teal-700);}
