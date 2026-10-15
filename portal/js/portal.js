@@ -3,6 +3,7 @@ import { getDoc } from '../../shared/vendor/firebase-firestore.js';
 import { JDAS, INVOICE_TRACKER_URL } from './config/app-config.js';
 import { esc } from '../../shared/esc.js';
 import { isConfigured, reportRefFor } from './config/firebase.js';
+import './account.js';
 
 const $ = id => document.getElementById(id);
 const statusLabel = { green: 'On track', amber: 'At risk', red: 'Delayed' };

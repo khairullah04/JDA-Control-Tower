@@ -1,8 +1,8 @@
-Sample files for testing the portal's Google Drive updates. All content is made up.
+Sample files for testing the JDA Control Tower's Google Drive updates. All content is made up.
 
-Upload: drag the whole "JDA 1" folder into your "JDA Portal" folder in Google Drive. The folders inside it are already laid out the way the portal expects.
+Upload: drag the whole "JDA 1" folder into your "JDA Portal" folder in Google Drive. The folders inside it are already laid out the way the Control Tower expects ("JDA Portal" is the folder name the server looks for).
 
-What you should see after syncing JDA 1 (passkey 1001):
+What you should see after syncing JDA 1 (signed in, from Edit report):
 
 Master Page (icon on the JDA 1 page > Update from Google Drive > Save to Master Page)
   - Tagline "Subsurface Data Foundation with AI"

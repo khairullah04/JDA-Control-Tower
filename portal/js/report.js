@@ -6,6 +6,7 @@ import { onSnapshot } from '../../shared/vendor/firebase-firestore.js';
 import { JDAS, DEFAULT_JDA_ICON, MS_CLIENT_ID, MS_AUTHORITY } from './config/app-config.js';
 import { portalApi } from './api.js';
 import { isConfigured, reportRefFor } from './config/firebase.js';
+import './account.js';
 import { contentFor, SOLUTION_ICONS } from './config/jda-content.js';
 import { startEditor } from './editor.js';
 import { blocksHtml } from './blocks.js';
@@ -846,7 +847,7 @@ const jdaIcon = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" str
 const editTitle = `Edit ${jda.name}`;
 // The one way in: this JDA's icon on its Master Page. Inside the editor, the tabs in the top bar move
 // between the Master Page, Overall progress and Weekly progress.
-$('masterEditBtn').innerHTML = jdaIcon;
+$('masterEditBtn').innerHTML = `${jdaIcon}<span>Edit</span>`;
 $('masterEditBtn').title = editTitle;
 $('masterEditBtn').setAttribute('aria-label', editTitle);
 $('masterEditBtn').onclick = () => goTo(masterHash + '/edit');

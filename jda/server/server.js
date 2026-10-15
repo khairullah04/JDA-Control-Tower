@@ -9,6 +9,12 @@ if (process.env.REQUIRE_AUTH === 'false' && process.env.NODE_ENV === 'production
   process.exit(1);
 }
 
+// Without a fixed secret, every restart signs everyone out, and an editor open at that moment loses what is unsaved.
+if (!(process.env.SESSION_SECRET?.length >= 32)) {
+  if (process.env.NODE_ENV === 'production') { console.error('Not starting: set SESSION_SECRET in server/.env (32 or more random characters).'); process.exit(1); }
+  console.warn('SESSION_SECRET is not set (32+ characters): a restart will sign everyone out.');
+}
+
 const finance = await openStore();
 const app = createApp({ finance: finance.store, storage: finance.kind });
 const port = process.env.PORT || 8080;

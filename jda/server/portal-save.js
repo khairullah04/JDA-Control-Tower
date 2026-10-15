@@ -1,7 +1,7 @@
 import { digest } from '../../shared/digest.js';
 
 // Saving a JDA's report document (its Master Page content and its progress). The portal's pages
-// used to write to the database themselves; now every save comes here, behind that JDA's passkey
+// used to write to the database themselves; now every save comes here, behind the JDA Control Tower sign-in
 // session, and the database accepts no writes from browsers.
 //
 // A save replaces whole parts of the document (the project list, the task list, the Master Page

@@ -547,12 +547,12 @@ a.arch-view-btn{text-decoration:none;}
 #solutionsBody>.sol-group-label:first-child{margin-top:26px;}
 
 /* ---- Master Page edit icon and the Editor Page (js/editor.js) ---- */
-.master-edit-btn{position:absolute;top:22px;right:32px;z-index:3;width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+.master-edit-btn{position:absolute;top:22px;right:32px;z-index:3;min-width:46px;height:46px;padding:0 16px 0 12px;gap:8px;font:700 14px/1 var(--font);border-radius:14px;display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.34);color:#fff;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   transition:background .15s ease,transform .15s ease,box-shadow .15s ease;}
 .master-edit-btn:hover{background:rgba(255,255,255,.26);transform:translateY(-2px);box-shadow:0 8px 20px rgba(1,40,36,.3);}
 .master-edit-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
-@media (max-width:640px){.master-edit-btn{top:12px;right:16px;width:40px;height:40px;border-radius:12px;}}
+@media (max-width:640px){.master-edit-btn{top:12px;right:16px;height:40px;padding:0 12px 0 10px;border-radius:12px;}}
 
 
 body.editor-checking .page-wrap{visibility:hidden;}
@@ -689,3 +689,12 @@ select.blk-type{width:auto;height:30px;padding:0 8px;font-size:12px;font-weight:
 .blk-item.blk-narrow .blk-controls{max-width:none;width:100%;justify-content:flex-start;}
 .blk-item.blk-narrow .blk-row>.blk{flex-basis:calc(100% - 40px);}
 @media (max-width:700px){.blk-grid>*{grid-column:1 / -1;grid-row:auto;}}
+
+/* ---- Who is signed in, and Sign out (js/account.js) ---- */
+.topbar-account{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.topbar-account .whoami{font-size:12.5px;color:#d4efec;white-space:nowrap;}
+.signout-btn{font:600 13px/1 var(--font);color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:9px 14px;min-height:36px;cursor:pointer;}
+.signout-btn:hover{background:rgba(255,255,255,.22);}
+.signout-btn:focus-visible,.topbar a:focus-visible,.topbar button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+@media (max-width:700px){.topbar-account .whoami{display:none;}}
+.arch-view-btn:focus-visible{outline:2px solid #00d1c5;outline-offset:3px;}

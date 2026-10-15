@@ -10,8 +10,8 @@ beforeEach(() => { forgetTokens(); asked = []; globalThis.fetch = async (url, in
 afterEach(() => { globalThis.fetch = realFetch; });
 const reply = (ok, body) => ({ ok, json: async () => body });
 const run = (headers = {}) => new Promise(resolve => {
-  const req = { headers }, res = { status(code) { this.code = code; return this; }, json(body) { resolve({ code: this.code, body, req }); } };
-  requireUser(req, res, () => resolve({ next: true, req }));
+  const req = { method: 'GET', headers }, res = { status(code) { this.code = code; return this; }, json(body) { resolve({ code: this.code, body, req }); }, setHeader(k, v) { this.cookie = v; } };
+  requireUser(req, res, () => resolve({ next: true, req, cookie: res.cookie }));
 });
 
 test('no token: refused before Google is asked', async () => {
@@ -27,6 +27,11 @@ test('a good token: the request goes on, and carries who it is', async () => {
   assert.deepEqual(asked[0], ['https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=key-1', { idToken: 'tok-1' }]);
 });
 
+test('a good token renews the session cookie, so a page whose cookie ran out keeps working', async () => {
+  answer = reply(true, { users: [{ email: 'aina@jda.app' }] });
+  assert.match((await run({ authorization: 'Bearer tok-r' })).cookie, /^ct_session=[^;]+; Max-Age=28800; Path=\/; HttpOnly; SameSite=Lax$/);
+});
+
 test('signed in but not on the access list: refused, by name', async () => {
   answer = reply(true, { users: [{ email: 'stranger@jda.app' }] });
   const out = await run({ authorization: 'Bearer tok' });
@@ -35,12 +40,12 @@ test('signed in but not on the access list: refused, by name', async () => {
   assert.equal((await run({ authorization: 'Bearer tok-2' })).next, true);
 });
 
-test('an empty access list lets nobody in, and says what to set', async () => {
+test('an empty access list lets nobody in, and says to ask the administrator', async () => {
   process.env.ALLOWED_EMAILS = ' ';
   answer = reply(true, { users: [{ email: 'aina@jda.app' }] });
   const out = await run({ authorization: 'Bearer tok' });
   assert.equal(out.code, 403);
-  assert.match(out.body.error, /ALLOWED_EMAILS/);
+  assert.match(out.body.error, /no one is on the access list/);
 });
 
 test('an expired or made-up token: 401', async () => {
@@ -53,7 +58,7 @@ test('a wrong server key is reported as a server problem, not as a sign-in probl
   answer = reply(false, { error: { message: 'API key not valid. Please pass a valid API key.' } });
   const out = await run({ authorization: 'Bearer tok' });
   assert.equal(out.code, 500);
-  assert.match(out.body.error, /FIREBASE_API_KEY/);
+  assert.match(out.body.error, /not set up on the server/);
 });
 
 test('Google unreachable: 500, not a crash', async () => {

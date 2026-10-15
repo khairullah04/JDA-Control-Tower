@@ -20,7 +20,7 @@ export const SITE = dir('../../site/'), PORTAL = dir('../../portal/'), TRACKER =
 //   public   /                 TriCipta AI landing page            site/index.html
 //            /login            employee sign-in                     site/login.html
 //            /jda/<id>/info    a JDA's public Info page             site/info.html
-//            /site/...         the public pages' own files; /site/portal/ is only the portal's css/ and assets/
+//            /site/...         the public pages' own files; /site/portal/ is only the portal's css/, assets/ and js/blocks.js
 //            /shared/...       code and libraries the pages share (no data)
 //            /api/auth/...     sign in, sign out, "am I signed in"
 //   private  /control-tower/   the JDA Control Tower (portal/), with the Invoice Tracker at /control-tower/tracker/
@@ -41,13 +41,17 @@ export function createApp({ finance, storage }) {
   app.get('/', (req, res) => res.sendFile('index.html', { root: SITE }));
   app.get('/login', (req, res) => res.sendFile('login.html', { root: SITE }));
   app.get('/jda/:id/info', (req, res, next) => JDAS.some(j => j.id === req.params.id) ? res.sendFile('info.html', { root: SITE }) : next());
-  app.use('/site/portal', (req, res, next) => /^\/(css|assets)\//.test(req.path) ? next() : res.sendStatus(404), express.static(PORTAL));
+  // Each its own root, so no path ("..", encoded or not) can climb out of it into the rest of portal/.
+  app.use('/site/portal/css', express.static(`${PORTAL}css`));
+  app.use('/site/portal/assets', express.static(`${PORTAL}assets`));
+  app.get('/site/portal/js/blocks.js', (req, res) => res.sendFile('js/blocks.js', { root: PORTAL })); // how a solution's detail page is drawn, for the Info page
+  app.use('/site/portal', (req, res) => res.sendStatus(404));
   app.use('/site', express.static(SITE));
   app.use('/shared', express.static(SHARED));
 
   // Addresses from before the Control Tower: they lead to the same pages, which now need a sign-in.
   app.get('/index.html', (req, res) => res.redirect(301, '/control-tower/'));
-  app.get('/jda-report.html', (req, res) => res.redirect(301, '/control-tower/jda-report.html'));
+  app.get('/jda-report.html', (req, res) => res.redirect(301, `/control-tower${req.url}`)); // keeps ?jda= of older links
   app.use('/tracker', (req, res) => res.redirect(301, `/control-tower/tracker${req.url}`));
 
   // ---- Private ----

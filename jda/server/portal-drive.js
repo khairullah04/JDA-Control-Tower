@@ -26,7 +26,7 @@ const MAX_TEXT = 400_000;             // characters per extracted text file
 export async function portalRootId() {
   if (process.env.PORTAL_DRIVE_ROOT_FOLDER_ID) return process.env.PORTAL_DRIVE_ROOT_FOLDER_ID;
   const invoices = process.env.DRIVE_ROOT_FOLDER_ID;
-  if (!invoices) throw new Error('Portal Drive is not configured: set PORTAL_DRIVE_ROOT_FOLDER_ID in server/.env');
+  if (!invoices) throw new Error('The JDA Control Tower Drive folder is not set up yet (PORTAL_DRIVE_ROOT_FOLDER_ID in server/.env). Contact your administrator.');
   const inside = (await children(invoices)).find(f => f.mimeType === FOLDER && norm(f.name) === 'jdaportal');
   return inside ? inside.id : invoices;
 }
@@ -63,7 +63,7 @@ async function jdaFolder(jda) {
 // The link the Editor Page opens so files can be dropped into this JDA's Master File folder.
 export async function masterFolderUrl(jda) {
   const folder = await jdaFolder(jda);
-  if (!folder) throw new Error(`No folder named "${jda.name}" in the portal's Drive folder.`);
+  if (!folder) throw new Error(`No folder named "${jda.name}" in the JDA Control Tower's Drive folder.`);
   const master = (await children(folder.id)).find(f => f.mimeType === FOLDER && kindOfFolder(f.name) === 'master');
   if (!master) throw new Error(`No "Master File" folder inside "${folder.name}" in Drive. Create it, then try again.`);
   return `https://drive.google.com/drive/folders/${master.id}`;

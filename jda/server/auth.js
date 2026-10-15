@@ -30,18 +30,18 @@ async function tokenEmail(token) {
     });
     if (!r.ok) {
       const reason = (await r.json().catch(() => ({}))).error?.message || '';
-      if (/API key/i.test(reason)) return { status: 500, error: 'The server cannot check sign-ins: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in shared/firebase-config.js.' };
+      if (/API key/i.test(reason)) { console.error('Sign-ins cannot be checked: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in shared/firebase-config.js.'); return { status: 500, error: 'Sign-in is not set up on the server yet. Contact your administrator.' }; }
       return { status: 401, error: 'Session expired. Sign in again.' };
     }
     const email = ((await r.json()).users?.[0]?.email || '').toLowerCase();
     if (email) remember(key, email, token, now);
     return { email };
-  } catch { return { status: 500, error: 'Auth check failed' }; }
+  } catch { return { status: 500, error: 'We could not check your sign-in just now. Try again in a minute.' }; }
 }
 // Why `email` may not come in, or '' when it may.
 function refusal(email) {
   const allowed = allowedEmails();
-  if (!allowed.length) return 'No one is on the access list yet. The administrator must set ALLOWED_EMAILS in server/.env.';
+  if (!allowed.length) { console.error('No one can sign in: ALLOWED_EMAILS in server/.env is empty.'); return 'Sign-in is not set up yet: no one is on the access list. Contact your administrator.'; }
   if (!allowed.includes(email)) return `${email || 'This account'} is not on the access list. Ask the administrator to add it.`;
   return '';
 }
@@ -49,10 +49,15 @@ const signInOff = () => process.env.REQUIRE_AUTH === 'false';
 const userOf = email => ({ email, name: email.split('@')[0] }); // who made a change, for the audit log
 const LOCAL = userOf('local@sign-in-off');
 
-// Every private API call: the session cookie set at /login, or (for a caller that is not a browser
-// page) a Firebase ID token as "Authorization: Bearer ...". Either way the person must still be on
-// the access list, which is looked at afresh on every call.
+// Every private API call: the session cookie set at /login, or a Firebase ID token as
+// "Authorization: Bearer ...". The pages send both, so a save still goes through after the cookie
+// has run out while the person was working: the token is checked and the cookie renewed. Either way
+// the person must still be on the access list, which is looked at afresh on every call.
 export async function requireUser(req, res, next) {
+  // A change must come as JSON: a form or a text/plain post from another site (which the browser
+  // could send with the cookie) is refused before anything else. GET, HEAD and OPTIONS change nothing.
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !/^application\/json\b/i.test(req.headers['content-type'] || ''))
+    return res.status(415).json({ error: 'Send changes as JSON (Content-Type: application/json).' });
   if (signInOff()) { req.user = LOCAL; return next(); }
   let email = sessionEmail(req);
   if (!email) {
@@ -61,6 +66,7 @@ export async function requireUser(req, res, next) {
     const who = await tokenEmail(token);
     if (who.error) return res.status(who.status).json({ error: who.error, signIn: who.status === 401 });
     email = who.email;
+    if (!refusal(email)) setSession(req, res, email);
   }
   const no = refusal(email);
   if (no) return res.status(403).json({ error: no });

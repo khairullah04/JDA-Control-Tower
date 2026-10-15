@@ -25,8 +25,8 @@ window.addEventListener('hashchange', route);
 // also needs that person's Firebase sign-in, which /login made, to read JDAs and projects; if it has
 // gone (signed out in another tab), /login is asked again and brings the person back here.
 onUser(user => {
-  if (!user) return me().then(m => m.signInOff ? showApp('sign-in off') : toLogin());
-  showApp(usernameOf(user));
+  if (!user) return me().then(m => m.signInOff ? showApp('Sign-in off (local)') : toLogin());
+  showApp(`Signed in as ${usernameOf(user)}`);
 });
 function showApp(who) {
   $('#whoami').textContent = who;

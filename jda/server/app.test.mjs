@@ -5,6 +5,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
 import { memoryStore } from '../web/js/finance/service.js';
 import { sessionToken, COOKIE } from './session.js';
 import { forgetTokens } from './auth.js';
@@ -18,6 +19,11 @@ let server, base;
 before(() => { server = createApp({ finance: memoryStore(), storage: 'memory' }).listen(0); base = `http://localhost:${server.address().port}`; });
 after(() => server.close());
 const get = (p, headers = {}) => fetch(base + p, { redirect: 'manual', headers });
+// A request sent exactly as written: fetch would resolve "..", a browser's address bar would not stop a script.
+const rawStatus = p => new Promise((resolve, reject) => {
+  const req = http.request({ host: 'localhost', port: server.address().port, path: p, method: 'GET' }, res => { res.resume(); resolve(res.statusCode); });
+  req.on('error', reject); req.end();
+});
 const as = email => ({ cookie: `${COOKIE}=${encodeURIComponent(sessionToken(email))}` });
 
 // Every file under a folder, as the path the server would serve it at.
@@ -28,7 +34,17 @@ test('the public pages and their files open without signing in', async () => {
   for (const p of ['/', '/login', '/jda/jda1/info', '/jda/jda3/info', '/site/css/site.css', '/site/js/login.js', '/shared/esc.js', '/shared/session.js',
     '/site/portal/css/styles.css', '/site/portal/assets/press.jpg']) assert.equal((await get(p)).status, 200, p);
   assert.equal((await get('/jda/jdaz/info')).status, 404);                 // not a JDA
-  assert.equal((await get('/site/portal/js/report.js')).status, 404);      // only the portal's css and images are public
+  assert.equal((await get('/site/portal/js/blocks.js')).status, 200);       // how a detail page is drawn: code, no data
+  assert.equal((await get('/site/portal/js/report.js')).status, 404);      // only the portal's css, images and blocks.js are public
+  for (const sneaky of ['/site/portal/css/../js/report.js', '/site/portal/css/%2e%2e/js/config/jda-content.js', '/site/portal/assets/../jda-report.html',
+    '/site/portal/css/../README.md', '/site/portal/css/%2E%2E/firestore-rules-addition.txt', '/site/portal/assets/%2e%2e%2fjda-report.html',
+    '/site/portal/css/..%2fjs/report.js', '/site/../portal/js/report.js', '/shared/../portal/js/report.js', '/site/%2e%2e/jda/web/index.html']) {
+    const res = await fetch(base + sneaky, { redirect: 'manual' });           // fetch would tidy the path; the raw request is what counts
+    assert.notEqual(res.status, 200, sneaky);
+  }
+  for (const raw of ['/site/portal/css/../js/report.js', '/site/portal/css/%2e%2e/js/report.js', '/site/portal/assets/..%2f..%2fjda%2fserver%2f.env']) {
+    assert.notEqual(await rawStatus(raw), 200, raw);
+  }
   assert.equal((await get('/site/portal/jda-report.html')).status, 404);
 });
 
@@ -44,7 +60,7 @@ test('every private page and file sends someone not signed in to /login, and bac
 
 test('the old addresses lead into the Control Tower, so they need the sign-in too', async () => {
   for (const [from, to] of [['/tracker/', '/control-tower/tracker/'], ['/tracker/js/main.js', '/control-tower/tracker/js/main.js'],
-    ['/jda-report.html', '/control-tower/jda-report.html'], ['/index.html', '/control-tower/']]) {
+    ['/jda-report.html', '/control-tower/jda-report.html'], ['/jda-report.html?jda=jda1', '/control-tower/jda-report.html?jda=jda1'], ['/index.html', '/control-tower/']]) {
     const res = await get(from);
     assert.deepEqual([res.status, res.headers.get('location')], [301, to], from);
     assert.equal((await get(to)).status, 302, to);
@@ -61,6 +77,12 @@ test('every private API answers 401 without a session', async () => {
     assert.equal(res.status, 401, `${method} ${p}`);
     assert.equal((await res.json()).signIn, true);
   }
+});
+
+test('a change sent as anything but JSON is refused, whoever sends it', async () => {
+  const send = (type, cookie) => fetch(`${base}/api/finance/settings`, { method: 'PUT', headers: { 'Content-Type': type, ...cookie }, body: '{"taxRate":"9"}' });
+  for (const type of ['text/plain', 'application/x-www-form-urlencoded', 'multipart/form-data; boundary=x']) assert.equal((await send(type, as('aina@jda.app'))).status, 415, type);
+  assert.notEqual((await send('application/json', as('aina@jda.app'))).status, 415);
 });
 
 test('a made-up, changed or run-out cookie is no session', async () => {

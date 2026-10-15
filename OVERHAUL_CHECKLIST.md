@@ -78,11 +78,11 @@ written beside it. Review findings are logged under each phase.
 
 ## Phase 2 (Priority 2): access control and routing
 
-- [x] `/`, `/jda/<id>/info` and `/login` open without signing in; an unknown JDA id is 404. *Checked: `app.test.mjs` "the public pages...".*
+- [x] `/`, `/jda/<id>/info` and `/login` open without signing in; an unknown JDA id is 404. Of `portal/`, only `css/`, `assets/` and `js/blocks.js` are public, each served from its own root so `..` (plain or `%2e%2e`) cannot climb out. *Checked: `app.test.mjs` "the public pages...", including raw HTTP requests with `..` that the first version let through (the test fails on that version).*
 - [x] Everything under `/control-tower` needs a session; without one, a page request redirects to `/login?next=<page>`. *Checked: `app.test.mjs` requests every file in `portal/` and `jda/web/` (over 40) signed out and expects 302 to /login.*
 - [x] Old addresses (`/tracker/...`, `/jda-report.html`, `/index.html`) redirect (301) into `/control-tower`, and so to `/login` when signed out. *Checked: `app.test.mjs`.*
 - [x] Every private API endpoint rejects a request with no session (401): `requireUser` sits in front of all of `/api` except `/api/auth`. Made-up, altered and expired cookies, and a person taken off the access list, are refused too. *Checked: `app.test.mjs`, 15 endpoints including an unknown one.*
-- [x] Sign in leads to the Control Tower landing page, or to the private page that was asked for (`next`, same-site paths only). *Checked: `app.test.mjs` (token for cookie, me, sign out); `/login` loaded in a browser. A real Firebase sign-in has not been tried: no account on `ALLOWED_EMAILS` in this Codespace.*
+- [x] Sign in leads to the Control Tower landing page, or to the private page that was asked for, including its `#/jda1` part (`next`, resolved as the browser will and kept only if it stays on this site). *Checked: `app.test.mjs` (token for cookie, me, sign out); `session-browser.test.mjs` (`nextPath`: tab, newline, backslash and `//` tricks); `/login` loaded in a browser. A real Firebase sign-in has not been tried: no account on `ALLOWED_EMAILS` in this Codespace.*
 - [x] The tracker's own login and passkey are removed; the tracker is not reachable without the main sign-in. *Checked: `app.test.mjs` (every tracker file 302 signed out, finance API 401); tracker loaded in a browser with no console errors.*
 - [x] Per-JDA editor passkeys are replaced by the main sign-in; `passkeys.js`, its test and `portal-passkeys.example.json` are deleted. *Checked: editor opened in a browser from the JDA icon with no prompt; grep finds no passkey code.*
 - [ ] Firestore rules: report documents readable only by signed-in people on the access list. *Written in `jda/firestore.rules` (and `site` closed to browsers); not yet published: needs `npx firebase-tools deploy --only firestore` by the user. JDA 3's project is outside this repository (Known issues).*
@@ -143,6 +143,11 @@ written beside it. Review findings are logged under each phase.
 | A6 | Every signed-in person can use edit mode; there is no role system. | Open question 5 default; the code has none besides the passkeys being removed. |
 | A7 | Info pages show project names only, no figures. | Open question 6 default. |
 | A8 | Tracker JDAs and portal JDAs are matched by name ("JDA 1"). | That is how the two lists are joined today. |
+| A13 | A session lasts 8 hours. The pages also send the Firebase token, which renews it, so a save made after it ran out still goes through. | Avoids losing an editor's unsaved work; Firebase keeps its own sign-in until Sign out. |
+| A14 | Private APIs accept the session cookie or a Firebase token (Bearer). | The token is what renews the cookie; it also lets a non-browser caller (e.g. a Power Automate flow) use the API. |
+| A15 | A username typed at /login means `<username>@jda.app` (`shared/firebase-config.js`); a full email is used as typed. | Matches how the tracker's accounts were created. |
+| A16 | `REQUIRE_AUTH=false` opens everything, for trying things on one's own computer only; refused with `NODE_ENV=production`. | Lets the demo mode run without Firebase accounts. |
+| A17 | Changes to private APIs must be sent as JSON (415 otherwise). | With SameSite=Lax this closes form-post CSRF, including from another subdomain. |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
 | A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
 | A11 | An invoice or sanctioned amount filed under another JDA (e.g. Unsorted) but against a JDA 4+ project is deleted with that project. | It would otherwise point at a project that no longer exists. |
@@ -159,7 +164,10 @@ written beside it. Review findings are logged under each phase.
 - JDA 3's report document lives in another Firebase project (`jda3-9c0c5`) whose rules this
   repository does not control. Until its rules require sign-in, that document stays readable by
   anyone who knows the project, whatever this server does.
-- New Firestore rules (`jda/firestore.rules`) only take effect once published in the Firebase console.
+- New Firestore rules (`jda/firestore.rules`) only take effect once published, and must be published in this order, or every report page breaks: (1) put `service-account.json` in `jda/server`, (2) restart and check the log says the access list was "copied to Firestore for the database rules", (3) `cd jda && npx firebase-tools deploy --only firestore`. Until then JDA 1 and 2's report documents stay readable by anyone with the public Firebase settings.
+- Sign out clears the cookie in the browser only; a copied cookie keeps working until it runs out (8 hours). A server-side revocation list is not built.
+- `REQUIRE_AUTH=false` is only refused when `NODE_ENV=production` is set; a server deployed without it and with `false` would be open (the start-up log says so loudly).
+- The tracker's top bar (seven items) wraps to three rows on a phone and its buttons are under 44px; not changed in this overhaul yet.
 
 ## Review findings
 
@@ -178,3 +186,29 @@ written beside it. Review findings are logged under each phase.
 | both | Low | Add JDA placeholder named an existing JDA. | Fixed: "Name, in the form JDA <number>". |
 | both | Low | Uncommitted `demoMode: true` in `jda/web/js/config/app-config.json`. | Kept out of every commit (the user's local setting). |
 | lead | Low | Grep note did not mention the removal script and test. | Fixed. |
+
+### Phase 2 (all four)
+
+| Who | Sev. | Finding | Done |
+|---|---|---|---|
+| dev, lead | High | `/site/portal/css/../` (and `%2e%2e`) served any private file in `portal/` signed out. | Fixed: css and assets each their own root; raw-request tests. |
+| lead, dev | High/Med | Open redirect through `next` (`/\t/evil.com`). | Fixed: resolved with `URL`, same origin only; `session-browser.test.mjs`. |
+| member | High | Bookmarks lost their `#/jda1` after signing in. | Fixed: the # the browser brings to /login is kept. |
+| member, designer | High/Med | Editor's unsaved work lost when the cookie ran out. | Fixed: pages send the Firebase token too, which renews the cookie (A13); tested. |
+| lead, dev | High/Med | Report documents still public until the rules are published; publishing before the access list is in Firestore breaks every report. | Not fixable from here: order written in Known issues; item stays unticked. |
+| dev | Med | JDA 3's report is public in its own project. | Known issue (needs that project's key and rules). |
+| designer, member, lead | Med | No Sign out on Control Tower and report pages. | Fixed: name and Sign out in both top bars. |
+| member | Med | `/jda-report.html?jda=` lost its query. | Fixed, tested. |
+| designer | Med | Invisible focus on Open Invoice Tracker and the tracker top bar. | Fixed. |
+| designer, member | Med/Low | JDA edit icon had no visible label. | Fixed: icon + "Edit". |
+| member | Med | Tracker forms dropped on a 401. | Mostly avoided by token renewal (A13); a 401 now means Firebase is signed out too. |
+| designer | Med | Tracker top bar wraps on phones. | Logged (Known issues). |
+| dev | Low | CSRF relied on SameSite alone. | Fixed: JSON required for changes (A17), tested. |
+| dev | Low | Missing `SESSION_SECRET` silent. | Fixed: warning; refused in production. |
+| dev | Low | Logout does not revoke the cookie server-side; `REQUIRE_AUTH=false` guard needs `NODE_ENV`. | Logged (Known issues). |
+| member, designer | Low | Technical or raw error text on /login. | Fixed: plain wording, details to the server log; `auth/user-disabled` and a general fallback. |
+| designer | Low | Sign-in page: progress in the error line, no aria-invalid, no busy state, autocapitalise. | Fixed. |
+| designer | Low | Padlock and "Signed in" badge on the tracker card; "sign-in off" text. | Fixed: receipt icon, "Finance"; "Signed in as …", "Sign-in off (local)". |
+| lead | Low | "Portal" left in Drive errors, a comment, test-file notes. | Fixed. |
+| lead | Low | Phase 2 choices not logged. | Fixed: A13 to A17. |
+| designer | Low | "Edit report" vs the editor naming; token differences between site.css and styles.css; primary gradient contrast; tracker whoami loading state. | Logged for Phase 6 / final pass. |
