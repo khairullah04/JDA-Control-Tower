@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/shared/styles/tokens.css">
 <link rel="stylesheet" href="/shared/styles/report.css">
 <link rel="stylesheet" href="/shared/styles/sidebar.css">
+<link rel="stylesheet" href="/control-tower/styles/ct-frame.css">
 </head>
 <body>
 <div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
@@ -26,24 +27,6 @@
     <div><div class="mark" id="brandMark"></div><h1 id="brandTitle">JDA Report</h1></div>
   </div>
 
-  <nav class="pagenav" aria-label="Report sections">
-    <div class="pagenav-scroll">
-      <div class="pagenav-inner">
-        <a class="pagenav-tab" href="/control-tower/" id="navHome">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-          Control Tower
-        </a>
-        <span class="pagenav-sep">›</span>
-        <a class="pagenav-tab" id="navMaster" href="/" target="_blank" rel="noopener"><span id="navJdaName">JDA</span> <span>Master Page ↗</span></a>
-        <span class="pagenav-sep">›</span>
-        <button type="button" class="pagenav-tab active" data-target="screen-progress">Overall progress</button>
-        <span class="pagenav-sep">›</span>
-        <button type="button" class="pagenav-tab" data-target="screen-weekly">Weekly progress</button>
-        <span class="pagenav-sep" id="pagenavEditSep" style="display:none;">›</span>
-        <button type="button" class="pagenav-tab" id="pagenavEditTab" data-target="screen-edit" style="display:none;">Edit report</button>
-      </div>
-    </div>
-  </nav>
   <div class="topbar-account"><span class="whoami" id="whoami"></span><button type="button" class="signout-btn" id="signOutBtn">Sign out</button></div>
  </div>
 </div>
@@ -103,7 +86,7 @@
       <div class="page-today mono" id="todayLabel"></div>
     </div>
 
-    <div class="block reveal" style="margin-top:0;">
+    <div class="block reveal" style="margin-top:0;" id="tasks">
       <h3>Tasks</h3>
       <p class="block-intro" id="tasksIntro"></p>
       <div class="task-toolbar" id="taskToolbar">
@@ -122,7 +105,7 @@
       </div>
     </div>
 
-    <div class="block reveal">
+    <div class="block reveal" id="updates">
       <h3>Key updates</h3>
       <p class="block-intro">Notable events from the past week.</p>
       <div class="update-log" id="updatesLog"></div>
@@ -246,7 +229,7 @@
 
 <footer id="reportFooter">
   <span class="footer-left"><span class="live-dot"></span>Live report, backed by Firestore</span>
-  <span class="editor-savebar-actions"><button id="progressEditBtn">Edit progress</button><button id="openEditBtn">Edit report</button></span>
+  <span class="editor-savebar-actions"><button type="button" class="ct-btn ghost" id="progressEditBtn">Edit page</button><button id="openEditBtn">Edit report</button></span>
 </footer>
 <footer class="editor-savebar" id="editorSaveBar" hidden>
   <span class="footer-left" id="editorSaveStatus">No changes yet</span>

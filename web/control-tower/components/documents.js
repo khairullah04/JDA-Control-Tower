@@ -8,12 +8,15 @@ import { auth } from '../../shared/lib/firebase.js';
 import '../../shared/components/account.js';
 import { api, editBar, listEditor, httpsCheck } from '../../shared/components/edit-kit.js';
 import { mountCtSidebar } from './ct-sidebar.js';
+import { mountCtTopbar, jdaNav, jdaPage } from './ct-topbar.js';
 import { previewUrl, downloadUrl, sourceOf } from '../lib/documents.js';
 
 const $ = id => document.getElementById(id);
 const jda = JDAS.find(j => j.id === location.pathname.split('/')[2]);
 if (!jda) { location.replace('/control-tower/'); await new Promise(() => {}); }
 mountCtSidebar({ wrap: document.querySelector('.app'), bar: document.querySelector('.topbar-inner'), current: jda.id });
+mountCtTopbar({ bar: document.querySelector('.topbar-inner'), tabs: { current: jda.id, href: j => jdaPage(j.id, 'documents') }, actions: [$('editPageBtn')] });
+$('main').prepend(jdaNav(jda, 'documents'));
 
 const token = () => auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve('');
 const KINDS = [
@@ -28,9 +31,7 @@ const notice = (text, warn = false) => { $('ctNotice').textContent = text; $('ct
 document.title = `${jda.name}: Agreement & BRD · JDA Control Tower`;
 $('docEyebrow').textContent = jda.name;
 $('docTitle').textContent = `${jda.name}: Agreement & BRD`;
-$('crumbJda').textContent = jda.name;
-$('crumbJda').href = `/control-tower/#${jda.id}`;
-document.querySelectorAll('a[href="/control-tower/"]:not(#crumbHome)').forEach(a => { a.href = `/control-tower/#${jda.id}`; });
+document.querySelectorAll('.brand a[href="/control-tower/"]').forEach(a => { a.href = `/control-tower/#${jda.id}`; });
 
 let data; // { jdas, updatedAt } as saved
 

@@ -8,18 +8,36 @@ import { $ } from './ui/dom.js';
 import { show } from './ui/render.js';
 import { toLogin, me } from '../../../shared/lib/session.js';
 import { mountCtSidebar } from '../../components/ct-sidebar.js';
+import { jdaNav } from '../../components/ct-topbar.js';
+import { JDAS } from '../../../shared/config/jdas.js';
+import { listJdas } from './services/db.js';
+import { esc } from './ui/dom.js';
 
 // The tracker's pages. Its old front page (a card per JDA) is the JDA Control Tower landing page now.
 const sidebar = mountCtSidebar({ wrap: $('#app-view'), bar: $('.topbar') });
 async function route() {
   const [, kind, id, sub] = location.hash.slice(1).split('/');
   sidebar.mark(`/control-tower/invoices/#/${kind}`);
+  $('#jdaNavSlot').replaceChildren();
+  // /control-tower/<jda>/invoices arrives as #/named/<JDA name>: the tracker's JDA of that name.
+  if (kind === 'named') {
+    const name = decodeURIComponent(id || ''), hit = (await listJdas()).find(j => sameName(j.name, name));
+    if (hit) return location.replace(`#/jda/${hit.id}`);
+    $('#page').innerHTML = `<div class="card"><h2>${esc(name)} is not in the Invoice Tracker yet</h2><p>Add it with "+ Add JDA (invoices)" on the <a href="/control-tower/">Control Tower</a>, then its projects and invoices.</p></div>`;
+    return;
+  }
   if (!['project', 'jda', 'cji3', 'payments'].includes(kind) || ((kind === 'project' || kind === 'jda') && !id)) return location.replace('/control-tower/');
   $('#page').classList.toggle('wide', kind === 'cji3' || kind === 'payments'); // the two wide tables get the whole window
   await show(kind === 'project' && id ? () => renderProject(id) : kind === 'jda' && id ? () => renderJda(id)
     : kind === 'cji3' ? () => renderCji3(id, sub) : () => renderPaymentsPage(id, sub));
   refreshCopilot();
+  // A JDA's page here is its "Invoices & payments": the breadcrumb, its other pages and the JDA tabs.
+  if (kind === 'jda') {
+    const tracked = (await listJdas()).find(j => j.id === id), ct = tracked && JDAS.find(j => sameName(j.name, tracked.name));
+    if (ct) $('#jdaNavSlot').replaceChildren(jdaNav(ct, 'invoices', { tabs: true }));
+  }
 }
+function sameName(a, b) { const n = v => String(v || '').toLowerCase().replace(/\s+/g, ''); return n(a) === n(b); }
 
 $('#logout-btn').onclick = logout;
 initCopilot();

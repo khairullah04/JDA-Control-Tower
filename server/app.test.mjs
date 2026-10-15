@@ -150,6 +150,10 @@ test("a JDA's private pages have addresses of their own; signed out they lead to
   }
   assert.equal((await get('/control-tower/jda9/overall-progress', as('aina@jda.app'))).status, 404);
   assert.equal((await get('/control-tower/jda1/master', as('aina@jda.app'))).status, 404);
+  const inv = await get('/control-tower/jda3/invoices', as('aina@jda.app'));                   // the Invoice Tracker's JDA of that name
+  assert.deepEqual([inv.status, inv.headers.get('location')], [302, '/control-tower/invoices/#/named/JDA%203']);
+  assert.equal((await get('/control-tower/jda3/invoices')).status, 302);
+  assert.match((await get('/control-tower/jda3/invoices')).headers.get('location'), /^\/login/);
   const bare = await get('/control-tower/jda2', as('aina@jda.app'));
   assert.deepEqual([bare.status, bare.headers.get('location')], [302, '/control-tower/jda2/overall-progress']);
 });

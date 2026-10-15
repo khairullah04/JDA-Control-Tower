@@ -32,7 +32,6 @@ export async function renderJda(id) {
   page.innerHTML = `
     <div class="section-head"><h2>${esc(jda.name)}</h2>
       <div class="row">
-        <a class="ghost" href="/control-tower/#${esc(String(jda.name).toLowerCase().replace(/\s+/g, ''))}" style="text-decoration:none;display:inline-flex;align-items:center">← Control Tower</a>
         <button class="ghost" id="edit-jda">Edit dates</button>
         <button class="ghost" id="add-project">+ Add project</button>
         <button class="primary" id="sync-drive">Sync from Drive</button>

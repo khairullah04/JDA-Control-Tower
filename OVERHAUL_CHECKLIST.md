@@ -393,7 +393,7 @@ Assumptions: the hero uses the two existing wide photos (`hero-banner.jpg`, `pre
 ## R2 Phase 3: master page only public
 
 - [x] Private master page routes, components and links removed; no references left. The Overview screen, solution detail screen, architecture diagram (markup, script, 70 + 29 style rules), jump bar, "Continue to…" band and the JDA's edit icon are gone from `web/control-tower/jda-report.html` and `components/report.js`. The page is now only Overall and Weekly progress, at `/control-tower/<jda>/overall-progress` and `/weekly-progress` (`/control-tower/<jda>` leads to the first). Old addresses (`jda-report.html#/jda1/...`, `?jda=`) are forwarded by `web/control-tower/lib/old-addresses.js` (tested): the Master Page and its solutions → `/jda/<jda>/info`; progress, project, weekly and their edit modes → the new pages (`#edit`, `#project/<name>`). The Control Tower's "Master Page" link is now "Master Page (public) ↗".
-- [x] Master Page edited on the public Info page by signed-in staff; Info pages still render. Signed in, the Info page shows **Edit Master Page**, which loads `web/control-tower/components/master-edit.js` and `master-page.html` (private: signed out, both answer 302 to /login, tested) and turns the page into the editor in place: the same in-place editing, drag-to-reorder, block editor for solution pages, Update from Google Drive, Reset and Save as before, saving through `/api/portal/save`. `editor.js` now has two modes (`master`, `progress`). Progress is edited on its own pages (**Edit progress** in the bottom bar). Its top bar: Control Tower › JDA Master Page ↗ › Overall progress › Weekly progress.
+- [x] Master Page edited on the public Info page by signed-in staff; Info pages still render. Signed in, the Info page shows **Edit Master Page**, which loads `web/control-tower/components/master-edit.js` and `master-page.html` (private: signed out, both answer 302 to /login, tested) and turns the page into the editor in place: the same in-place editing, drag-to-reorder, block editor for solution pages, Update from Google Drive, Reset and Save as before, saving through `/api/portal/save`. `editor.js` now has two modes (`master`, `progress`). Progress is edited on its own pages (**Edit progress**, which became **Edit page** in the top bar in R2 Phase 5).
 
 Assumption: Microsoft Calendar's sign-in now returns to one fixed address, `/control-tower/` (the per-page address changed with every JDA and page); docs updated.
 
@@ -406,7 +406,7 @@ Assumption: Microsoft Calendar's sign-in now returns to one fixed address, `/con
 |---|---|
 | The Master Page itself (hero, aspiration, solutions, collaborators, press release, added sections) | The public Info page, `/jda/<jda>/info`; edited there with **Edit Master Page** (signed in) |
 | A solution's detail page (`#/<jda>/solution/<key>`) | `/jda/<jda>/info#solution/<key>` |
-| The JDA's edit icon → Editor Page (`#/<jda>/edit`) | **Edit Master Page** on the Info page; progress: **Edit progress** on its own pages |
+| The JDA's edit icon → Editor Page (`#/<jda>/edit`) | **Edit Master Page** on the Info page; progress: **Edit page** on its own pages |
 | Overall progress (`#/<jda>/progress`), a project (`#/<jda>/project/<name>`) | `/control-tower/<jda>/overall-progress`, `…#project/<name>` |
 | Weekly progress (`#/<jda>/weekly`), Edit tasks (`#/<jda>/edit/weekly`) | `/control-tower/<jda>/weekly-progress`, `…#edit` |
 | "Continue to overall progress / weekly progress" band | The top bar's Overall progress / Weekly progress, and the sidebar |
@@ -416,9 +416,19 @@ Assumption: Microsoft Calendar's sign-in now returns to one fixed address, `/con
 
 ## R2 Phase 5: Control Tower top bar, no per-card action bar
 
-- [ ] Per-card link bar removed; every action mapped (table below) and discoverable.
-- [ ] Top bar: title and JDA tabs left; Sync from Drive, Edit page, View public site, user menu right.
-- [ ] Sub-pages (documents, overall progress, weekly progress, invoices): breadcrumb and JDA tabs that keep the sub-page.
+- [x] Per-card link bar removed; every action mapped (table below) and discoverable.
+- [x] Top bar: title and JDA tabs left; Sync from Drive, Edit page, View public site, user menu right. One module, `web/control-tower/components/ct-topbar.js`, styled by `styles/ct-frame.css`, on the Control Tower landing page, Overall/Weekly progress and Agreement & BRD. On the landing page the tabs are its JDA tabs (with progress %); Sync from Drive and Edit page sit beside View public site; the user menu (person icon) shows who is signed in and Sign out (Escape or a click outside closes it). "+ Add JDA (invoices)" stays in the page header. On a narrow window the tabs wrap to their own row; on a phone the action labels become icons.
+- [x] Sub-pages (documents, overall progress, weekly progress, invoices): breadcrumb and JDA tabs that keep the sub-page. Under the top bar: Control Tower › JDA › page, then the JDA's pages (Overall progress · Weekly progress · Agreement & BRD · Invoices & payments · Master Page ↗). The JDA tabs lead to the same page of the other JDA. `/control-tower/<jda>/invoices` opens the Invoice Tracker's JDA of that name (`#/named/<name>`, tested); there the breadcrumb, pages and JDA tabs sit above the tracker's own page (its top bar is its own), and its "← Control Tower" button is gone.
+
+| Was on each JDA card (link bar) | Now |
+|---|---|
+| Overall progress | Click the **progress ring**; the JDA's pages under the top bar; the sidebar's JDA |
+| Weekly progress & tasks | Click **Latest key update**, **All updates**, or **View tasks** (to the task list) |
+| Edit tasks | **Edit tasks** on Weekly progress (as before), or **Edit page** in its top bar |
+| Master Page (public) ↗ | **Master Page ↗** in the JDA's pages; **View public site** in the top bar |
+| Invoices & payments | Click the **cost ring**, or **Detail cost →**, both `/control-tower/<jda>/invoices` |
+| Agreement & BRD | Unchanged button, now the Agreement & BRD page |
+| Edit page, Sync from Drive (page header) | The top bar |
 
 ## R2 Phase 6: review
 

@@ -74,6 +74,9 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
   const known = id => JDAS.some(j => j.id === id);
   app.get('/control-tower/:jda/:page(overall-progress|weekly-progress|documents)', (req, res, next) => known(req.params.jda)
     ? res.sendFile(req.params.page === 'documents' ? 'documents.html' : 'jda-report.html', { root: CONTROL_TOWER }) : next());
+  // Its invoices and payments: the Invoice Tracker's page for the JDA of the same name.
+  app.get('/control-tower/:jda/invoices', (req, res, next) => known(req.params.jda)
+    ? res.redirect(302, `/control-tower/invoices/#/named/${encodeURIComponent(JDAS.find(j => j.id === req.params.jda).name)}`) : next());
   app.get('/control-tower/:jda', (req, res, next) => known(req.params.jda) ? res.redirect(302, `/control-tower/${req.params.jda}/overall-progress`) : next());
   app.use('/control-tower', express.static(CONTROL_TOWER));
   return app;

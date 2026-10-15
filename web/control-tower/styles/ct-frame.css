@@ -1,0 +1,78 @@
+/* The Control Tower's frame on every private page (components/ct-topbar.js): the top bar (title, JDA
+   tabs, the page's actions, View public site, the user menu), and on a JDA's pages the breadcrumb and
+   that JDA's own pages. */
+.ct-topbar{flex-wrap:nowrap;gap:calc(18px * var(--space-scale))}
+.ct-topbar .brand{flex:none}
+.ct-top-left{flex:1;min-width:0;display:flex;align-items:center}
+.ct-top-right{flex:none;display:flex;align-items:center;gap:calc(8px * var(--space-scale))}
+
+/* buttons (every Control Tower page) */
+.ct-btn{display:inline-flex;align-items:center;justify-content:center;gap:calc(8px * var(--space-scale));min-height:44px;padding:0 calc(18px * var(--space-scale));border-radius:calc(12px * var(--space-scale));border:1px solid transparent;font:700 max(min(14px, 14px), calc(14px * var(--type-scale)))/1 var(--font);cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s,box-shadow .15s,transform .15s}
+.ct-btn svg{width:calc(17px * var(--space-scale));height:calc(17px * var(--space-scale))}
+.ct-btn.primary{background:linear-gradient(135deg,var(--teal-600),var(--teal-800));color:#fff;box-shadow:0 4px 14px rgba(0,133,124,.3)}
+.ct-btn.primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,133,124,.38)}
+.ct-btn.primary:disabled{opacity:.7;cursor:wait;transform:none}
+.ct-btn.ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
+.ct-btn.ghost:hover{background:var(--teal-050);border-color:var(--teal-100)}
+.ct-btn.small{min-height:calc(38px * var(--space-scale));padding:0 calc(14px * var(--space-scale));font-size:max(min(13px, 14px), calc(13px * var(--type-scale)))}
+.ct-btn:focus-visible,.ct-info-btn:focus-visible,.ct-more:focus-visible,.ct-links a:focus-visible,.ct-arrow:focus-visible{outline:3px solid var(--teal-500);outline-offset:2px}
+
+/* JDA tabs on the dark bar: links on a JDA's page, the landing page's own tablist there */
+.ct-top-tabs,.ct-topbar .ct-tabs{display:flex;gap:calc(4px * var(--space-scale));overflow-x:auto;scrollbar-width:none;padding:calc(4px * var(--space-scale));margin:0;border-radius:calc(999px * var(--space-scale));background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);box-shadow:none;position:static}
+.ct-top-tabs a,.ct-topbar .ct-tabs [role="tab"]{flex:none;display:inline-flex;align-items:center;gap:calc(8px * var(--space-scale));min-height:40px;padding:0 calc(16px * var(--space-scale));border-radius:calc(999px * var(--space-scale));border:0;background:transparent;color:#d4efec;font:700 max(min(14px, 14px), calc(14px * var(--type-scale)))/1 var(--font);text-decoration:none;cursor:pointer;box-shadow:none}
+.ct-top-tabs a:hover,.ct-topbar .ct-tabs [role="tab"]:hover{background:rgba(255,255,255,.12);color:#fff}
+.ct-top-tabs a[aria-current],.ct-topbar .ct-tabs [role="tab"][aria-selected="true"]{background:#fff;color:var(--teal-900);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.ct-topbar .ct-tabs [role="tab"] small{background:rgba(255,255,255,.16);color:#fff}
+.ct-topbar .ct-tabs [role="tab"][aria-selected="true"] small{background:var(--teal-050);color:var(--teal-800)}
+.ct-top-tabs a:focus-visible,.ct-topbar .ct-tabs [role="tab"]:focus-visible,.ct-top-right :focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* actions on the dark bar */
+.ct-top-right .ct-btn{min-height:40px;padding:0 calc(14px * var(--space-scale));font-size:max(min(14px, 14px), calc(14px * var(--type-scale)))}
+.ct-top-right .ct-btn.ghost{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28);color:#fff}
+.ct-top-right .ct-btn.ghost:hover{background:rgba(255,255,255,.2)}
+.ct-top-right .ct-btn.primary{background:#fff;color:var(--teal-900);border-color:#fff}
+.ct-top-link{display:inline-flex;align-items:center;gap:calc(6px * var(--space-scale));min-height:40px;padding:0 calc(10px * var(--space-scale));border-radius:calc(10px * var(--space-scale));color:#fff;text-decoration:none;font-weight:600;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));white-space:nowrap}
+.ct-top-link:hover{background:rgba(255,255,255,.12)}
+.ct-top-link svg,.ct-user-btn svg,.ct-top-right .ct-btn svg{width:calc(18px * var(--space-scale));height:calc(18px * var(--space-scale));flex:none}
+.ct-user{position:relative}
+.ct-user-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
+.ct-user-btn:hover{background:rgba(255,255,255,.2)}
+.ct-user-menu{position:absolute;right:0;top:calc(100% + calc(8px * var(--space-scale)));z-index:130;min-width:calc(220px * var(--space-scale));display:grid;gap:calc(10px * var(--space-scale));padding:calc(14px * var(--space-scale));border-radius:calc(14px * var(--space-scale));background:#fff;color:var(--text);box-shadow:var(--elev-3);border:1px solid var(--border)}
+.ct-user-menu[hidden]{display:none}
+.ct-user-menu .whoami{color:var(--muted);font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));white-space:normal}
+.ct-user-menu .ct-btn{width:100%}
+
+/* on a narrow window: the tabs take a row of their own; on a phone, the labels go */
+@media (max-width:1180px){
+  .ct-topbar{flex-wrap:wrap}
+  .ct-top-left{order:3;flex-basis:100%}
+}
+@media (max-width:640px){
+  .ct-top-link span,.ct-top-right .ct-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ct-top-right{gap:calc(4px * var(--space-scale))}
+  .ct-topbar .brand .mark,.ct-topbar .brand h1{display:none}
+}
+
+/* a JDA's page: breadcrumb and its other pages */
+.ct-jda-nav{display:grid;gap:calc(10px * var(--space-scale));margin:0 0 calc(18px * var(--space-scale))}
+.ct-crumbs ol{list-style:none;display:flex;flex-wrap:wrap;gap:calc(6px * var(--space-scale));margin:0;padding:0;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));color:var(--muted)}
+.ct-crumbs li+li::before{content:'›';margin-right:calc(6px * var(--space-scale));color:var(--muted)}
+.ct-crumbs a{color:var(--teal-700);font-weight:600;text-decoration:none}
+.ct-crumbs a:hover{text-decoration:underline}
+.ct-crumbs [aria-current]{color:var(--text);font-weight:600}
+.ct-subnav{display:flex;gap:calc(4px * var(--space-scale));overflow-x:auto;scrollbar-width:thin;border-bottom:1px solid var(--border)}
+.ct-subnav a{position:relative;flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 calc(14px * var(--space-scale));color:var(--muted);font-weight:700;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));text-decoration:none}
+.ct-subnav a:hover{color:var(--teal-800)}
+.ct-subnav a[aria-current]{color:var(--teal-900)}
+.ct-subnav a[aria-current]::after{content:'';position:absolute;inset:auto calc(10px * var(--space-scale)) 0;height:calc(3px * var(--space-scale));border-radius:calc(3px * var(--space-scale)) calc(3px * var(--space-scale)) 0 0;background:var(--teal-600)}
+.ct-subnav a:last-child{margin-left:auto}
+.ct-jda-nav .ct-top-tabs{background:var(--teal-050);border-color:var(--teal-100);justify-self:start}
+.ct-jda-nav .ct-top-tabs a{color:var(--teal-800)}
+.ct-jda-nav .ct-top-tabs a[aria-current]{background:var(--teal-700);color:#fff}
+
+/* the rings and headings that lead to a JDA's pages */
+.ct-ring-link{display:block;border-radius:50%;color:inherit;text-decoration:none;transition:transform .15s}
+.ct-ring-link:hover{transform:scale(1.04)}
+.ct-head-link{color:inherit;text-decoration:none}
+.ct-head-link:hover{text-decoration:underline}
+.ct-arrows{display:flex;flex-wrap:wrap;gap:calc(6px * var(--space-scale)) calc(18px * var(--space-scale));margin:auto 0 0}

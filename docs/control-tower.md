@@ -16,13 +16,19 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
   its progress (the average of its projects' % on Overall progress) and its latest key update (Weekly
   progress), an **Agreement & BRD** button (its documents page, below), key insights, challenges
   (from Overall progress unless written in edit mode) and cost (paid / sanctioned, with tax, from the
-  Invoice Tracker) with **Detail cost** into that JDA's page in the tracker. Links under the JDA's name
-  open its Overall progress, Weekly progress and its Master Page (the public Info page). **Sync from Drive** (the
-  tracker's invoice inbox) and **+ Add JDA (finance)** sit top right; Recent activity is at the bottom.
-- Sidebar (every private page; collapses to a rail of icons, a drawer on a phone): Control Tower, each JDA, CJI3 register, Payment tables, View public site. Top bar: Sign out.
+  Invoice Tracker). The progress ring opens Overall progress; Latest key update, All updates and View tasks
+  open Weekly progress; the cost ring and **Detail cost** open its Invoices & payments. **+ Add JDA
+  (invoices)** sits in the page header; Recent activity is at the bottom.
+- Sidebar (every private page; collapses to a rail of icons, a drawer on a phone): Control Tower, each JDA, CJI3 register, Payment tables, View public site.
+- Top bar (the Control Tower and every JDA page): the JDA tabs; the page's own actions (on the landing
+  page **Sync from Drive**, the tracker's invoice inbox, and **Edit page**; on a JDA page its **Edit
+  page**); **View public site**; the user menu with Sign out.
+- A JDA's pages (Overall progress, Weekly progress, Agreement & BRD, Invoices & payments at
+  `/control-tower/<jda>/invoices`): a breadcrumb and links to the others under the top bar, and the JDA
+  tabs there keep the page (JDA 1's Weekly progress → JDA 2's).
 - **Edit page** (top right): per JDA, its key insights, challenges, and the progress and cost figures when they must be set by hand (shown as "Set by hand"). The public TriCipta AI page has the same button in its sidebar for anyone signed in. Both save on the server (`/api/site/...`), and a save made after someone else's is refused until confirmed.
-- A JDA -> Control Tower: the "Control Tower" tab, the logo or the sidebar. Invoice Tracker -> Control Tower:
-  the sidebar or its logo. The tracker's old front page (a card per JDA) is gone: its address
+- A JDA -> Control Tower: the breadcrumb, the logo or the sidebar. Invoice Tracker -> Control Tower:
+  the sidebar, its logo, or on a JDA's page the breadcrumb. The tracker's old front page (a card per JDA) is gone: its address
   leads to the Control Tower.
 - **Agreement & BRD** (`/control-tower/<jda>/documents`): the signed agreement and the Business
   Requirement Document, each with its title, version, date and source (worked out from the link when
@@ -31,9 +37,9 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
   is marked Latest. Previewing a private file needs the viewer to be signed in to Google or SharePoint
   in the same browser.
 - Inside a JDA: **Overall progress** (`/control-tower/<jda>/overall-progress`, a project's page at
-  `#project/<name>`) and **Weekly progress** (`/control-tower/<jda>/weekly-progress`), with **Edit progress**
-  and **Edit report** in the bar at the bottom. Its **Master Page** is public: the JDA's Info page
-  (`/jda/<jda>/info`), linked from the top bar. Addresses of the old single page
+  `#project/<name>`) and **Weekly progress** (`/control-tower/<jda>/weekly-progress`), with **Edit page**
+  in the top bar and **Edit report** in the bar at the bottom. Its **Master Page** is public: the JDA's
+  Info page (`/jda/<jda>/info`), linked as **Master Page ↗** in the JDA's pages. Addresses of the old single page
   (`jda-report.html#/jda1/...`) lead to the same screen in its new place.
 
 ## Where each JDA's data lives
@@ -90,8 +96,8 @@ Once saved from edit mode, the saved version is what shows: later changes to tha
 `jda-content.js` do not appear until it is reset. The architecture diagram of the old private Master
 Page is gone.
 
-**Overall progress** and **Weekly progress** are edited on their own pages: **Edit progress** in the
-bottom bar (or `#edit` on the address, which **Edit tasks** uses) makes them editable the same way,
+**Overall progress** and **Weekly progress** are edited on their own pages: **Edit page** in the
+top bar (or `#edit` on the address, which **Edit tasks** uses) makes them editable the same way,
 with **Delete** on every project, challenge, task and key update and **+ Add** for each; click a
 status, severity or the overall status pill to change it. **Update from Google Drive** at the top of
 both reads the Overall Progress and Weekly Progress folders into a draft. The S-curve is not editable
@@ -167,7 +173,7 @@ numbers, and never another JDA's content. To fill it in:
 
 - Master Page: Edit Master Page on its Info page, typing it in or updating from its Master File
   folder. Or as an entry in `web/control-tower/config/jda-content.js`, next to `jda3`.
-- Progress: Edit progress on its Overall or Weekly progress page, by hand or from Drive; or Sync
+- Progress: Edit page on its Overall or Weekly progress page, by hand or from Drive; or Sync
   from Drive on Edit report.
 - S-curve: there is no S-curve editor (the reference has none either). Add a `scurve` field to its
   document in the Firebase console.

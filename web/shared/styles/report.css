@@ -48,19 +48,7 @@
   .back-link:hover{text-decoration:underline;}
 
   /* ---------- persistent page nav (built into the topbar, sticky with it) ---------- */
-  .pagenav{min-width:0;max-width:100%;} /* may be narrower than its tabs: they scroll inside it */
-  .pagenav-scroll{overflow-x:auto;}
-  .pagenav-inner{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;
-    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:calc(999px * var(--space-scale));padding:calc(5px * var(--space-scale));}
-  .pagenav-tab{display:inline-flex;align-items:center;gap:calc(6px * var(--space-scale));color:rgba(255,255,255,.88);font-weight:700;cursor:pointer;
-    white-space:nowrap;padding:calc(8px * var(--space-scale)) calc(16px * var(--space-scale));border-radius:calc(999px * var(--space-scale));transition:background .15s ease,color .15s ease,transform .1s ease;
-    background:none;border:none;font-family:inherit;font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));}
-  .pagenav-tab:hover{background:rgba(255,255,255,.14);color:#fff;}
-  .pagenav-tab svg{flex-shrink:0;}
-  .pagenav-tab.active{font-weight:800;color:var(--teal-700);background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.16);}
-  .pagenav-sep{display:inline-flex;align-items:center;justify-content:center;width:calc(16px * var(--space-scale));height:calc(16px * var(--space-scale));
-    color:rgba(255,255,255,.5);font-size:max(min(11px, 14px), calc(11px * var(--type-scale)));flex-shrink:0;}
-  @media (max-width:560px){.pagenav-tab{padding:7px 13px;font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));}}
+   /* may be narrower than its tabs: they scroll inside it */
 
   /* ---------- hero (full viewport bleed, content re-centered inside) ---------- */
   .hero{position:relative;color:#fff;overflow:hidden;width:calc(100vw - var(--side-w, 0px));margin-left:calc(50% - (100vw - var(--side-w, 0px)) / 2);margin-right:calc(50% - (100vw - var(--side-w, 0px)) / 2);
@@ -328,7 +316,7 @@
   
   .btn-teal{background:var(--teal-600);color:#fff;border:none;box-shadow:0 4px 14px rgba(0,80,74,.28);}
   .btn-teal:hover{background:var(--teal-700);transform:translateY(-2px);}
-  .btn:active,.pagenav-tab:active,.back-link:active,.crumb-link:active{transform:scale(.96);}
+  .btn:active,.back-link:active{transform:scale(.96);}
 
   footer:not(.site-footer){position:sticky;bottom:0;z-index:60;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
     border-top:1px solid var(--glass-brd);padding:calc(14px * var(--space-scale)) calc(56px * var(--space-scale));display:flex;justify-content:space-between;align-items:center;font-size:max(min(12.5px, 14px), calc(12.5px * var(--type-scale)));color:var(--muted);}
@@ -387,7 +375,7 @@
 
 /* ---- Portal additions: only what the reference has no markup for (links in the nav, the portal's JDA grid and admin card). ---- */
 [hidden]{display:none !important;}
-a.pagenav-tab{text-decoration:none;}
+
 .topbar .brand a{display:block;border-radius:calc(7px * var(--space-scale));}
 .topbar .brand a:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 

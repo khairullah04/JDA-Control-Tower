@@ -9,6 +9,7 @@ import { portalApi } from '../../shared/lib/portal-api.js';
 import { isConfigured, reportRefFor } from '../../shared/lib/firebase.js';
 import '../../shared/components/account.js';
 import { mountCtSidebar } from './ct-sidebar.js';
+import { mountCtTopbar, jdaNav, jdaPage } from './ct-topbar.js';
 import { contentFor } from '../config/jda-content.js';
 import { startEditor } from './editor.js';
 import { contentFromOverview as overviewContent } from '../../shared/lib/overview.js';
@@ -30,13 +31,23 @@ if (!jda) { location.replace('/control-tower/'); await new Promise(() => {}); }
 mountCtSidebar({ wrap: document.querySelector('.app'), bar: document.querySelector('.topbar-inner'), current: jda.id });
 const PAGE_FOR = { 'screen-progress': 'overall-progress', 'screen-weekly': 'weekly-progress' };
 const pathFor = screen => `/control-tower/${jda.id}/${PAGE_FOR[screen] || 'overall-progress'}`;
+// Top bar: the JDA tabs keep the page you are on; Edit page is edit mode for the progress pages.
+mountCtTopbar({ bar: document.querySelector('.topbar-inner'), tabs: { current: jda.id, href: j => jdaPage(j.id, pageName) }, actions: [$('progressEditBtn')] });
+const topTabs = document.querySelectorAll('.ct-top-tabs a');
+const subnav = jdaNav(jda, pageName);
+document.querySelector('.page-wrap').prepend(subnav);
+// Overall and Weekly progress are one page: moving between them needs no reload.
+subnav.addEventListener('click', e => {
+  const a = e.target.closest('a[data-page]'), screen = Object.keys(PAGE_FOR).find(k => PAGE_FOR[k] === a?.dataset.page);
+  if (!screen || editing || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault(); showScreen(screen);
+});
 const baseContent = contentFor(jda);
 let c = baseContent; // + the saved Master Page content (titles, intros), once the report document arrives
 
 /* ---------- Saving goes through the JDA server, behind the JDA Control Tower sign-in ---------- */
-// Back to the Control Tower lands on this JDA's tab; its Master Page is its public Info page.
+// Back to the Control Tower lands on this JDA's tab.
 document.querySelectorAll('a[href="/control-tower/"]').forEach(a => { a.href = `/control-tower/#${jda.id}`; });
-$('navMaster').href = `/jda/${encodeURIComponent(jda.id)}/info`;
 const api = (path, body = {}) => portalApi(path, { jda: { id: jda.id, name: jda.name }, ...body });
 // Reading and edit mode differ only in the hash (#edit), so moving between them swaps it and reloads
 // to start again in the other mode.
@@ -67,7 +78,6 @@ function renderHeader(){
   document.title = `${c.short}: progress · JDA Control Tower`;
   $('brandMark').textContent = c.mark;
   $('brandTitle').textContent = c.reportTitle;
-  $('navJdaName').textContent = c.short;
   $('footBrand').textContent = c.footBrand;
   $('footNote').textContent = c.footNote;
   $('progressIntro').textContent = c.progressIntro;
@@ -125,21 +135,23 @@ function renderDetailTasks(project, tasks){
   return assigned;
 }
 $('todayLabel').textContent = "Today: " + formatDueDate(todayISO);
-const pagenavTabFor = { "screen-progress":"screen-progress", "screen-project-detail":"screen-progress", "screen-weekly":"screen-weekly", "screen-edit":"screen-edit" };
+const PAGE_OF_SCREEN = { "screen-progress":"screen-progress", "screen-project-detail":"screen-progress", "screen-weekly":"screen-weekly", "screen-edit":"screen-edit" };
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
   // The address follows the screen, so a reload, a shared link or Leave returns to the same one.
   if (PAGE_FOR[id]) history.replaceState(null, '', pathFor(id) + (editor ? '#edit' : ''));
-  const activeTab = pagenavTabFor[id];
-  document.querySelectorAll('.pagenav-tab').forEach(t => t.classList.toggle('active', t.dataset.target === activeTab));
-  const onEdit = id === 'screen-edit';
-  $('pagenavEditSep').style.display = onEdit ? 'inline-flex' : 'none';
-  $('pagenavEditTab').style.display = onEdit ? 'inline-flex' : 'none';
+  // The breadcrumb, the JDA's pages and the JDA tabs say (and keep) which page this is.
+  const page = PAGE_FOR[PAGE_OF_SCREEN[id]];
+  if (page) {
+    subnav.querySelectorAll('a[data-page]').forEach(a => a.toggleAttribute('aria-current', a.dataset.page === page));
+    subnav.querySelector('[aria-current="page"]:not(a)').textContent = page === 'weekly-progress' ? 'Weekly progress' : 'Overall progress';
+    topTabs.forEach(a => { a.href = a.href.replace(/[^/]+$/, page); });
+  }
   window.scrollTo({top:0, behavior:'smooth'});
   updateScrollProgress();
 }
-document.querySelectorAll('.btn[data-target], .back-link, .crumb-link, .pagenav-tab[data-target]').forEach(btn => {
+document.querySelectorAll('.btn[data-target], .back-link').forEach(btn => {
   btn.addEventListener('click', () => showScreen(btn.dataset.target));
 });
 
@@ -301,6 +313,8 @@ function handleInitialRoute(){
   firstLoadDone();
   if (pageName === 'weekly-progress') showScreen('screen-weekly');
   if (!editing && hashParts[0] === 'project') { try { showProjectDetail(decodeURIComponent(hashParts[1] || '')); } catch { /* a malformed address: stay on the page */ } }
+  // #tasks, #updates (from the Control Tower): that part of Weekly progress
+  if (['tasks', 'updates'].includes(hashParts[0])) setTimeout(() => $(hashParts[0])?.scrollIntoView({ block: 'start' }), 350);
 }
 
 // `data` is null when this JDA has no report document yet: every section keeps its place and its
@@ -708,7 +722,7 @@ if (!firebaseReady) {
   });
 }
 
-/* ---------- Edit mode: "Edit progress" in the bar at the bottom ---------- */
+/* ---------- Edit mode: "Edit page" in the top bar ---------- */
 $('progressEditBtn').hidden = editing;
 $('progressEditBtn').onclick = () => goTo(location.pathname + '#edit');
 

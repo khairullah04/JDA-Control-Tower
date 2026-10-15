@@ -12,9 +12,12 @@ import { contentFor } from '../config/jda-content.js';
 import { isConfigured, reportRefFor, auth } from '../../shared/lib/firebase.js';
 import '../../shared/components/account.js';
 import { mountCtSidebar } from './ct-sidebar.js';
+import { mountCtTopbar, jdaPage } from './ct-topbar.js';
 
 const $ = id => document.getElementById(id);
 mountCtSidebar({ wrap: document.querySelector('.app'), bar: document.querySelector('.topbar-inner'), current: 'home' });
+// The JDA tabs, Edit page and Sync from Drive sit in the top bar.
+mountCtTopbar({ bar: document.querySelector('.topbar-inner'), tabs: $('ctTabs'), actions: [$('editPageBtn'), $('syncBtn')] });
 const FAILED = { failed: true };
 const SEVERITY = { high: 'High', medium: 'Medium', low: 'Low' };
 const STATUS = REPORT_STATUS;
@@ -97,17 +100,13 @@ function panel(j, f, written, costsFailed) {
       <a class="ct-info-btn" href="/control-tower/${encodeURIComponent(j.id)}/documents">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></a>
       <div><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}</div>
     </div>
-    <nav class="ct-links" aria-label="${esc(j.name)} pages">
-      <a href="${reportUrl(j)}">Overall progress</a><a href="${reportUrl(j, 'weekly')}">Weekly progress &amp; tasks</a>
-      <a href="${reportUrl(j, 'weekly', '#edit')}">Edit tasks</a><a href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener">Master Page (public) ↗</a>
-    </nav>
   </div>
   ${f.failed ? `<p class="ct-notice warn">${esc(j.name)}'s report could not be read just now, so its progress, update and challenges are missing. Reload to try again.</p>` : ''}
 
   <section class="ct-card ct-status" aria-label="${esc(j.name)} at a glance">
     <div class="ct-gauge">
       <h4>Progress</h4>
-      ${ring(f.progress, 'complete', 'Progress')}
+      <a class="ct-ring-link" href="${reportUrl(j)}" title="Open ${esc(j.name)}'s Overall progress">${ring(f.progress, 'complete', 'Progress')}<span class="visually-hidden">Open Overall progress</span></a>
       <div class="ct-gauge-meta">
         ${f.status ? `<span class="status-pill ${f.status}">${STATUS[f.status]}</span>` : ''}
         <span>${f.projects ? `${f.projects} project${f.projects === 1 ? '' : 's'}` : 'No projects yet'}</span>
@@ -115,19 +114,19 @@ function panel(j, f, written, costsFailed) {
       </div>
     </div>
     <div class="ct-latest">
-      <h4>Latest key update</h4>
+      <h4><a class="ct-head-link" href="${reportUrl(j, 'weekly')}">Latest key update</a></h4>
       ${f.latest ? `<p class="ct-when"><time datetime="${esc(f.latest.date || '')}">${fmtDate(f.latest.date)}</time><span class="${stale !== null && stale > STALE_DAYS ? 'ct-stale' : 'ct-hint'}">${age(stale)}</span></p><p class="ct-clamp">${esc(f.latest.text)}</p>`
         : `<p class="ct-empty">No key updates yet. They come from the Weekly progress page.</p>`}
-      <a class="ct-arrow" href="${reportUrl(j, 'weekly')}">All updates and tasks${f.updates > 1 ? ` (${f.updates} updates)` : ''} →</a>
+      <p class="ct-arrows"><a class="ct-arrow" href="${reportUrl(j, 'weekly')}#updates">All updates${f.updates > 1 ? ` (${f.updates})` : ''} →</a><a class="ct-arrow" href="${reportUrl(j, 'weekly')}#tasks">View tasks →</a></p>
     </div>
     <div class="ct-gauge cost">
       <h4>Cost ${f.cost?.override ? tag('Set by hand') : ''}</h4>
-      ${ring(pctCost, unsanctioned ? 'unsanctioned' : 'paid', 'Cost: paid of sanctioned', `cost${unsanctioned || (pctCost !== null && pctCost > 100) ? ' over' : ''}`)}
+      <a class="ct-ring-link" href="${jdaPage(j.id, 'invoices')}" title="Open ${esc(j.name)}'s invoices and payments">${ring(pctCost, unsanctioned ? 'unsanctioned' : 'paid', 'Cost: paid of sanctioned', `cost${unsanctioned || (pctCost !== null && pctCost > 100) ? ' over' : ''}`)}<span class="visually-hidden">Open invoices and payments</span></a>
       <div class="ct-gauge-meta">
         ${f.cost ? `<span><b class="mono">${esc(rm(f.cost.spent))}</b> paid</span><span class="ct-hint">${f.cost.sanctioned > 0 ? `of <b class="mono">${esc(rm(f.cost.sanctioned))}</b> sanctioned, with tax` : 'Nothing is sanctioned yet.'}</span>${f.twice ? '<span class="ct-stale">Two Invoice Tracker JDAs have this name: their figures are added together.</span>' : ''}`
           : `<span class="ct-hint">${costsFailed ? 'Cost figures could not be read just now. Reload to try again.' : 'Not in the Invoice Tracker yet.'}</span>`}
         ${f.pending ? `<a class="ct-pending" href="invoices/#/cji3/${encodeURIComponent(f.trackerId)}">${f.pending} invoice${f.pending === 1 ? '' : 's'} pending: open the register →</a>` : ''}
-        ${f.trackerId ? `<a class="ct-btn ghost small" href="invoices/#/jda/${encodeURIComponent(f.trackerId)}">Invoices &amp; payments →</a>` : ''}
+        ${f.trackerId ? `<a class="ct-btn ghost small" href="${jdaPage(j.id, 'invoices')}">Detail cost →</a>` : ''}
       </div>
     </div>
   </section>

@@ -5,15 +5,6 @@
 .ct-head h2{margin:calc(4px * var(--space-scale)) 0 calc(6px * var(--space-scale));font-size:clamp(max(min(26px, 14px), calc(26px * var(--type-scale))),4vw,max(min(34px, 14px), calc(34px * var(--type-scale))));font-weight:800;color:var(--teal-900);letter-spacing:-.01em}
 .ct-lead{margin:0;color:var(--muted)}
 .ct-actions{display:flex;flex-wrap:wrap;gap:calc(10px * var(--space-scale))}
-.ct-btn{display:inline-flex;align-items:center;justify-content:center;gap:calc(8px * var(--space-scale));min-height:44px;padding:0 calc(18px * var(--space-scale));border-radius:calc(12px * var(--space-scale));border:1px solid transparent;font:700 max(min(14px, 14px), calc(14px * var(--type-scale)))/1 var(--font);cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s,box-shadow .15s,transform .15s}
-.ct-btn svg{width:calc(17px * var(--space-scale));height:calc(17px * var(--space-scale))}
-.ct-btn.primary{background:linear-gradient(135deg,var(--teal-600),var(--teal-800));color:#fff;box-shadow:0 4px 14px rgba(0,133,124,.3)}
-.ct-btn.primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,133,124,.38)}
-.ct-btn.primary:disabled{opacity:.7;cursor:wait;transform:none}
-.ct-btn.ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
-.ct-btn.ghost:hover{background:var(--teal-050);border-color:var(--teal-100)}
-.ct-btn.small{min-height:calc(38px * var(--space-scale));padding:0 calc(14px * var(--space-scale));font-size:max(min(13px, 14px), calc(13px * var(--type-scale)))}
-.ct-btn:focus-visible,.ct-info-btn:focus-visible,.ct-more:focus-visible,.ct-links a:focus-visible,.ct-arrow:focus-visible{outline:3px solid var(--teal-500);outline-offset:2px}
 .ct-notice{margin:0 0 calc(18px * var(--space-scale));padding:calc(12px * var(--space-scale)) calc(16px * var(--space-scale));border-radius:calc(12px * var(--space-scale));background:var(--teal-050);border:1px solid var(--teal-100);color:var(--teal-900);font-size:max(min(14px, 14px), calc(14px * var(--type-scale)))}
 .ct-notice.warn{background:#fbf1e3;border-color:#efd8b4;color:#6e4a12}
 .ct-loading,.ct-empty{color:var(--muted);font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));margin:calc(4px * var(--space-scale)) 0}
@@ -36,15 +27,13 @@
 .ct-panel{display:grid;gap:calc(18px * var(--space-scale));outline:none}
 .ct-panel-head{display:grid;grid-template-columns:1fr auto;align-items:center;gap:calc(16px * var(--space-scale))}
 .ct-panel-title{display:flex;align-items:center;gap:calc(16px * var(--space-scale));min-width:0}
-.ct-info-btn{display:inline-flex;align-items:center;gap:calc(8px * var(--space-scale));min-height:40px;padding:0 calc(14px * var(--space-scale));border-radius:calc(12px * var(--space-scale));border:1px solid var(--glass-brd);background:#fff;color:var(--teal-800);font:700 max(min(13.5px, 14px), calc(13.5px * var(--type-scale)))/1 var(--font);cursor:pointer;box-shadow:var(--elev-1)}
+.ct-info-btn{text-decoration:none;display:inline-flex;align-items:center;gap:calc(8px * var(--space-scale));min-height:40px;padding:0 calc(14px * var(--space-scale));border-radius:calc(12px * var(--space-scale));border:1px solid var(--glass-brd);background:#fff;color:var(--teal-800);font:700 max(min(13.5px, 14px), calc(13.5px * var(--type-scale)))/1 var(--font);cursor:pointer;box-shadow:var(--elev-1)}
 .ct-info-btn svg{width:calc(18px * var(--space-scale));height:calc(18px * var(--space-scale))}
 .ct-info-btn:hover{background:var(--teal-050)}
 .ct-panel-title h3{margin:0;font-size:max(min(22px, 14px), calc(22px * var(--type-scale)));font-weight:800;color:var(--teal-900)}
 .ct-panel-title p{margin:2px 0 0;color:var(--muted);font-size:max(min(14px, 14px), calc(14px * var(--type-scale)))}
-.ct-links{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:calc(4px * var(--space-scale)) calc(14px * var(--space-scale))}
-.ct-links a{display:inline-flex;align-items:center;min-height:44px;font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));font-weight:600;color:var(--teal-700);text-decoration:none;padding:0 2px}
-.ct-links a:hover{text-decoration:underline}
-@media (max-width:860px){.ct-panel-head{grid-template-columns:1fr}.ct-links{justify-content:flex-start}}
+
+@media (max-width:860px){.ct-panel-head{grid-template-columns:1fr}}
 
 .ct-card{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:calc(18px * var(--space-scale));box-shadow:var(--elev-1);padding:calc(20px * var(--space-scale)) calc(22px * var(--space-scale));min-width:0}
 .ct-card h4{margin:0 0 calc(12px * var(--space-scale));display:flex;flex-wrap:wrap;align-items:center;gap:calc(8px * var(--space-scale));font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-700)}
@@ -148,17 +137,12 @@ dialog .ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
 .mono{font-family:'IBM Plex Mono',monospace}
 /* after the 20% scale-down: the ring's label fits inside it, and the documents button stays on one line */
 .ct-ring-label small{font-size:10px;letter-spacing:.08em}
-.ct-info-btn{white-space:nowrap}
+.ct-info-btn{text-decoration:none;white-space:nowrap}
 
 /* Round 2: the same accents as the public site (one accent colour, under section headings) */
 .ct-head h2::after{content:'';display:block;width:calc(40px * var(--space-scale));height:3px;margin-top:calc(10px * var(--space-scale));border-radius:2px;background:var(--accent)}
 
 /* ---------- A JDA's Agreement & BRD page (documents.html) ---------- */
-.ct-crumbs ol{list-style:none;display:flex;flex-wrap:wrap;gap:calc(6px * var(--space-scale));margin:0 0 calc(14px * var(--space-scale));padding:0;font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));color:var(--muted)}
-.ct-crumbs li+li::before{content:'›';margin-right:calc(6px * var(--space-scale));color:var(--muted)}
-.ct-crumbs a{color:var(--teal-700);font-weight:600;text-decoration:none}
-.ct-crumbs a:hover{text-decoration:underline}
-.ct-crumbs [aria-current]{color:var(--text);font-weight:600}
 .doc-sec{margin-top:calc(28px * var(--space-scale))}
 .doc-sec-head{margin-bottom:calc(12px * var(--space-scale))}
 .doc-sec-head h3{margin:0 0 calc(4px * var(--space-scale));font-size:max(min(1.15rem, 14px), calc(1.15rem * var(--type-scale)));color:var(--teal-900)}

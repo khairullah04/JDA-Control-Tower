@@ -32,3 +32,7 @@
 @media (max-width:900px){.topbar{flex-wrap:wrap}} /* seven items do not fit one line on a tablet */
 @media (max-width:600px){#page{padding:1.25rem 1rem 3rem}.topbar{padding:calc(.5rem * var(--space-scale)) calc(1rem * var(--space-scale))}.brand{font-size:max(min(.9rem, 14px), calc(.9rem * var(--type-scale)))}}
 .topbar :focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* A JDA's page: the Control Tower's breadcrumb, its other pages and the JDA tabs (main.js) */
+.jda-nav-slot{max-width:1240px;margin:0 auto;padding:calc(1.25rem * var(--space-scale)) calc(1.5rem * var(--space-scale)) 0}
+.jda-nav-slot:empty{display:none}
+.jda-nav-slot .ct-jda-nav{margin:0}
