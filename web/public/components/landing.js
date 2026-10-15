@@ -3,6 +3,7 @@
 // place it is saved under, which edit mode (edit.js) uses.
 import { esc } from '/shared/lib/esc.js';
 import { me, endSession } from '/shared/lib/session.js';
+import { mountSidebar } from '/shared/components/sidebar.js';
 
 const $ = id => document.getElementById(id);
 export const STATUS = {
@@ -14,13 +15,20 @@ const icon = (paths, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill=
 // Text as paragraphs: a blank line starts a new one.
 const paras = (text, field) => `<div class="prose" data-field="${field}" data-multiline>${String(text || '').split(/\n\s*\n/).map(p => `<p>${esc(p.trim())}</p>`).join('')}</div>`;
 const initials = name => (String(name).match(/\b\p{L}/gu) || ['?']).slice(0, 2).join('').toUpperCase();
+const shorten = (t, n) => { t = String(t || ''); return t.length > n ? `${t.slice(0, n).replace(/\s+\S*$/, '')}…` : t; };
+const fmtDate = iso => { const d = new Date(`${iso}T00:00:00`); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
 const PROJECTS_SHOWN = 6;
+// The pictures already in the site. Only the two large photos are wide enough for the hero; the
+// solution pictures (480px) are used at card size, never stretched.
+const HERO = ['/shared/assets/photos/hero-banner.jpg', '/shared/assets/photos/press.jpg'];
+const CARD_PICTURES = ['gai', 'sap', 'vision', 'agentic', 'integrity', 'maintenance', 'hse', 'production', 'workprocess'].map(k => `/shared/assets/solutions/sol-${k}.jpg`);
+const cardPicture = (i, j = 0) => CARD_PICTURES[(i + j * 3) % CARD_PICTURES.length];
 
 export const sectionHead = (s, key, eyebrow = '') => `
   <header class="sec-head">
     ${eyebrow ? `<span class="eyebrow">${esc(eyebrow)}</span>` : ''}
     <h2 data-field="${key}.title">${esc(s.title)}</h2>
-    <p class="sec-sub" data-field="${key}.subtitle">${esc(s.subtitle)}</p>
+    ${s.subtitle !== undefined ? `<p class="sec-sub" data-field="${key}.subtitle">${esc(s.subtitle)}</p>` : ''}
   </header>`;
 
 const person = (p, list, i) => `
@@ -29,7 +37,50 @@ const person = (p, list, i) => `
     <span><b data-field="${list}.${i}.name">${esc(p.name)}</b><span class="person-title" data-field="${list}.${i}.title">${esc(p.title)}</span></span>
   </li>`;
 
-export function jdaPanel(j) {
+/* ---------- Sections ---------- */
+// The hero: one slide each for TriCipta AI, what a JDA is, and every JDA; their titles are the tabs below.
+function hero(c) {
+  const slides = [
+    { tab: 'Overview', eyebrow: `<span data-field="header.eyebrow">${esc(c.header.eyebrow)}</span>`, title: `<h1 id="heroTitle" data-field="header.title">${esc(c.header.title)}</h1>`,
+      text: `<p class="slide-text" data-field="header.tagline">${esc(c.header.tagline)}</p>`, href: '#overview', image: HERO[0] },
+    { tab: 'What is a JDA', eyebrow: esc(c.whatIsJda.subtitle), title: `<h2>${esc(c.whatIsJda.title)}</h2>`, text: `<p class="slide-text">${esc(shorten(c.whatIsJda.body, 150))}</p>`, href: '#what-is-jda', image: HERO[1] },
+    ...c.jdas.map((j, i) => ({ tab: j.name, eyebrow: esc(j.name), title: `<h2>${esc(j.title || 'Title TBC')}</h2>`, text: `<p class="slide-text">${esc(shorten(j.pressRelease, 150))}</p>`,
+      href: `/jda/${encodeURIComponent(j.id)}/info`, image: j.image || HERO[i % 2], pos: i % 2 ? 'center 30%' : 'center 70%' }))
+  ];
+  return `
+  <section class="hero" id="home" aria-roledescription="carousel" aria-label="TriCipta AI">
+    <div class="slides">
+      ${slides.map((s, i) => `<div class="slide${i === 0 ? ' on' : ''}" id="slide-${i}" role="tabpanel" aria-roledescription="slide" aria-label="${i + 1} of ${slides.length}: ${esc(s.tab)}" aria-labelledby="slidetab-${i}"${i === 0 ? '' : ' hidden'}
+        style="background-image:linear-gradient(100deg,rgba(1,39,36,.88) 0%,rgba(1,61,57,.7) 45%,rgba(1,61,57,.2) 100%),url('${esc(s.image)}');background-position:${s.pos || 'center'}">
+        <div class="slide-inner">
+          <span class="eyebrow">${s.eyebrow}</span>${s.title}${s.text}
+          <a class="btn primary on-dark" href="${esc(s.href)}">Read more ${icon('<path d="M5 12h14M13 6l6 6-6 6"/>')}</a>
+        </div>
+      </div>`).join('')}
+    </div>
+    <div class="slide-bar">
+      <div class="slide-tabs" role="tablist" aria-label="Slides">
+        ${slides.map((s, i) => `<button type="button" role="tab" id="slidetab-${i}" aria-controls="slide-${i}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"><span>${esc(s.tab)}</span><i class="slide-progress" aria-hidden="true"></i></button>`).join('')}
+      </div>
+      <button type="button" class="slide-pause" id="slidePause" aria-label="Pause the slides">${icon('<path d="M9 5v14M15 5v14"/>')}</button>
+    </div>
+  </section>`;
+}
+
+const figures = c => {
+  const projects = c.jdas.reduce((n, j) => n + (j.projectCount || 0), 0), finished = c.jdas.reduce((n, j) => n + (j.finished || 0), 0);
+  return `
+  <section class="figures" aria-labelledby="figuresTitle">
+    <h2 class="figures-title" id="figuresTitle" data-field="figures.title">${esc(c.figures.title)}</h2>
+    <dl class="figure-strip">
+      <div><dt>Joint Development Agreements</dt><dd>${c.jdas.length}</dd></div>
+      <div><dt>Projects under way</dt><dd>${projects}</dd></div>
+      <div><dt>Projects finished</dt><dd>${finished}</dd></div>
+    </dl>
+  </section>`;
+};
+
+export function jdaPanel(j, jdaIndex = 0) {
   const base = `jdas.${j.id}`, shown = j.projects.slice(0, PROJECTS_SHOWN), more = j.projects.length - shown.length;
   return `
     <div class="jda-panel-grid">
@@ -40,9 +91,6 @@ export function jdaPanel(j) {
           <p class="clamp" id="press-${j.id}" data-field="${base}.pressRelease" data-multiline>${esc(j.pressRelease || 'No press release yet.')}</p>
           <button type="button" class="link-btn clamp-toggle" aria-expanded="false" aria-controls="press-${j.id}" hidden>Read more</button>
         </div>
-        <h3 class="mini-head">Projects under ${esc(j.name)} <span class="count">${j.projectCount}</span></h3>
-        ${j.projects.length ? `<ul class="chips" data-field="${base}.projects" data-list-of="text">${shown.map(p => `<li title="${esc(p)}">${esc(p)}</li>`).join('')}${more > 0 ? `<li class="chip-more"><a href="/jda/${encodeURIComponent(j.id)}/info">+${more} more</a></li>` : ''}</ul>`
-          : '<p class="muted" data-field="' + base + '.projects" data-list-of="text">No projects listed yet.</p>'}
       </div>
       <div class="jda-people">
         <h3 class="mini-head">Program Lead</h3>
@@ -51,7 +99,34 @@ export function jdaPanel(j) {
         <ul class="people" data-people="${base}.businessChampions">${j.businessChampions.map((p, i) => person(p, `${base}.businessChampions`, i)).join('')}</ul>
       </div>
     </div>
+    <h3 class="mini-head">Projects under ${esc(j.name)} <span class="count">${j.projectCount}</span></h3>
+    ${j.projects.length ? `<ul class="highlights" data-field="${base}.projects" data-list-of="text">${shown.map((p, i) => `
+      <li class="highlight"><img src="${cardPicture(i, jdaIndex)}" alt="" loading="lazy" width="480" height="320"><span title="${esc(p)}">${esc(p)}</span></li>`).join('')}
+      ${more > 0 ? `<li class="highlight more"><a href="/jda/${encodeURIComponent(j.id)}/info">+${more} more projects</a></li>` : ''}</ul>`
+      : `<p class="muted" data-field="${base}.projects" data-list-of="text">No projects listed yet.</p>`}
     <div class="panel-foot"><a class="btn ghost" href="/jda/${encodeURIComponent(j.id)}/info">View more about ${esc(j.name)} ${icon('<path d="M5 12h14M13 6l6 6-6 6"/>')}</a></div>`;
+}
+
+// Latest press releases: the newest (by date, when dates are given) large, the others as smaller dated cards.
+function news(c) {
+  const items = c.jdas.filter(j => j.pressRelease).map((j, i) => ({ j, i })).sort((a, b) => (b.j.pressDate || '').localeCompare(a.j.pressDate || '') || a.i - b.i);
+  if (!items.length) return '';
+  const [first, ...rest] = items;
+  const card = ({ j, i }, big) => `
+    <a class="news-card${big ? ' featured' : ''}" href="/jda/${encodeURIComponent(j.id)}/info">
+      <span class="news-pic"><img src="${esc(j.image || (big ? HERO[1] : cardPicture(i, 2)))}" alt="" loading="lazy"></span>
+      <span class="news-body">
+        <span class="news-meta">${esc(j.name)}${j.pressDate ? ` · <time datetime="${esc(j.pressDate)}">${esc(fmtDate(j.pressDate))}</time>` : ''}</span>
+        <b>${esc(j.title || j.name)}</b>
+        <span class="news-text">${esc(shorten(j.pressRelease, big ? 260 : 120))}</span>
+        <span class="news-more">Read more ${icon('<path d="M5 12h14M13 6l6 6-6 6"/>')}</span>
+      </span>
+    </a>`;
+  return `
+  <section class="sec" id="news">
+    ${sectionHead(c.news, 'news')}
+    <div class="news-grid">${card(first, true)}<div class="news-side">${rest.map(r => card(r, false)).join('')}</div></div>
+  </section>`;
 }
 
 export const statusBadge = (status, field = '') => {
@@ -59,28 +134,22 @@ export const statusBadge = (status, field = '') => {
   return `<span class="status-badge ${esc(status)}"${field ? ` data-field="${field}" data-choice="status"` : ''}>${icon(s.icon)}${esc(s.label)}</span>`;
 };
 
-// A contact card: a link when written, "To be announced" (and no link) until then.
-const contact = (label, field, value, href, paths) => {
+// A contact card: a link when written, "To be announced" (and no link) until then. `optional` cards
+// (LinkedIn, website) only show once written, except in edit mode.
+const contact = (label, field, value, href, paths, optional = false) => {
   const body = `${icon(paths)}<span><small>${label}</small><b data-field="${field}"${field.endsWith('address') ? ' data-multiline' : ''}>${esc(value || 'To be announced')}</b></span>`;
-  return value && href ? `<a class="contact-card" href="${esc(href)}">${body}</a>` : `<div class="contact-card${value ? '' : ' tba'}">${body}</div>`;
+  const cls = `contact-card${value ? '' : ' tba'}${optional && !value ? ' optional' : ''}`;
+  return value && href ? `<a class="${cls}" href="${esc(href)}"${/^https?:/.test(href) ? ' target="_blank" rel="noopener"' : ''}>${body}</a>` : `<div class="${cls}">${body}</div>`;
 };
+const webAddress = v => /^https?:\/\//i.test(String(v || '').trim()) ? String(v).trim() : '';
 
 export function render(site) {
   const c = site, at = Math.max(0, c.jdas.findIndex(j => j.id === new URLSearchParams(location.search).get('jda'))); // ?jda=jda3 opens JDA 3's tab
   return `
-  <section class="hero" id="home" aria-labelledby="heroTitle">
-    <div class="hero-inner">
-      <span class="eyebrow" data-field="header.eyebrow">${esc(c.header.eyebrow)}</span>
-      <h1 id="heroTitle" data-field="header.title">${esc(c.header.title)}</h1>
-      <p class="hero-tagline" data-field="header.tagline">${esc(c.header.tagline)}</p>
-      <div class="hero-actions">
-        <a class="btn primary" href="#jdas">Explore the JDAs</a>
-        <a class="btn ghost on-dark" href="#status">See JDA status</a>
-      </div>
-    </div>
-  </section>
+  ${hero(c)}
+  ${figures(c)}
 
-  <section class="sec" id="overview">${sectionHead(c.overview, 'overview')}${paras(c.overview.body, 'overview.body')}</section>
+  <section class="sec" id="overview"><div class="soft-box">${sectionHead(c.overview, 'overview')}${paras(c.overview.body, 'overview.body')}</div></section>
 
   <section class="sec" id="roles">
     ${sectionHead(c.roles, 'roles')}
@@ -90,7 +159,7 @@ export function render(site) {
     </figure>
   </section>
 
-  <section class="sec" id="what-is-jda">${sectionHead(c.whatIsJda, 'whatIsJda')}${paras(c.whatIsJda.body, 'whatIsJda.body')}</section>
+  <section class="sec" id="what-is-jda"><div class="soft-box">${sectionHead(c.whatIsJda, 'whatIsJda')}${paras(c.whatIsJda.body, 'whatIsJda.body')}</div></section>
 
   <section class="sec" id="jdas">
     ${sectionHead(c.existing, 'existing')}
@@ -98,18 +167,20 @@ export function render(site) {
       <div class="tablist" role="tablist" aria-label="JDAs">
         ${c.jdas.map((j, i) => `<button type="button" role="tab" id="tab-${j.id}" aria-controls="panel-${j.id}" aria-selected="${i === at}" tabindex="${i === at ? 0 : -1}">${esc(j.name)}</button>`).join('')}
       </div>
-      ${c.jdas.map((j, i) => `<div class="tab-panel" role="tabpanel" id="panel-${j.id}" aria-labelledby="tab-${j.id}" tabindex="0"${i === at ? '' : ' hidden'}>${jdaPanel(j)}</div>`).join('')}
+      ${c.jdas.map((j, i) => `<div class="tab-panel" role="tabpanel" id="panel-${j.id}" aria-labelledby="tab-${j.id}" tabindex="0"${i === at ? '' : ' hidden'}>${jdaPanel(j, i)}</div>`).join('')}
     </div>
   </section>
+
+  ${news(c)}
 
   <section class="sec" id="status">
     ${sectionHead(c.status, 'status')}
     <div class="status-grid">
       ${c.jdas.map(j => `
         <article class="status-card ${esc(j.status)}">
-          <div class="status-top"><h3>${esc(j.name)}</h3>${statusBadge(j.status, `jdas.${j.id}.status`)}</div>
-          <p class="status-title">${esc(j.title || 'Title TBC')}</p>
-          <p class="status-count"><b data-field="jdas.${j.id}.projectCount" data-number>${j.projectCount}</b> ${j.projectCount === 1 ? 'project' : 'projects'}</p>
+          <span class="status-label">${esc(j.name)}</span>
+          <h3 class="status-title">${esc(j.title || 'Title TBC')}</h3>
+          <p class="status-line"><b data-field="jdas.${j.id}.projectCount" data-number>${j.projectCount}</b> ${j.projectCount === 1 ? 'project' : 'projects'} · ${statusBadge(j.status, `jdas.${j.id}.status`)}</p>
         </article>`).join('')}
     </div>
   </section>
@@ -120,22 +191,32 @@ export function render(site) {
       ${contact('Email', 'contacts.email', c.contacts.email, c.contacts.email && `mailto:${c.contacts.email}`, '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>')}
       ${contact('Phone', 'contacts.phone', c.contacts.phone, c.contacts.phone && `tel:${String(c.contacts.phone).replace(/[^\d+]/g, '')}`, '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>')}
       ${contact('Address', 'contacts.address', c.contacts.address, '', '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>')}
+      ${contact('LinkedIn', 'contacts.linkedin', c.contacts.linkedin, webAddress(c.contacts.linkedin), '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 10v7M8 7v.01M12 17v-4a2 2 0 0 1 4 0v4M12 10v7"/>', true)}
+      ${contact('Website', 'contacts.website', c.contacts.website, webAddress(c.contacts.website), '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>', true)}
     </div>
   </section>
 
-  <footer class="site-foot"><span>© ${new Date().getFullYear()} <span data-field="footer.text">${esc(c.footer.text)}</span></span><a href="/login" id="footSignIn">Employee sign-in</a></footer>`;
+  <footer class="site-foot">
+    <nav class="foot-links" aria-label="Footer"><a href="#home">Home</a><a href="#jdas">Existing JDAs</a><a href="#status">JDA Status</a><a href="#contacts">Contacts</a><a href="/login" id="footSignIn">Employee sign-in</a></nav>
+    <div class="foot-row">
+      <span>© ${new Date().getFullYear()} <span data-field="footer.text">${esc(c.footer.text)}</span></span>
+      <span class="foot-social">${[['LinkedIn', c.contacts.linkedin], ['Website', c.contacts.website]].filter(([, v]) => webAddress(v)).map(([n, v]) => `<a href="${esc(webAddress(v))}" target="_blank" rel="noopener">${n}</a>`).join('')}</span>
+    </div>
+  </footer>`;
 }
 
 /* ---------- Behaviour ---------- */
-export function wireTabs(root) {
-  const tabs = [...root.querySelectorAll('[role="tab"]')];
+export function wireTabs(root, selector = '.jda-tabs [role="tab"]', onSelect = () => {}) {
+  const tabs = [...root.querySelectorAll(selector)];
   const select = (tab, focus = true) => {
     tabs.forEach(t => {
       const on = t === tab;
       t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
-      root.querySelector(`#${t.getAttribute('aria-controls')}`).hidden = !on;
+      const panel = root.querySelector(`#${t.getAttribute('aria-controls')}`);
+      panel.hidden = !on; panel.classList.toggle('on', on);
     });
     if (focus) tab.focus();
+    onSelect(tabs.indexOf(tab));
     wireClamps(root);
   };
   tabs.forEach((t, i) => {
@@ -146,7 +227,28 @@ export function wireTabs(root) {
       e.preventDefault(); select(tabs[(to + tabs.length) % tabs.length]);
     };
   });
+  return { select: i => select(tabs[(i + tabs.length) % tabs.length], false), count: tabs.length };
 }
+
+// The hero turns to its next slide every 7 seconds, except when motion is reduced, while the pointer
+// or keyboard focus is in it, in edit mode, or after Pause.
+function wireHero(root) {
+  const hero = root.querySelector('.hero');
+  if (!hero) return;
+  let at = 0, paused = matchMedia('(prefers-reduced-motion: reduce)').matches, held = false, timer;
+  const tabs = wireTabs(root, '.slide-tabs [role="tab"]', i => { at = i; restart(); });
+  const pauseBtn = hero.querySelector('#slidePause');
+  const restart = () => {
+    clearInterval(timer);
+    hero.classList.toggle('running', !paused);
+    if (!paused) timer = setInterval(() => { if (!held && !document.body.classList.contains('editing')) tabs.select(at + 1); }, 7000);
+  };
+  const setPaused = on => { paused = on; pauseBtn.setAttribute('aria-label', on ? 'Play the slides' : 'Pause the slides'); pauseBtn.innerHTML = icon(on ? '<path d="M7 5l12 7-12 7Z"/>' : '<path d="M9 5v14M15 5v14"/>'); restart(); };
+  pauseBtn.onclick = () => setPaused(!paused);
+  for (const [ev, on] of [['pointerenter', true], ['pointerleave', false], ['focusin', true], ['focusout', false]]) hero.addEventListener(ev, () => { held = on; hero.classList.toggle('held', on); });
+  setPaused(paused);
+}
+
 // A long press release shows five lines and "Read more"; a short one shows no button.
 export function wireClamps(root) {
   root.querySelectorAll('.clamp-wrap').forEach(w => {
@@ -157,7 +259,14 @@ export function wireClamps(root) {
   });
 }
 
-let closeMenu = () => {};
+// Sections fade in as they scroll into view (not when motion is reduced).
+function wireReveal(root) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const seen = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); seen.unobserve(e.target); } }), { threshold: .08 });
+  root.querySelectorAll('.sec, .figures').forEach(s => { s.classList.add('reveal'); seen.observe(s); });
+}
+
+let sidebar = { close: () => {} };
 function wireNav() {
   const links = [...document.querySelectorAll('.side-nav a')];
   const current = id => links.forEach(a => a.getAttribute('href') === `#${id}` ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current'));
@@ -168,22 +277,7 @@ function wireNav() {
   const watch = () => links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean).forEach(s => spy.observe(s));
   // the last section is short: at the very bottom of the page it is the current one
   addEventListener('scroll', () => { if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) current(links.at(-1).getAttribute('href').slice(1)); }, { passive: true });
-
-  // On a phone the sidebar is a drawer: closed, nothing in it can be reached; open, nothing behind it can.
-  const phone = matchMedia('(max-width:900px)');
-  const open = (on, refocus = false) => {
-    document.body.classList.toggle('menu-open', on); $('menuBtn').setAttribute('aria-expanded', on); $('scrim').hidden = !on;
-    $('sidebar').inert = phone.matches && !on;
-    $('main').inert = on; document.querySelector('.mobilebar').inert = false;
-    if (on) $('sidebar').querySelector('a').focus(); else if (refocus) $('menuBtn').focus();
-  };
-  open(false);
-  closeMenu = () => open(false);
-  phone.addEventListener('change', () => open(false));
-  $('menuBtn').onclick = () => open(!document.body.classList.contains('menu-open'));
-  $('scrim').onclick = () => open(false, true);
-  $('sidebar').addEventListener('click', e => { if (e.target.closest('a[href^="#"]') && phone.matches) open(false); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) open(false, true); });
+  sidebar = mountSidebar({ sidebar: $('sidebar'), menuBtn: $('menuBtn'), scrim: $('scrim'), main: $('main'), storageKey: 'tricipta.sidebar.collapsed' });
   return watch;
 }
 
@@ -192,22 +286,27 @@ async function account() {
   const who = await me();
   if (!who.signedIn) return;
   for (const a of [$('signInBtn'), $('footSignIn')].filter(Boolean)) a.href = '/control-tower/';
-  $('signInBtn').lastChild.textContent = ' Open Control Tower';
+  $('signInBtn').querySelector('span').textContent = 'Open Control Tower';
+  $('signInBtn').dataset.tip = 'Open Control Tower';
   if ($('footSignIn')) $('footSignIn').textContent = 'Open Control Tower';
   document.querySelector('.side-note').textContent = who.signInOff ? 'Sign-in is off (local)' : `Signed in as ${String(who.email).split('@')[0]}`;
   // Edit mode: everything on this page that is written rather than worked out (edit.js).
-  const editBtn = Object.assign(document.createElement('button'), { type: 'button', id: 'editPageBtn', className: 'btn ghost small side-edit', textContent: 'Edit page' });
+  const editBtn = Object.assign(document.createElement('button'), { type: 'button', id: 'editPageBtn', className: 'btn ghost small side-edit' });
+  editBtn.innerHTML = `${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}<span>Edit page</span>`;
+  editBtn.dataset.tip = 'Edit page';
   editBtn.onclick = async () => {
     if (!current) return toast('The page has not loaded, so it cannot be edited. Reload and try again.');
     editBtn.disabled = true;
-    closeMenu();
+    sidebar.close();
     try { await (await import('/public/components/edit.js')).start({ site: current, show, reload, done: text => { toast(text); editBtn.focus(); } }); }
     catch (e) { toast(`Edit mode could not open: ${e.message}`); }
     finally { editBtn.disabled = false; }
   };
   $('sideFoot').append(editBtn);
   if (!who.signInOff) {
-    const out = Object.assign(document.createElement('button'), { type: 'button', className: 'btn ghost small side-signout', textContent: 'Sign out' });
+    const out = Object.assign(document.createElement('button'), { type: 'button', className: 'btn ghost small side-signout' });
+    out.innerHTML = `${icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>')}<span>Sign out</span>`;
+    out.dataset.tip = 'Sign out';
     out.onclick = () => { if (!window.hasUnsavedChanges?.() || confirm('You have unsaved changes. Sign out anyway and lose them?')) endSession(); };
     $('sideFoot').append(out);
   }
@@ -231,7 +330,10 @@ export async function show(site) {
   $('page').innerHTML = render(current);
   $('page').hidden = false; $('loadNote').hidden = true;
   wireTabs($('page'));
+  wireHero($('page'));
   wireClamps($('page'));
+  wireReveal($('page'));
+  document.querySelectorAll('.side-nav a').forEach(a => { a.hidden = !document.getElementById(a.getAttribute('href').slice(1)); });
 }
 
 async function start() {

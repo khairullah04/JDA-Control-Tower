@@ -7,10 +7,13 @@ import { initCopilot, refreshCopilot } from './ui/copilot.js';
 import { $ } from './ui/dom.js';
 import { show } from './ui/render.js';
 import { toLogin, me } from '../../../shared/lib/session.js';
+import { mountCtSidebar } from '../../components/ct-sidebar.js';
 
 // The tracker's pages. Its old front page (a card per JDA) is the JDA Control Tower landing page now.
+const sidebar = mountCtSidebar({ wrap: $('#app-view'), bar: $('.topbar') });
 async function route() {
   const [, kind, id, sub] = location.hash.slice(1).split('/');
+  sidebar.mark(`/control-tower/invoices/#/${kind}`);
   if (!['project', 'jda', 'cji3', 'payments'].includes(kind) || ((kind === 'project' || kind === 'jda') && !id)) return location.replace('/control-tower/');
   $('#page').classList.toggle('wide', kind === 'cji3' || kind === 'payments'); // the two wide tables get the whole window
   await show(kind === 'project' && id ? () => renderProject(id) : kind === 'jda' && id ? () => renderJda(id)

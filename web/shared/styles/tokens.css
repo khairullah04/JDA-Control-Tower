@@ -11,6 +11,10 @@
   --red:#a33a30; --red-tint:#f6e0de; --blue:#2f5fbf; --blue-tint:#e6edfb;
   --ok:var(--green); --ok-tint:var(--green-tint); --warn:var(--amber); --warn-tint:var(--amber-tint);
   --bad:var(--red); --bad-tint:var(--red-tint); --info-tint:#dbeeec; --idle-tint:#eef0ef;
+  /* the one accent: thin highlights only (active slide, underlines, figure rules), never text on white */
+  --accent:#e2b53e; --accent-soft:rgba(226,181,62,.18);
+  /* the faint dot pattern of the sidebar and footer */
+  --dots:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1.4px) 0 0/14px 14px;
   /* surfaces */
   --glass-bg:linear-gradient(165deg,rgba(255,255,255,.97),rgba(231,244,243,.66));
   --glass-brd:rgba(0,133,124,.17);
@@ -24,5 +28,11 @@
   /* shape */
   --radius:16px; --radius-sm:10px;
   /* layout */
-  --side:244px; --topbar-h:58px;
+  --side:244px; --side-rail:68px; --topbar-h:58px;
+}
+:root{
+  /* Size: everything is about 20% smaller than the first design. Spacing, sizes and radii are
+     multiplied by --space-scale; type by --type-scale, never below 14px for text at 14px and up
+     (smaller labels keep their size). Tap targets (40-48px) keep theirs. */
+  --space-scale:.8; --type-scale:.8;
 }

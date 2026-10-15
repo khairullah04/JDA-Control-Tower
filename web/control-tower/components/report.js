@@ -8,6 +8,7 @@ import { JDAS, DEFAULT_JDA_ICON, MS_CLIENT_ID, MS_AUTHORITY } from '../../shared
 import { portalApi } from '../../shared/lib/portal-api.js';
 import { isConfigured, reportRefFor } from '../../shared/lib/firebase.js';
 import '../../shared/components/account.js';
+import { mountCtSidebar } from './ct-sidebar.js';
 import { contentFor, SOLUTION_ICONS } from '../config/jda-content.js';
 import { startEditor } from './editor.js';
 import { blocksHtml } from '../../shared/components/blocks.js';
@@ -27,6 +28,7 @@ const empty = (text = 'Not added yet.', style = '') => `<p class="detail-tasks-e
 // while a hash survives any redirect. ?jda= is still read so older links keep working.
 const hashParts = location.hash.replace(/^#\/?/, '').split('/');
 const jdaKey = JDAS.some(j => j.id === hashParts[0]) ? hashParts.shift() : new URLSearchParams(location.search).get('jda');
+mountCtSidebar({ wrap: document.querySelector('.app'), bar: document.querySelector('.topbar-inner'), current: jdaKey });
 const jda = JDAS.find(j => j.id === jdaKey);
 if (!jda) { location.replace('index.html'); throw new Error('Unknown JDA'); }
 const baseContent = contentFor(jda);

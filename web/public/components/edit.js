@@ -9,8 +9,8 @@ import { STATUS } from '/public/components/landing.js';
 const $ = id => document.getElementById(id);
 const PERSON = () => ({ name: '', title: '' });
 // What each in-place field is called, for screen readers.
-const SECTION = { header: 'Top of the page', overview: 'Overview', roles: 'Roles', whatIsJda: 'What is a JDA', existing: 'Existing JDAs', status: 'JDA status', contacts: 'Contacts', footer: 'Footer' };
-const FIELD = { title: 'heading', subtitle: 'subheading', body: 'text', eyebrow: 'small heading above the title', tagline: 'tagline', email: 'email', phone: 'phone', address: 'address', text: 'text', alt: 'picture description' };
+const SECTION = { header: 'Top of the page', overview: 'Overview', roles: 'Roles', whatIsJda: 'What is a JDA', existing: 'Existing JDAs', news: 'Latest press releases', figures: 'Figures', status: 'JDA status', contacts: 'Contacts', footer: 'Footer' };
+const FIELD = { title: 'heading', subtitle: 'subheading', body: 'text', eyebrow: 'small heading above the title', tagline: 'tagline', email: 'email', phone: 'phone', address: 'address', linkedin: 'LinkedIn address', website: 'website address', text: 'text', alt: 'picture description' };
 const nameOf = path => { const [s, f] = path.split('.'); return `${SECTION[s] || s}: ${FIELD[f] || f}`; };
 
 export async function start({ site, show, reload, done }) {
@@ -40,7 +40,7 @@ export async function start({ site, show, reload, done }) {
     const path = el.dataset.field;
     if (path.startsWith('jdas.') || !(path.split('.')[0] in draft)) continue;
     editable(el, getPath(draft, path) ?? '', v => { setPath(draft, path, v); changed(); },
-      { multiline: el.hasAttribute('data-multiline'), placeholder: el.closest('.contact-card') ? 'To be announced' : 'Type here', label: nameOf(path) });
+      { multiline: el.hasAttribute('data-multiline'), placeholder: el.closest('.contact-card') ? (/linkedin|website/.test(path) ? 'https://…' : 'To be announced') : 'Type here', label: nameOf(path) });
   }
 
   // Each JDA's tab: a form for what is written about it.
@@ -95,6 +95,7 @@ function jdaForm(j, w, changed, say) {
     field('Status', status, 'Automatic is In progress once its report lists projects, otherwise In the works.'),
     field('Press release overview', input(w.pressRelease, v => set('pressRelease', v), { multiline: true, placeholder: r.pressRelease }),
       r.pressRelease ? "Leave empty to use the press release on the JDA's Master Page (shown greyed in the box)." : "The Master Page has no press release yet."),
+    field('Press release date', input(w.pressDate, v => set('pressDate', v), { type: 'date' }), 'Shown on its card under Latest press releases; the newest is shown first and largest.'),
     field('Projects, one per line', input((w.projects || []).join('\n'), v => set('projects', v.split('\n').map(x => x.trim()).filter(Boolean)), { multiline: true, placeholder: r.projects.join('\n') }),
       `Leave empty to use the project names on Overall progress (${r.projects.length} there now).`),
     field('Number of projects', count, 'Leave empty to count the projects listed (0 to 999).')

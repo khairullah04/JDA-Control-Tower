@@ -1,76 +1,76 @@
 /* CJI3 register and Payment Tables. Colours and shapes follow the portal's design (index5):
    its status pills, glass cards and IBM Plex Mono figures. */
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
-.banner.notice{margin-bottom:1rem}
+.banner.notice{margin-bottom:calc(1rem * var(--space-scale))}
 
 /* Status pills: payment status, and a Payment Table row against its sanctioned amount */
-.st,.flag{display:inline-block;padding:3px 11px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.st,.flag{display:inline-block;padding:calc(3px * var(--space-scale)) calc(11px * var(--space-scale));border-radius:calc(20px * var(--space-scale));font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));font-weight:700;white-space:nowrap}
 .st.paid{background:var(--ok-tint);color:var(--ok)}
 .st.approved{background:var(--info-tint);color:var(--teal-700)}
 .st.pending{background:var(--warn-tint);color:var(--warn)}
 .st.rejected,.flag.over{background:var(--bad-tint);color:var(--bad)}
 .flag.under{background:var(--blue-tint);color:var(--blue)}
 .flag.within{background:var(--idle-tint);color:var(--muted)}
-select.st-select{appearance:none;width:auto;border:1px solid transparent;border-radius:20px;font-size:11.5px;font-weight:700;padding:3px 24px 3px 11px;cursor:pointer;
+select.st-select{appearance:none;width:auto;border:1px solid transparent;border-radius:calc(20px * var(--space-scale));font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));font-weight:700;padding:calc(3px * var(--space-scale)) calc(24px * var(--space-scale)) calc(3px * var(--space-scale)) calc(11px * var(--space-scale));cursor:pointer;
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-position:calc(100% - 13px) center,calc(100% - 8px) center;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+  background-position:calc(100% - 13px) center,calc(100% - 8px) center;background-size:calc(5px * var(--space-scale)) calc(5px * var(--space-scale)),calc(5px * var(--space-scale)) calc(5px * var(--space-scale));background-repeat:no-repeat}
 select.st-select.paid{background-color:var(--ok-tint);color:var(--ok)}
 select.st-select.approved{background-color:var(--info-tint);color:var(--teal-700)}
 select.st-select.pending{background-color:var(--warn-tint);color:var(--warn)}
 select.st-select.rejected{background-color:var(--bad-tint);color:var(--bad)}
 
 /* The summary cells above a Payment Table */
-.pt-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;margin-bottom:1rem}
-.pt-summary>div{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:12px;padding:.7rem .9rem}
-.pt-summary small{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-.pt-summary b{font-family:'IBM Plex Mono',monospace;font-size:1.02rem;color:var(--teal-800)}
+.pt-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(200px * var(--space-scale)),1fr));gap:calc(.75rem * var(--space-scale));margin-bottom:calc(1rem * var(--space-scale))}
+.pt-summary>div{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:calc(12px * var(--space-scale));padding:calc(.7rem * var(--space-scale)) calc(.9rem * var(--space-scale))}
+.pt-summary small{display:block;font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.pt-summary b{font-family:'IBM Plex Mono',monospace;font-size:max(min(1.02rem, 14px), calc(1.02rem * var(--type-scale)));color:var(--teal-800)}
 .pt-summary .over b{color:var(--bad)}
 
 /* Tables: a glass card that scrolls sideways, as wide as the sheet it mirrors */
-.pt-scroll{overflow-x:auto;border:1px solid var(--glass-brd);border-radius:14px;background:var(--glass-bg);container-type:inline-size}
-.pt-scroll table{font-size:.82rem;white-space:nowrap}
-.pt-scroll th{background:none;font-size:10.5px;border-bottom:1px solid var(--glass-brd)!important;border-radius:0!important}
+.pt-scroll{overflow-x:auto;border:1px solid var(--glass-brd);border-radius:calc(14px * var(--space-scale));background:var(--glass-bg);container-type:inline-size}
+.pt-scroll table{font-size:max(min(.82rem, 14px), calc(.82rem * var(--type-scale)));white-space:nowrap}
+.pt-scroll th{background:none;font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));border-bottom:1px solid var(--glass-brd)!important;border-radius:0!important}
 .pt-scroll td{border-bottom-color:var(--glass-brd)}
 td.actions{white-space:nowrap}
-td.actions button+button{margin-left:.3rem}
+td.actions button+button{margin-left:calc(.3rem * var(--space-scale))}
 
 /* The Payment Table: a white sheet in three bands (what was sanctioned, what was invoiced, and the result), each named above its
    columns so the column headings stay one short word. Headings and the totals row stay in view while the rows scroll. */
 .pt-sheet{background:var(--white);border-color:var(--line);box-shadow:var(--elev-1);--pt-head:#f5f9f8;--pt-rule:#ebf2f1;--pt-grp:2rem}
-.pt-table{border-collapse:separate;border-spacing:0;font-size:.8rem}
-.pt-table th,.pt-table td{padding:.6rem .5rem}
-.pt-table .edge,.pt-table .grp,.pt-table .pin.total{padding-left:.8rem}
-.pt-table .pin.status{padding-left:.9rem;padding-right:.9rem}
-.pt-table td:first-child,.pt-table th:first-child{padding-left:1rem}
+.pt-table{border-collapse:separate;border-spacing:0;font-size:max(min(.8rem, 14px), calc(.8rem * var(--type-scale)))}
+.pt-table th,.pt-table td{padding:calc(.6rem * var(--space-scale)) calc(.5rem * var(--space-scale))}
+.pt-table .edge,.pt-table .grp,.pt-table .pin.total{padding-left:calc(.8rem * var(--space-scale))}
+.pt-table .pin.status{padding-left:calc(.9rem * var(--space-scale));padding-right:calc(.9rem * var(--space-scale))}
+.pt-table td:first-child,.pt-table th:first-child{padding-left:calc(1rem * var(--space-scale))}
 .pt-table>thead th{position:sticky;top:0;z-index:2;background:var(--pt-head);vertical-align:bottom;color:var(--muted);letter-spacing:.06em}
-.pt-table .pt-groups th{height:var(--pt-grp);padding-top:.55rem;padding-bottom:.3rem;border-bottom:0!important;text-align:left;color:var(--teal-900);letter-spacing:.09em}
-.pt-table .pt-groups small{margin-left:.45rem;font-size:10px;font-weight:500;letter-spacing:.02em;text-transform:none;color:var(--muted)}
+.pt-table .pt-groups th{height:var(--pt-grp);padding-top:calc(.55rem * var(--space-scale));padding-bottom:calc(.3rem * var(--space-scale));border-bottom:0!important;text-align:left;color:var(--teal-900);letter-spacing:.09em}
+.pt-table .pt-groups small{margin-left:calc(.45rem * var(--space-scale));font-size:max(min(10px, 14px), calc(10px * var(--type-scale)));font-weight:500;letter-spacing:.02em;text-transform:none;color:var(--muted)}
 .pt-table .grp{box-shadow:inset 0 -2px 0 var(--teal-400)}
 .pt-table .grp.cji3{box-shadow:inset 0 -2px 0 #9db7ea}
 .pt-table .grp.result{box-shadow:inset 0 -2px 0 var(--teal-800)}
-.pt-table .pt-cols th{top:var(--pt-grp);padding-top:.5rem;border-bottom:1px solid var(--line)!important}
+.pt-table .pt-cols th{top:var(--pt-grp);padding-top:calc(.5rem * var(--space-scale));border-bottom:1px solid var(--line)!important}
 .pt-table .grp,.pt-table .edge{border-left:1px solid var(--pt-rule)}
 .pt-table>tbody>tr>td{border-bottom:1px solid var(--pt-rule)}
-.pt-table .desc-cell{white-space:normal;min-width:110px}
-.pt-empty{padding:2rem 1rem!important;text-align:center;color:var(--muted);white-space:normal}
+.pt-table .desc-cell{white-space:normal;min-width:calc(110px * var(--space-scale))}
+.pt-empty{padding:calc(2rem * var(--space-scale)) calc(1rem * var(--space-scale))!important;text-align:center;color:var(--muted);white-space:normal}
 
 /* Figures: light mono so a column of them reads as a column, with only the two that are compared (w TAX and Total) set heavier */
-.pt-table .mono{font-size:.78rem;letter-spacing:-.01em}
+.pt-table .mono{font-size:max(min(.78rem, 14px), calc(.78rem * var(--type-scale)));letter-spacing:-.01em}
 .pt-table .strong .mono{font-weight:600;color:var(--black)}
 .pt-table .zero .mono{font-weight:400;color:var(--muted)}
-.pt-orig small{margin-right:.4rem;font:600 9.5px var(--font);letter-spacing:.06em;color:var(--muted)}
+.pt-orig small{margin-right:calc(.4rem * var(--space-scale));font:600 max(min(9.5px, 14px), calc(9.5px * var(--type-scale))) var(--font);letter-spacing:.06em;color:var(--muted)}
 .pt-orig.same{color:var(--muted)}
 .pt-none{color:#9fb0ad}
 .pt-month{color:var(--muted)}
 
 /* Total, Variance and Status stay in view while the rest of the sheet scrolls under them */
 @media (min-width:900px){
-  .pt-sheet{max-height:calc(100vh - 6rem);overflow:auto}
+  .pt-sheet{max-height:calc(100vh - calc(6rem * var(--space-scale)));overflow:auto}
   .pt-table .pin{position:sticky;right:0;z-index:1;background:var(--white)}
   .pt-table>thead .pin{z-index:3;background:var(--pt-head)}
-  .pt-table .pin.status{min-width:150px}
-  .pt-table .pin.var{right:var(--pin-var,150px);min-width:100px}
-  .pt-table .pin.total{right:var(--pin-total,250px);min-width:100px}
+  .pt-table .pin.status{min-width:calc(150px * var(--space-scale))}
+  .pt-table .pin.var{right:var(--pin-var,calc(150px * var(--space-scale)));min-width:calc(100px * var(--space-scale))}
+  .pt-table .pin.total{right:var(--pin-total,calc(250px * var(--space-scale)));min-width:calc(100px * var(--space-scale))}
   /* the pinned band casts a soft shadow to its left only, over the columns that pass under it */
   .pt-table .pin.total,.pt-table .pin.result{border-left:1px solid var(--line);box-shadow:-8px 0 10px rgba(2,62,58,.07);clip-path:inset(0 0 0 -14px)}
   .pt-table .grp.result{box-shadow:inset 0 -2px 0 var(--teal-800),-8px 0 10px rgba(2,62,58,.07)}
@@ -85,44 +85,44 @@ td.actions button+button{margin-left:.3rem}
 .pt-row.under>td:first-child{box-shadow:inset 3px 0 0 #a9bfee}
 .pt-row:focus-visible{outline:2px solid var(--teal-500);outline-offset:-2px}
 .pt-id{font-weight:600;color:var(--teal-800)}
-.pt-id::before{content:'›';display:inline-block;width:.9rem;font:600 1rem/1 var(--font);color:#9fb0ad;transition:transform .15s ease,color .15s ease}
+.pt-id::before{content:'›';display:inline-block;width:calc(.9rem * var(--space-scale));font:600 max(min(1rem, 14px), calc(1rem * var(--type-scale)))/1 var(--font);color:#9fb0ad;transition:transform .15s ease,color .15s ease}
 .pt-row:hover .pt-id::before{color:var(--teal-600)}
 .pt-row.open .pt-id::before{transform:rotate(90deg);color:var(--teal-600)}
 .variance .mono{font-weight:600}
 .over>.variance{color:var(--bad)}
 .under>.variance{color:var(--blue)}
 .within>.variance{color:var(--muted)}
-.pt-table .flag::before,.pt-legend .flag::before{content:'';display:inline-block;width:6px;height:6px;margin-right:.4rem;border-radius:50%;background:currentColor;vertical-align:1px}
+.pt-table .flag::before,.pt-legend .flag::before{content:'';display:inline-block;width:calc(6px * var(--space-scale));height:calc(6px * var(--space-scale));margin-right:calc(.4rem * var(--space-scale));border-radius:50%;background:currentColor;vertical-align:1px}
 /* a row's invoices, one to a line: the number gives way (…) before its status does */
-.pt-line{display:flex;align-items:center;gap:.45rem;min-height:1.7rem}
+.pt-line{display:flex;align-items:center;gap:calc(.45rem * var(--space-scale));min-height:calc(1.7rem * var(--space-scale))}
 .num .pt-line{justify-content:flex-end}
 .pt-line.unpaid{color:var(--muted)}
 .pt-no{min-width:0;overflow:hidden;text-overflow:ellipsis}
-.pt-inv .st{flex:none;padding:2px 8px;font-size:10px}
-.pt-foot td{background:var(--pt-head);border-top:1px solid var(--line);border-bottom:0;padding-top:.75rem;padding-bottom:.75rem}
-.pt-foot td:first-child{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pt-inv .st{flex:none;padding:2px calc(8px * var(--space-scale));font-size:max(min(10px, 14px), calc(10px * var(--type-scale)))}
+.pt-foot td{background:var(--pt-head);border-top:1px solid var(--line);border-bottom:0;padding-top:calc(.75rem * var(--space-scale));padding-bottom:calc(.75rem * var(--space-scale))}
+.pt-foot td:first-child{font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .pt-foot:hover td{background:var(--pt-head)}
-.pt-legend{margin:.8rem 0 0}
-.pt-legend .flag{margin-left:.3rem}
-.pt-detail>td,.pt-detail:hover>td{background:#f4faf9;white-space:normal;padding:1rem;box-shadow:inset 0 6px 8px -8px rgba(2,62,58,.25)}
+.pt-legend{margin:calc(.8rem * var(--space-scale)) 0 0}
+.pt-legend .flag{margin-left:calc(.3rem * var(--space-scale))}
+.pt-detail>td,.pt-detail:hover>td{background:#f4faf9;white-space:normal;padding:calc(1rem * var(--space-scale));box-shadow:inset 0 6px 8px -8px rgba(2,62,58,.25)}
 .pt-detail tr:hover td{background:none}
 /* an opened row's detail keeps to the visible width of the table, however far the sheet is scrolled */
-.pt-detail-grid{display:grid;gap:1.25rem;position:sticky;left:1rem;width:calc(100cqw - 2rem)}
-.pt-detail-grid>div{min-width:0;overflow-x:auto;padding:.9rem 1rem;background:var(--white);border:1px solid var(--line);border-radius:12px}
-.pt-detail h4{margin:0 0 .4rem;font-size:.85rem}
-.pt-detail table{margin-bottom:.6rem}
-.pt-detail .legend{margin:.2rem 0 .6rem}
-.pt-gone{margin-top:.75rem;font-size:.85rem}
+.pt-detail-grid{display:grid;gap:calc(1.25rem * var(--space-scale));position:sticky;left:calc(1rem * var(--space-scale));width:calc(100cqw - calc(2rem * var(--space-scale)))}
+.pt-detail-grid>div{min-width:0;overflow-x:auto;padding:calc(.9rem * var(--space-scale)) calc(1rem * var(--space-scale));background:var(--white);border:1px solid var(--line);border-radius:calc(12px * var(--space-scale))}
+.pt-detail h4{margin:0 0 calc(.4rem * var(--space-scale));font-size:max(min(.85rem, 14px), calc(.85rem * var(--type-scale)))}
+.pt-detail table{margin-bottom:calc(.6rem * var(--space-scale))}
+.pt-detail .legend{margin:calc(.2rem * var(--space-scale)) 0 calc(.6rem * var(--space-scale))}
+.pt-gone{margin-top:calc(.75rem * var(--space-scale));font-size:max(min(.85rem, 14px), calc(.85rem * var(--type-scale)))}
 summary{cursor:pointer;font-weight:600;color:var(--teal-700)}
 
 /* The register */
-.reg-filters{margin-bottom:.6rem}
+.reg-filters{margin-bottom:calc(.6rem * var(--space-scale))}
 .reg-filters select{max-width:14rem}
-.reg-filters input[type=search]{width:min(330px,100%);border-radius:999px;font-size:.82rem;padding:.4rem .9rem}
-label.check{display:inline-flex;align-items:center;gap:.4rem;font-size:.82rem;white-space:nowrap}
+.reg-filters input[type=search]{width:min(calc(330px * var(--space-scale)),100%);border-radius:calc(999px * var(--space-scale));font-size:max(min(.82rem, 14px), calc(.82rem * var(--type-scale)));padding:calc(.4rem * var(--space-scale)) calc(.9rem * var(--space-scale))}
+label.check{display:inline-flex;align-items:center;gap:calc(.4rem * var(--space-scale));font-size:max(min(.82rem, 14px), calc(.82rem * var(--type-scale)));white-space:nowrap}
 input[type=checkbox]{width:auto;padding:0}
-.reg-bulk{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;padding:.5rem .8rem;margin-bottom:.6rem;background:var(--teal-050);border:1px solid var(--teal-100);border-radius:12px;font-size:.85rem}
-.reg-bulk select{width:auto;font-size:.8rem;padding:.3rem .6rem;border-radius:999px}
+.reg-bulk{display:flex;align-items:center;gap:calc(.5rem * var(--space-scale));flex-wrap:wrap;padding:calc(.5rem * var(--space-scale)) calc(.8rem * var(--space-scale));margin-bottom:calc(.6rem * var(--space-scale));background:var(--teal-050);border:1px solid var(--teal-100);border-radius:calc(12px * var(--space-scale));font-size:max(min(.85rem, 14px), calc(.85rem * var(--type-scale)))}
+.reg-bulk select{width:auto;font-size:max(min(.8rem, 14px), calc(.8rem * var(--type-scale)));padding:calc(.3rem * var(--space-scale)) calc(.6rem * var(--space-scale));border-radius:calc(999px * var(--space-scale))}
 button.sort{all:unset;cursor:pointer;white-space:nowrap}
 button.sort.on{color:var(--teal-700)}
 button.sort:focus-visible{outline:2px solid var(--teal-500);outline-offset:2px}
@@ -132,17 +132,17 @@ tr.gone td b{text-decoration:line-through}
 td.overdue{color:var(--bad);font-weight:700}
 
 /* The form an invoice or a sanctioned amount is entered in, and the other dialogs */
-dialog.wide{width:min(900px,95vw)}
-.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem}
-.rec-rate{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:.75rem;align-items:end;padding:.75rem;border:1px dashed var(--teal-100);border-radius:12px;background:var(--teal-050)}
+dialog.wide{width:min(calc(900px * var(--space-scale)),95vw)}
+.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(200px * var(--space-scale)),1fr));gap:calc(.75rem * var(--space-scale))}
+.rec-rate{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:calc(.75rem * var(--space-scale));align-items:end;padding:calc(.75rem * var(--space-scale));border:1px dashed var(--teal-100);border-radius:calc(12px * var(--space-scale));background:var(--teal-050)}
 .rec-rate small{grid-column:1/-1}
-.rec-preview{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .9rem;padding:.75rem .9rem;border-radius:12px;background:var(--glass-bg);border:1px solid var(--glass-brd)}
+.rec-preview{display:flex;flex-wrap:wrap;align-items:center;gap:calc(.5rem * var(--space-scale)) calc(.9rem * var(--space-scale));padding:calc(.75rem * var(--space-scale)) calc(.9rem * var(--space-scale));border-radius:calc(12px * var(--space-scale));background:var(--glass-bg);border:1px solid var(--glass-brd)}
 .rec-preview span{display:grid}
-.rec-preview small{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.rec-preview small{font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .rec-preview b{font-family:'IBM Plex Mono',monospace}
 .rec-preview .arrow{color:var(--muted)}
-.rec-form details{border:1px solid var(--line);border-radius:12px;padding:.6rem .8rem}
-.rec-form details[open] summary{margin-bottom:.6rem}
+.rec-form details{border:1px solid var(--line);border-radius:calc(12px * var(--space-scale));padding:calc(.6rem * var(--space-scale)) calc(.8rem * var(--space-scale))}
+.rec-form details[open] summary{margin-bottom:calc(.6rem * var(--space-scale))}
 .audit,.import-preview{max-height:55vh;overflow:auto}
 .audit td,.import-preview td{white-space:normal}
 tr.bad td{color:var(--bad)}
@@ -150,9 +150,9 @@ tr.bad td{color:var(--bad)}
 
 /* The Payment Table and the CJI3 register have pages of their own that use the whole window */
 #page.wide{max-width:none}
-.scope-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:1rem}
+.scope-bar{display:flex;flex-wrap:wrap;align-items:center;gap:calc(.5rem * var(--space-scale));margin-bottom:calc(1rem * var(--space-scale))}
 .scope-bar .ghost.on{background:var(--teal-700);border-color:var(--teal-700);color:var(--white)}
-.scope-bar select{width:auto;font-size:.85rem;padding:.45rem .8rem;border-radius:999px}
+.scope-bar select{width:auto;font-size:max(min(.85rem, 14px), calc(.85rem * var(--type-scale)));padding:calc(.45rem * var(--space-scale)) calc(.8rem * var(--space-scale));border-radius:calc(999px * var(--space-scale))}
 /* However long a name, number or remark is, it stays inside its column: it is cut with … and shown in full on hover and in Edit */
 .pt-scroll td:not(.num):not(.actions){max-width:17rem;overflow:hidden;text-overflow:ellipsis}
 .pt-table td:not(.num):not(.actions){max-width:11rem}

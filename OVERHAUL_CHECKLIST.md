@@ -382,11 +382,13 @@ Audit of the tree before the move (2026-10-15):
 
 ## R2 Phase 2: scale down and visual refresh
 
-- [ ] UI about 20% smaller through the tokens (type, spacing, radii, component sizes), body text at least 14px, tap targets usable.
-- [ ] Public landing: hero carousel (TRICIPTA AI, slides Overview / What is JDA / each JDA, slide titles as tabs), latest press releases (one featured, smaller dated cards), JDA status pillar cards, a key-figures strip, image-led project highlights, a subtle pattern in sidebar and footer, a clean footer.
-- [ ] Same card, type and spacing system in the Control Tower.
-- [ ] Collapsible sidebar (icon rail with tooltips, remembered per browser, drawer on phones) on both sides.
-- [ ] Overview and What is JDA in faint section boxes.
+- [x] UI about 20% smaller through the tokens (type, spacing, radii, component sizes), body text at least 14px, tap targets usable. `--space-scale` and `--type-scale` (0.8) in `web/shared/styles/tokens.css`; every stylesheet's sizes go through them; text never below 14px where it was 14px or more; 40–48px tap targets and page max-widths keep their size.
+- [x] Public landing: hero carousel (TRICIPTA AI, slides Overview / What is JDA / each JDA, slide titles as tabs), latest press releases (one featured, smaller dated cards), JDA status pillar cards, a key-figures strip, image-led project highlights, a subtle pattern in sidebar and footer, a clean footer. The carousel turns every 7 s, stops while hovered or focused, in edit mode, with reduced motion, or on Pause; tabs work with arrow keys. Press releases are dated with the new **Press release date** field (edit mode, per JDA); the newest is featured. Figures: number of JDAs, projects under way, projects finished (100% on Overall progress). Footer: section links, sign-in, ©, and LinkedIn / website once written (new optional Contacts cards, shown in edit mode until filled). Sections fade in on scroll (not with reduced motion).
+- [x] Same card, type and spacing system in the Control Tower: same tokens, one accent (`--accent`) under headings, dot pattern (`--dots`) in sidebar and footer. Its top bar and per-card links are reworked in R2 Phase 5.
+- [x] Collapsible sidebar (icon rail with tooltips, remembered per browser, drawer on phones) on both sides. One script (`web/shared/components/sidebar.js`) and one stylesheet (`web/shared/styles/sidebar.css`); the Control Tower's is drawn by `web/control-tower/components/ct-sidebar.js` on its landing page, a JDA's pages and the Invoice Tracker (Control Tower, each JDA, CJI3 register, Payment tables, View public site). The tracker's and landing page's duplicate top-bar links (CJI3, Payments, ← Control Tower, Public site) were removed in favour of it.
+- [x] Overview and What is JDA in faint section boxes.
+
+Assumptions: the hero uses the two existing wide photos (`hero-banner.jpg`, `press.jpg`); the 480px solution pictures are used only at card size. Accent is a gold (`#e2b53e`) used for thin rules only, never for text on white.
 
 ## R2 Phase 3: master page only public
 

@@ -29,12 +29,14 @@ export const PUBLIC_DEFAULTS = {
   existing: { title: 'Existing JDAs', subtitle: 'Each agreement and the work under it' },
   status: { title: 'JDA status', subtitle: 'Where each agreement stands today' },
   // Empty until written in edit mode: the page then shows "To be announced", never a made-up address.
-  contacts: { title: 'Contacts', subtitle: 'Get in touch with the TriCipta AI team', email: '', phone: '', address: '' },
+  contacts: { title: 'Contacts', subtitle: 'Get in touch with the TriCipta AI team', email: '', phone: '', address: '', linkedin: '', website: '' },
+  news: { title: 'Latest press releases', subtitle: 'News from each Joint Development Agreement' },
+  figures: { title: 'TriCipta AI in numbers' },
   footer: { text: 'TriCipta AI · Petronas Carigali' },
   jdas: {}
 };
 export const JDA_DEFAULTS = () => ({
-  title: '', status: '', pressRelease: '', projects: [], projectCount: null,
+  title: '', status: '', pressRelease: '', pressDate: '', projects: [], projectCount: null,
   programLeads: [{ ...PERSON }], businessChampions: [{ ...PERSON }, { ...PERSON }]
 });
 
@@ -76,13 +78,18 @@ export async function publicJda(jda, written = {}) {
   const derived = {
     title: text(c.tagline),
     pressRelease: text(c.press?.text),
-    projects: list(report?.projects).map(p => text(p?.name).trim()).filter(n => n && !seen.has(same(n)) && seen.add(same(n)))
+    projects: list(report?.projects).map(p => text(p?.name).trim()).filter(n => n && !seen.has(same(n)) && seen.add(same(n))),
+    // how many of its projects are complete: a count only, never which or by how much
+    finished: list(report?.projects).filter(p => Number(p?.pct) >= 100).length,
+    // the picture of its press release, when it is one of this site's or a web address
+    image: asset(c.press?.img)
   };
   const projects = Array.isArray(e.projects) && e.projects.length ? e.projects.map(text).filter(Boolean) : derived.projects;
   const status = STATUSES.includes(e.status) ? e.status : (derived.projects.length ? 'in-progress' : 'in-the-works');
   return {
     id: jda.id, name: jda.name,
-    title: text(e.title) || derived.title, pressRelease: text(e.pressRelease) || derived.pressRelease, projects, status,
+    title: text(e.title) || derived.title, pressRelease: text(e.pressRelease) || derived.pressRelease, pressDate: /^\d{4}-\d{2}-\d{2}$/.test(text(e.pressDate)) ? e.pressDate : '',
+    projects, status, finished: derived.finished, image: derived.image,
     projectCount: Number.isInteger(e.projectCount) && e.projectCount >= 0 ? e.projectCount : projects.length,
     programLeads: people(e.programLeads), businessChampions: people(e.businessChampions),
     // what the report says, whether or not something is written over it (edit mode shows it beside each field)
@@ -237,7 +244,7 @@ export function cleanPublic(input) {
   out.jdas = Object.fromEntries(JDAS.map(j => {
     const w = isObj(input?.jdas?.[j.id]) ? input.jdas[j.id] : {};
     return [j.id, {
-      title: short(w.title), status: STATUSES.includes(w.status) ? w.status : '', pressRelease: cut(w.pressRelease),
+      title: short(w.title), status: STATUSES.includes(w.status) ? w.status : '', pressRelease: cut(w.pressRelease), pressDate: /^\d{4}-\d{2}-\d{2}$/.test(text(w.pressDate)) ? w.pressDate : '',
       projects: (Array.isArray(w.projects) ? w.projects : []).map(short).map(p => p.trim()).filter(Boolean).slice(0, MAX_LIST),
       projectCount: wholeOrNull(w.projectCount, 999), programLeads: peopleIn(w.programLeads), businessChampions: peopleIn(w.businessChampions)
     }];

@@ -1,0 +1,72 @@
+/* The sidebar of the public site and the Control Tower (web/shared/components/sidebar.js): fixed on a
+   desktop and collapsible to a rail of icons, a drawer behind a menu button on a phone. The page's
+   main wrapper carries .with-side so it sits beside it. */
+:is(.sidebar,.mobilebar) .brand{display:flex;align-items:center;gap:calc(12px * var(--space-scale));text-decoration:none;color:inherit;min-width:0}
+:is(.sidebar,.mobilebar) .brand-mark{width:calc(38px * var(--space-scale));height:calc(38px * var(--space-scale));flex:none;border-radius:calc(11px * var(--space-scale));display:grid;place-items:center;font:800 max(min(18px, 14px), calc(18px * var(--type-scale)))/1 var(--font);color:#fff;
+  background:linear-gradient(140deg,var(--teal-400),var(--teal-700));box-shadow:0 4px 12px rgba(0,133,124,.35)}
+:is(.sidebar,.mobilebar) .brand-text{min-width:0;overflow:hidden}
+:is(.sidebar,.mobilebar) .brand-name{display:block;font-weight:800;letter-spacing:.14em;font-size:max(min(max(min(.86rem, 14px), calc(.86rem * var(--type-scale))), max(min(14px, 14px), calc(14px * var(--type-scale)))), calc(max(min(.86rem, 14px), calc(.86rem * var(--type-scale))) * var(--type-scale)));text-transform:uppercase;white-space:nowrap}
+:is(.sidebar,.mobilebar) .brand-sub{display:block;font-size:max(min(max(min(.72rem, 14px), calc(.72rem * var(--type-scale))), max(min(14px, 14px), calc(14px * var(--type-scale)))), calc(max(min(.72rem, 14px), calc(.72rem * var(--type-scale))) * var(--type-scale)));color:#b9dcd8;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar{position:fixed;inset:0 auto 0 0;width:var(--side);z-index:120;display:flex;flex-direction:column;gap:calc(24px * var(--space-scale));padding:calc(20px * var(--space-scale)) calc(14px * var(--space-scale));color:#fff;
+  background:var(--dots),linear-gradient(185deg,var(--teal-800),var(--teal-900));box-shadow:4px 0 24px rgba(1,40,36,.18);transition:width .2s ease}
+.side-top{display:flex;align-items:center;justify-content:space-between;gap:calc(8px * var(--space-scale));padding:0 calc(4px * var(--space-scale))}
+.side-collapse{width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:calc(10px * var(--space-scale));border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#d4efec;cursor:pointer}
+.side-collapse:hover{background:rgba(255,255,255,.14);color:#fff}
+.side-collapse svg{width:calc(18px * var(--space-scale));height:calc(18px * var(--space-scale));fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.side-nav{display:grid;gap:calc(4px * var(--space-scale))}
+.side-nav a{position:relative;display:flex;align-items:center;gap:calc(12px * var(--space-scale));min-height:42px;padding:0 calc(12px * var(--space-scale));border-radius:calc(12px * var(--space-scale));color:#d4efec;text-decoration:none;font-weight:600;font-size:max(min(max(min(.94rem, 14px), calc(.94rem * var(--type-scale))), max(min(14px, 14px), calc(14px * var(--type-scale)))), calc(max(min(.94rem, 14px), calc(.94rem * var(--type-scale))) * var(--type-scale)));white-space:nowrap;transition:background-color .15s,color .15s}
+.side-nav a[hidden]{display:none}
+.side-label{margin:calc(14px * var(--space-scale)) calc(12px * var(--space-scale)) calc(4px * var(--space-scale));font-size:max(min(.7rem, 14px), calc(.7rem * var(--type-scale)));font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8fc4bf;white-space:nowrap}
+.side-nav .side-label:first-child{margin-top:0}
+.side-nav a svg{width:calc(19px * var(--space-scale));height:calc(19px * var(--space-scale));flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.side-nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.side-nav a[aria-current]{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
+.side-nav a:focus-visible,.sidebar .btn:focus-visible,.sidebar .brand:focus-visible,.sidebar .side-brand:focus-visible,.side-collapse:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.side-foot{margin-top:auto;display:grid;gap:calc(10px * var(--space-scale));padding:calc(16px * var(--space-scale)) calc(4px * var(--space-scale)) calc(4px * var(--space-scale));border-top:1px solid rgba(255,255,255,.12)}
+.side-note{margin:0;font-size:max(min(max(min(.76rem, 14px), calc(.76rem * var(--type-scale))), max(min(14px, 14px), calc(14px * var(--type-scale)))), calc(max(min(.76rem, 14px), calc(.76rem * var(--type-scale))) * var(--type-scale)));color:#b9dcd8;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-foot .btn{width:100%}
+.side-foot .btn.ghost{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff}
+.side-foot .btn.ghost:hover{background:rgba(255,255,255,.18)}
+.side-signout{min-height:calc(38px * var(--space-scale))}
+/* --side-w: how much of the window the sidebar takes now, for full-bleed pieces such as a JDA's hero */
+body{--side-w:0px}
+body.has-side{--side-w:var(--side)}
+.mobilebar,.menu-btn{display:none}
+.menu-btn svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.menu-btn .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.scrim{position:fixed;inset:0;z-index:110;background:rgba(1,39,36,.5)}
+.with-side{margin-left:var(--side);transition:margin-left .2s ease}
+
+/* collapsed to a rail: icons only, their names as tooltips */
+@media (min-width:901px){
+  .scrim{display:none}
+  body.side-collapsed .sidebar{width:var(--side-rail);padding-inline:calc(10px * var(--space-scale))}
+  body.has-side.side-collapsed{--side-w:var(--side-rail)}
+  body.side-collapsed .with-side{margin-left:var(--side-rail)}
+  body.side-collapsed .side-top{flex-direction:column;padding:0}
+  body.side-collapsed .brand-text,body.side-collapsed .side-nav a span,body.side-collapsed .side-foot .btn span,body.side-collapsed .side-note,body.side-collapsed .side-label{display:none}
+  body.side-collapsed .side-collapse svg{transform:rotate(180deg)}
+  body.side-collapsed .side-nav a,body.side-collapsed .side-foot .btn{justify-content:center;padding:0}
+  body.side-collapsed .side-foot{padding-inline:0}
+  body.side-collapsed .side-nav a::after,body.side-collapsed .side-foot .btn::after{content:attr(data-tip);position:absolute;left:calc(100% + calc(12px * var(--space-scale)));top:50%;transform:translateY(-50%);
+    padding:calc(6px * var(--space-scale)) calc(10px * var(--space-scale));border-radius:calc(8px * var(--space-scale));background:var(--teal-900);color:#fff;font:600 max(min(13px, 14px), calc(13px * var(--type-scale)))/1.2 var(--font);white-space:nowrap;box-shadow:var(--elev-3);
+    opacity:0;pointer-events:none;transition:opacity .12s}
+  body.side-collapsed .side-foot .btn{position:relative}
+  body.side-collapsed .side-nav a:is(:hover,:focus-visible)::after,body.side-collapsed .side-foot .btn:is(:hover,:focus-visible)::after{opacity:1}
+}
+@media (max-width:900px){
+  .mobilebar{display:flex;position:sticky;top:0;z-index:30;align-items:center;justify-content:space-between;gap:calc(12px * var(--space-scale));padding:calc(10px * var(--space-scale)) calc(16px * var(--space-scale));color:#fff;
+    background:linear-gradient(180deg,var(--teal-800),var(--teal-700));box-shadow:0 2px 10px rgba(1,40,36,.2)}
+  .mobilebar .brand-mark{width:calc(34px * var(--space-scale));height:calc(34px * var(--space-scale));font-size:max(min(max(min(16px, 14px), calc(16px * var(--type-scale))), max(min(14px, 14px), calc(14px * var(--type-scale)))), calc(max(min(16px, 14px), calc(16px * var(--type-scale))) * var(--type-scale)))}
+  .menu-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:calc(12px * var(--space-scale));border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
+  .menu-btn svg{width:calc(22px * var(--space-scale));height:calc(22px * var(--space-scale))}
+  .menu-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .sidebar{transform:translateX(-105%);transition:transform .22s ease;width:min(calc(300px * var(--space-scale)),86vw)}
+  .side-collapse{display:none}
+  body.menu-open .sidebar{transform:none}
+  body.menu-open{overflow:hidden}
+  .with-side{margin-left:0}
+  body.has-side{--side-w:0px}
+  html{scroll-padding-top:calc(84px * var(--space-scale))}
+}
+

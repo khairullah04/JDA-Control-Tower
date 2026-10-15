@@ -11,8 +11,10 @@ import { jdaFigures, costsByName, costPercent, REPORT_STATUS } from '../lib/jda-
 import { contentFor } from '../config/jda-content.js';
 import { isConfigured, reportRefFor, auth } from '../../shared/lib/firebase.js';
 import '../../shared/components/account.js';
+import { mountCtSidebar } from './ct-sidebar.js';
 
 const $ = id => document.getElementById(id);
+mountCtSidebar({ wrap: document.querySelector('.app'), bar: document.querySelector('.topbar-inner'), current: 'home' });
 const FAILED = { failed: true };
 const SEVERITY = { high: 'High', medium: 'Medium', low: 'Low' };
 const STATUS = REPORT_STATUS;
@@ -269,4 +271,6 @@ function safeDraw(selected) {
   try { draw(selected); }
   catch (e) { console.error(e); notice(`Part of this page could not be drawn: ${e.message}. Reload to try again.`, true); }
 }
+// A JDA chosen in the sidebar (/control-tower/#jda2) while already here.
+addEventListener('hashchange', () => { const tab = $(`tab-${location.hash.slice(1)}`); if (tab) select(tab, false); });
 start();

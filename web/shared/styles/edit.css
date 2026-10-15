@@ -1,72 +1,72 @@
 /* Edit mode on the two landing pages (site/js/edit-kit.js, site/js/edit.js, portal/js/control-tower-edit.js). */
-body.editing{padding-bottom:96px}
-.edit-bar{position:fixed;left:0;right:0;bottom:0;z-index:90;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
-  padding:12px clamp(16px,4vw,32px);background:#fff;border-top:3px solid #6b4fc7;box-shadow:0 -8px 24px rgba(2,62,58,.14);font-family:"Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif}
+body.editing{padding-bottom:calc(96px * var(--space-scale))}
+.edit-bar{position:fixed;left:0;right:0;bottom:0;z-index:90;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:calc(12px * var(--space-scale));
+  padding:calc(12px * var(--space-scale)) clamp(calc(16px * var(--space-scale)),4vw,calc(32px * var(--space-scale)));background:#fff;border-top:3px solid #6b4fc7;box-shadow:0 -8px 24px rgba(2,62,58,.14);font-family:"Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif}
 .edit-bar-text{display:grid;gap:2px;min-width:0}
-.edit-bar-text b{color:#3b2a83;font-size:15px}
-.edit-status{font-size:13.5px;color:#4a5b60}
-.edit-bar-actions{display:flex;gap:10px}
-.eb-btn{min-height:44px;padding:0 20px;border-radius:12px;border:1px solid transparent;cursor:pointer}
+.edit-bar-text b{color:#3b2a83;font-size:max(min(15px, 14px), calc(15px * var(--type-scale)))}
+.edit-status{font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));color:#4a5b60}
+.edit-bar-actions{display:flex;gap:calc(10px * var(--space-scale))}
+.eb-btn{min-height:44px;padding:0 calc(20px * var(--space-scale));border-radius:calc(12px * var(--space-scale));border:1px solid transparent;cursor:pointer}
 .eb-btn.primary{background:linear-gradient(135deg,#00857c,#015149);color:#fff}
 .eb-btn.primary:disabled{opacity:.55;cursor:default}
 .eb-btn.ghost{background:#fff;border-color:#d7dfe1;color:#015149}
 .eb-btn:focus-visible,.le-btn:focus-visible,.le-add:focus-visible{outline:3px solid #00a19c;outline-offset:2px}
 /* text edited where it stands */
-.ed-inline{outline:1.5px dashed #8a74d6;outline-offset:3px;border-radius:4px;white-space:pre-wrap;cursor:text;min-width:2ch}
+.ed-inline{outline:1.5px dashed #8a74d6;outline-offset:calc(3px * var(--space-scale));border-radius:calc(4px * var(--space-scale));white-space:pre-wrap;cursor:text;min-width:2ch}
 .ed-inline:hover{background:rgba(107,79,199,.06)}
 .ed-inline:focus{outline:2px solid #6b4fc7;background:rgba(107,79,199,.05)}
 .ed-inline:empty::before{content:attr(data-ph);color:#8b979a;font-style:italic}
 .hero .ed-inline{outline-color:rgba(255,255,255,.7)}
 .hero .ed-inline:empty::before{color:rgba(255,255,255,.7)}
 /* forms */
-.jda-edit,.roles-edit,.ct-edit{display:grid;gap:14px;padding:18px;border-radius:16px;border:1.5px dashed #8a74d6;background:#fbfaff}
-.roles-edit{margin-top:14px}
-.ef{display:grid;gap:6px}
-.ef-label{font-size:13px;font-weight:700;color:#24363b}
-.ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #d7dfe1;border-radius:10px;background:#fff;width:100%;color:#16242a}
-.ef textarea{min-height:90px;resize:vertical}
+.jda-edit,.roles-edit,.ct-edit{display:grid;gap:calc(14px * var(--space-scale));padding:calc(18px * var(--space-scale));border-radius:calc(16px * var(--space-scale));border:1.5px dashed #8a74d6;background:#fbfaff}
+.roles-edit{margin-top:calc(14px * var(--space-scale))}
+.ef{display:grid;gap:calc(6px * var(--space-scale))}
+.ef-label{font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));font-weight:700;color:#24363b}
+.ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font:inherit;font-size:max(min(14.5px, 14px), calc(14.5px * var(--type-scale)));padding:calc(9px * var(--space-scale)) calc(11px * var(--space-scale));border:1px solid #d7dfe1;border-radius:calc(10px * var(--space-scale));background:#fff;width:100%;color:#16242a}
+.ef textarea{min-height:calc(90px * var(--space-scale));resize:vertical}
 .ef input:focus,.ef textarea:focus,.ef select:focus,.le-field input:focus,.le-field textarea:focus{outline:none;border-color:#6b4fc7;box-shadow:0 0 0 3px rgba(107,79,199,.18)}
-.edit-hint{margin:0;font-size:12.5px;color:#566a6f}
-.ct-edit h4,.jda-edit h3,.jda-edit h4{margin:6px 0 0}
+.edit-hint{margin:0;font-size:max(min(12.5px, 14px), calc(12.5px * var(--type-scale)));color:#566a6f}
+.ct-edit h4,.jda-edit h3,.jda-edit h4{margin:calc(6px * var(--space-scale)) 0 0}
 /* list editor */
-.le{display:grid;gap:8px}
-.le-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px;padding:10px;border-radius:12px;background:#fff;border:1px solid #e2e8ea}
-.le-field{display:grid;gap:4px;flex:1 1 180px;font-size:12px;font-weight:700;color:#566a6f}
+.le{display:grid;gap:calc(8px * var(--space-scale))}
+.le-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:calc(8px * var(--space-scale)) calc(10px * var(--space-scale));padding:calc(10px * var(--space-scale));border-radius:calc(12px * var(--space-scale));background:#fff;border:1px solid #e2e8ea}
+.le-field{display:grid;gap:calc(4px * var(--space-scale));flex:1 1 180px;font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:700;color:#566a6f}
 .le-field.wide{flex-basis:100%}
-.le-field textarea{min-height:64px}
-.le-tools{display:flex;gap:6px}
-.le-btn{min-height:36px;min-width:36px;padding:0 10px;border-radius:9px;border:1px solid #d7dfe1;background:#fff;color:#015149;cursor:pointer}
+.le-field textarea{min-height:calc(64px * var(--space-scale))}
+.le-tools{display:flex;gap:calc(6px * var(--space-scale))}
+.le-btn{min-height:calc(36px * var(--space-scale));min-width:calc(36px * var(--space-scale));padding:0 calc(10px * var(--space-scale));border-radius:calc(9px * var(--space-scale));border:1px solid #d7dfe1;background:#fff;color:#015149;cursor:pointer}
 .le-btn:disabled{opacity:.4;cursor:default}
 .le-btn:last-child{color:#a33a30}
-.le-add{justify-self:start;min-height:40px;padding:0 14px;border-radius:10px;border:1.5px dashed #8a74d6;background:#fff;color:#3b2a83;cursor:pointer}
+.le-add{justify-self:start;min-height:40px;padding:0 calc(14px * var(--space-scale));border-radius:calc(10px * var(--space-scale));border:1.5px dashed #8a74d6;background:#fff;color:#3b2a83;cursor:pointer}
 .side-edit{border-color:rgba(255,255,255,.4)!important}
 @media (prefers-reduced-motion:reduce){.edit-bar{transition:none}}
-.ct-override{display:grid;gap:8px}
-.ef-check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#24363b;cursor:pointer}
-.ef-check input{width:18px;height:18px;margin:0}
-.ct-cost-fields{display:flex;flex-wrap:wrap;gap:12px}
+.ct-override{display:grid;gap:calc(8px * var(--space-scale))}
+.ef-check{display:flex;align-items:center;gap:calc(8px * var(--space-scale));font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));font-weight:600;color:#24363b;cursor:pointer}
+.ef-check input{width:calc(18px * var(--space-scale));height:calc(18px * var(--space-scale));margin:0}
+.ct-cost-fields{display:flex;flex-wrap:wrap;gap:calc(12px * var(--space-scale))}
 .ct-cost-fields .ef{flex:1 1 180px}
-.ct-edit h4{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#3b2a83}
-.ct-edit > h4:first-child{font-size:15px;letter-spacing:0;text-transform:none}
+.ct-edit h4{font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#3b2a83}
+.ct-edit > h4:first-child{font-size:max(min(15px, 14px), calc(15px * var(--type-scale)));letter-spacing:0;text-transform:none}
 .ef-check,.ef,.le-field{text-transform:none;letter-spacing:0}
-.ct-override > input[type=number]{max-width:180px;font:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #d7dfe1;border-radius:10px}
+.ct-override > input[type=number]{max-width:180px;font:inherit;font-size:max(min(14.5px, 14px), calc(14.5px * var(--type-scale)));padding:calc(9px * var(--space-scale)) calc(11px * var(--space-scale));border:1px solid #d7dfe1;border-radius:calc(10px * var(--space-scale))}
 /* review fixes */
 .eb-btn,.le-btn,.le-add{font-family:inherit;line-height:1}
-.eb-btn{font-weight:700;font-size:14px}
-.le-btn{font-weight:600;font-size:13px}
-.le-add{font-weight:700;font-size:13.5px}
-.edit-bar{font-family:var(--font,"Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif);padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+.eb-btn{font-weight:700;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)))}
+.le-btn{font-weight:600;font-size:max(min(13px, 14px), calc(13px * var(--type-scale)))}
+.le-add{font-weight:700;font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)))}
+.edit-bar{font-family:var(--font,"Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif);padding-bottom:calc(calc(12px * var(--space-scale)) + env(safe-area-inset-bottom))}
 .ed-inline:empty::before{color:#5f6f73}
-.le-warn{font-size:12px;font-weight:600;color:#a33a30}
+.le-warn{font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:600;color:#a33a30}
 .le-field input[aria-invalid="true"]{border-color:#a33a30}
-.edit-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:95;max-width:min(560px,92vw);padding:12px 18px;border-radius:12px;background:#16242a;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
-@media (min-width:901px){body.landing.editing .edit-bar{left:var(--side,244px)}}
+.edit-toast{position:fixed;left:50%;bottom:calc(24px * var(--space-scale));transform:translateX(-50%);z-index:95;max-width:min(560px,92vw);padding:calc(12px * var(--space-scale)) calc(18px * var(--space-scale));border-radius:calc(12px * var(--space-scale));background:#16242a;color:#fff;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));box-shadow:0 8px 24px rgba(0,0,0,.25)}
+@media (min-width:901px){body.landing.editing .edit-bar{left:var(--side,calc(244px * var(--space-scale)))}}
 @media (max-width:640px){
   body.editing{padding-bottom:190px}
   .edit-bar-actions{width:100%}
   .edit-bar-actions .eb-btn{flex:1}
-  .ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font-size:16px}
+  .ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font-size:max(min(16px, 14px), calc(16px * var(--type-scale)))}
   .le-btn{min-height:44px;min-width:44px}
 }
-.ct-num{display:grid;gap:4px;max-width:220px}
-.ct-num input{font:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #d7dfe1;border-radius:10px}
+.ct-num{display:grid;gap:calc(4px * var(--space-scale));max-width:220px}
+.ct-num input{font:inherit;font-size:max(min(14.5px, 14px), calc(14.5px * var(--type-scale)));padding:calc(9px * var(--space-scale)) calc(11px * var(--space-scale));border:1px solid #d7dfe1;border-radius:calc(10px * var(--space-scale))}

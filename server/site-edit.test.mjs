@@ -19,7 +19,7 @@ test('a public save keeps only known sections and fields, as text of a sensible 
   assert.equal(out.overview.body.length, 6000);
   assert.equal('secret' in out.overview || 'hacked' in out, false);
   assert.equal(out.header.title, '');                                                  // not text: dropped
-  assert.deepEqual(out.jdas.jda1, { title: 'Geo', status: '', pressRelease: '', projects: ['A', 'B'], projectCount: null, programLeads: [{ name: 'Aina', title: 'Lead' }], businessChampions: [] });
+  assert.deepEqual(out.jdas.jda1, { title: 'Geo', status: '', pressRelease: '', pressDate: '', projects: ['A', 'B'], projectCount: null, programLeads: [{ name: 'Aina', title: 'Lead' }], businessChampions: [] });
   assert.equal('jdaz' in out.jdas, false);
 });
 
