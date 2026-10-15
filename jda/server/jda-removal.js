@@ -14,12 +14,17 @@ export async function planRemoval(db, from = 4) {
   const entries = (await all('financeEntries')).filter(ofThem);
   const sanctioned = (await all('financeSanctioned')).filter(ofThem);
   const recordIds = new Set([...entries, ...sanctioned].map(d => d.id));
-  const audit = (await all('financeAudit')).filter(d => ofThem(d) || recordIds.has(d.get('entityId')));
+  // By the record a line is about only: a record moved out of a JDA 4 project keeps its whole history.
+  const audit = (await all('financeAudit')).filter(d => recordIds.has(d.get('entityId')));
+  // The old tracker's records, still offered once by "Bring over old tracker records".
+  const legacyInvoices = (await all('invoices')).filter(ofThem), legacyScope = (await all('scope')).filter(ofThem);
   // A change-log line names the JDA or project it is about in `projectId`.
   const activity = (await all('activity')).filter(d => jdaIds.has(d.get('projectId')) || projectIds.has(d.get('projectId')));
   const reports = [];
   for (const d of (await all('jdaReports')).filter(d => numberOf(d.id.replace(/^jda/i, 'jda ')) >= from)) {
     reports.push(...(await d.ref.collection('versions').get()).docs, d); // its versions, then the document
   }
-  return { jdas, projects, financeEntries: entries, financeSanctioned: sanctioned, financeAudit: audit, activity, 'jdaReports (with versions)': reports };
+  // Children before parents, JDAs last: if a run stops part way, running it again still finds what is left through them.
+  return { 'jdaReports (with versions)': reports, activity, financeAudit: audit, financeEntries: entries, financeSanctioned: sanctioned,
+    'invoices (old tracker)': legacyInvoices, 'scope (old tracker)': legacyScope, projects, jdas };
 }

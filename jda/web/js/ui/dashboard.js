@@ -43,7 +43,7 @@ export async function renderDashboard() {
   $('#sync-drive').onclick = e => runSync(e.target, refresh);
   $('#add-jda').onclick = () => openForm({
     title: 'Add JDA',
-    fields: [{ name: 'name', label: 'Name (e.g. JDA 3)' }, ...JDA_DATE_FIELDS()],
+    fields: [{ name: 'name', label: 'Name, in the form JDA <number>' }, ...JDA_DATE_FIELDS()],
     onSubmit: async v => {
       checkDates(v);
       const created = await addJda(v);

@@ -7,41 +7,57 @@
 //   projects                  their projects (jdaId)
 //   financeEntries            invoices of those JDAs or projects (jdaId, projectId)
 //   financeSanctioned         sanctioned amounts of those JDAs or projects
-//   financeAudit              audit lines about any of the above (jdaId, projectId, entityId)
+//   financeAudit              audit lines about the invoices and sanctioned amounts above (entityId)
+//   invoices, scope           the old tracker's records of those projects ("Bring over old tracker records")
 //   activity                  change-log lines about those JDAs or projects (projectId holds either)
 //   jdaReports/jda<n>         the portal's report document, with its versions subcollection
 // Left alone: processedFiles (it records which Drive files were read and names no JDA; deleting a
 // line would make the next Drive sync import that file again), meta, access, financeMeta.
 //
-// The first JDA to remove is FROM (default 4): `--from 5` keeps JDA 4. The backup is
+// The first JDA to remove is FROM (default 4, never less): `--from 5` keeps JDA 4. Stop the server first. The backup is
 // scripts/backup.mjs; if it cannot save the main project, nothing is deleted.
 import 'dotenv/config';
+import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { adminDb } from '../firebase-admin.js';
 import { planRemoval } from '../jda-removal.js';
 
 const args = process.argv.slice(2), apply = args.includes('--apply');
-const from = Number(args[args.indexOf('--from') + 1]) || 4;
-const db = await adminDb('portal');
-const plan = await planRemoval(db, from);
-const { jdas } = plan;
-console.log(`JDAs numbered ${from} and above: ${jdas.map(d => `${d.get('name')} (${d.id})`).join(', ') || 'none'}\n`);
-for (const [what, docs] of Object.entries(plan)) console.log(`  ${what.padEnd(28)} ${docs.length}`);
-const total = Object.values(plan).reduce((n, docs) => n + docs.length, 0);
+const from = args.includes('--from') ? Number(args[args.indexOf('--from') + 1]) : 4;
+if (!Number.isInteger(from) || from < 4) { console.error('--from must be a whole number, 4 or more: JDA 1 to 3 are never removed by this script.'); process.exit(1); }
 
-if (!total) console.log('\nNothing to remove.');
-else if (!apply) console.log(`\n${total} documents would be deleted. Nothing has been changed. Run again with --apply to back up and delete them.`);
+const db = await adminDb('portal');
+const count = plan => Object.values(plan).reduce((n, docs) => n + docs.length, 0);
+function show(plan) {
+  console.log(`JDAs numbered ${from} and above: ${plan.jdas.map(d => `${d.get('name')} (${d.id})`).join(', ') || 'none'}`);
+  for (const [what, docs] of Object.entries(plan)) console.log(`  ${what.padEnd(28)} ${docs.length}`);
+}
+let plan = await planRemoval(db, from);
+show(plan);
+// Only a name that is exactly "JDA <n>" is matched. Every other JDA is listed, so an odd name ("JDA 4 (Pilot)") shows up here before anything is deleted.
+const kept = (await db.collection('jdas').get()).docs.filter(d => !plan.jdas.some(j => j.id === d.id)).map(d => d.get('name'));
+console.log(`Kept: ${kept.join(', ') || 'none'}`);
+
+if (!count(plan)) console.log('\nNothing to remove.');
+else if (!apply) console.log(`\n${count(plan)} documents would be deleted. Nothing has been changed. Stop the server, then run again with --apply to back up and delete them.`);
 else {
   console.log('\nBacking up first...');
-  const backup = spawnSync(process.execPath, [fileURLToPath(new URL('./backup.mjs', import.meta.url))], { stdio: 'inherit' });
-  // backup.mjs exits with 1 when anything was missed. Only the main project matters here: it says so on its own line.
-  if (backup.status !== 0 && backup.status !== 1) { console.error('The backup failed. Nothing was deleted.'); process.exit(1); }
-  const { readdirSync, readFileSync } = await import('node:fs');
-  const dir = new URL('../../../backups/', import.meta.url), latest = readdirSync(dir).sort().at(-1);
-  const manifest = JSON.parse(readFileSync(new URL(`${latest}/MANIFEST.json`, dir), 'utf8'));
-  if (manifest.missing.some(m => m.startsWith('firestore-main'))) { console.error('The backup could not save the main Firebase project. Nothing was deleted.'); process.exit(1); }
-  const docs = Object.values(plan).flat();
+  const started = new Date().toISOString();
+  spawnSync(process.execPath, [fileURLToPath(new URL('./backup.mjs', import.meta.url))], { stdio: 'inherit' });
+  // The backup counts only if it is the one just made and it saved the main project's collections.
+  let latest, manifest;
+  try {
+    const dir = new URL('../../../backups/', import.meta.url);
+    latest = fs.readdirSync(dir).sort().at(-1);
+    manifest = JSON.parse(fs.readFileSync(new URL(`${latest}/MANIFEST.json`, dir), 'utf8'));
+  } catch { manifest = null; }
+  if (!manifest || !(manifest.at >= started) || !manifest.saved.some(m => m.startsWith('firestore-main/'))) {
+    console.error('The backup did not save the main Firebase project. Nothing was deleted.');
+    process.exit(1);
+  }
+  plan = await planRemoval(db, from); // again, after the backup: whatever was written meanwhile is included
+  const docs = Object.values(plan).flat(); // children first, the JDAs last (jda-removal.js)
   for (let i = 0; i < docs.length; i += 400) {
     const batch = db.batch();
     docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));

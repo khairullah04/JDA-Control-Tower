@@ -71,7 +71,7 @@ written beside it. Review findings are logged under each phase.
 
 - [x] JDA 4+ removed from code: portal JDA list (`portal/js/config/app-config.js`), tracker default JDAs (`jda/web/js/config/app-config.json`), demo data and its JDA 4 projects DA/DB/DC (`jda/web/js/services/demo/data.js`), passkey example and the local `portal-passkeys.json`, READMEs, rule and code comments. *Checked: grep below; `npm test` 102/102.*
 - [x] Test fixtures no longer name JDA numbers above 3 (jda7/jda9 became `jdaz` / "JDA Z"). *Checked: grep below.*
-- [x] Repo search for `JDA 4`, `JDA4`, `jda-4`, `jda_4`, `jda4` and 5+ finds nothing outside this checklist and the review agent's instructions. *Checked: `grep -rniE "jda[ _-]?([4-9]|[1-9][0-9])\b"` and a search for "1, 2 and 4" / "1-4" (excluding node_modules, backups, vendor, drive-test-files).*
+- [x] Repo search for `JDA 4`, `JDA4`, `jda-4`, `jda_4`, `jda4` and 5+ finds nothing outside this checklist, the review agent's instructions, and the removal script and its test. *Checked: `grep -rniE "jda[ _-]?([4-9]|[1-9][0-9])\b"` and a search for "1, 2 and 4" / "1-4" (excluding node_modules, backups, vendor, drive-test-files).*
 - [x] Database cleanup script `jda/server/scripts/remove-jdas.mjs` (logic in `jda/server/jda-removal.js`) removes JDA 4+ tracker records and every dependent row: projects, invoices, sanctioned amounts, audit lines (by JDA, project or record), activity log lines, report documents and their versions. Dry run by default; `--apply` runs `scripts/backup.mjs` first and deletes nothing unless the main project was saved. `processedFiles` is left: it names no JDA, and deleting a line would make the next Drive sync import that file again. *Checked: `jda-removal.test.mjs` (3 tests) on a stand-in database, including an invoice filed under Unsorted against a JDA 4 project.*
 - [ ] Script run against the real database, and a second dry run finds nothing left. *Needs the service-account key.*
 - [x] JDA list still comes from data/config, so adding a JDA later needs no code change. *Checked: the portal reads `JDAS` in `portal/js/config/app-config.js`; the tracker reads its `jdas` collection; nothing counts to 3.*
@@ -144,6 +144,9 @@ written beside it. Review findings are logged under each phase.
 | A7 | Info pages show project names only, no figures. | Open question 6 default. |
 | A8 | Tracker JDAs and portal JDAs are matched by name ("JDA 1"). | That is how the two lists are joined today. |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
+| A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
+| A11 | An invoice or sanctioned amount filed under another JDA (e.g. Unsorted) but against a JDA 4+ project is deleted with that project. | It would otherwise point at a project that no longer exists. |
+| A12 | `processedFiles` (which Drive files the tracker has read) is kept. | It names no JDA; deleting a line would make the next Drive sync import the file again. |
 
 ## Stripped from the public Info pages
 
@@ -158,4 +161,18 @@ written beside it. Review findings are logged under each phase.
 
 ## Review findings
 
-(Logged after each phase.)
+### Phase 1 (software-developer, team-leader; web-designer and team-member had nothing to review: no page changed)
+
+| Who | Sev. | Finding | Done |
+|---|---|---|---|
+| both | High | `jda/firestore.rules` comment still said "JDA 1, 2 and 4"; the grep tick was wrong. | Fixed; search widened to "1, 2 and 4" wording. |
+| dev | Med | Deletes ran parents first; a failure part way left rows no rerun could find. | Fixed: children first, JDAs last (`jda-removal.js`, tested). |
+| dev | Med | Backup check read the newest folder, which might be an older backup. | Fixed: must be newer than the run's start and list `firestore-main/` files; a missing manifest stops the run. |
+| dev | Med | Audit lines of a record moved out of a JDA 4 project were deleted. | Fixed: audit lines go only with their record (tested). |
+| dev | Med | Old tracker `invoices` / `scope` rows not covered. | Fixed: in the plan (tested). |
+| lead | Med | Name-matching and cleanup decisions not logged. | Fixed: A10 to A12; dry run lists every JDA it keeps. |
+| dev | Low | `--from 1` would delete JDA 1 to 3. | Fixed: refused below 4. |
+| dev | Low | Plan made before the backup could miss writes in between. | Fixed: plan made again after the backup; the dry run says to stop the server. |
+| both | Low | Add JDA placeholder named an existing JDA. | Fixed: "Name, in the form JDA <number>". |
+| both | Low | Uncommitted `demoMode: true` in `jda/web/js/config/app-config.json`. | Kept out of every commit (the user's local setting). |
+| lead | Low | Grep note did not mention the removal script and test. | Fixed. |

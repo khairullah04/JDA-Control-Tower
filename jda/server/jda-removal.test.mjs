@@ -22,7 +22,9 @@ test('removes JDA 4 and above with everything that hangs off them, and nothing e
     projects: [['AA', { jdaId: 'j1' }], ['DA', { jdaId: 'j4' }], ['DB', { jdaId: 'j4' }], ['EA', { jdaId: 'j5' }], ['UN', { jdaId: 'ju' }]],
     financeEntries: [['e1', { jdaId: 'j1', projectId: 'AA' }], ['e2', { jdaId: 'j4', projectId: 'DA' }], ['e3', { jdaId: 'ju', projectId: 'DB' }]],
     financeSanctioned: [['s1', { jdaId: 'j1', projectId: 'AA' }], ['s2', { jdaId: 'j5', projectId: 'EA' }]],
-    financeAudit: [['a1', { entityId: 'e1', jdaId: 'j1', projectId: 'AA' }], ['a2', { entityId: 'e2', jdaId: 'j4', projectId: 'DA' }], ['a3', { entityId: 'e3', jdaId: '', projectId: '' }], ['a4', { entityId: 'settings' }]],
+    financeAudit: [['a1', { entityId: 'e1', jdaId: 'j1', projectId: 'AA' }], ['a2', { entityId: 'e2', jdaId: 'j4', projectId: 'DA' }], ['a3', { entityId: 'e3', jdaId: '', projectId: '' }], ['a4', { entityId: 'settings' }],
+      ['a5', { entityId: 'e1', jdaId: 'j4', projectId: 'DA' }]],   // e1 was in a JDA 4 project once and has moved to JDA 1: its history stays
+    invoices: [['i1', { projectId: 'DA' }], ['i2', { projectId: 'AA' }]], scope: [['c1', { projectId: 'EA' }]],
     activity: [['l1', { projectId: 'AA' }], ['l2', { projectId: 'j4' }], ['l3', { projectId: 'DB' }], ['l4', { projectId: 'j1' }]],
     jdaReports: [['jda1', {}], ['jda3', {}], ['jda4', {}]]
   }, { jda4: [['v1', {}], ['v2', {}]], jda1: [['v9', {}]] });
@@ -34,6 +36,9 @@ test('removes JDA 4 and above with everything that hangs off them, and nothing e
   assert.deepEqual(ids(plan.financeAudit), ['a2', 'a3']);            // a3 only by the record it is about
   assert.deepEqual(ids(plan.activity), ['l2', 'l3']);
   assert.deepEqual(plan['jdaReports (with versions)'].map(d => d.id), ['v1', 'v2', 'jda4']); // versions before their document
+  assert.deepEqual(ids(plan['invoices (old tracker)']), ['i1']);
+  assert.deepEqual(ids(plan['scope (old tracker)']), ['c1']);
+  assert.deepEqual(Object.keys(plan).slice(-2), ['projects', 'jdas']);                   // parents last
 });
 
 test('`from` moves the cut-off', async () => {
