@@ -5,14 +5,16 @@ images and behaviour, shared from one place.
 
 ```
 portal/
-  index.html               Control Tower main page: one card per JDA (live progress) + the Invoice Tracker
+  index.html               Control Tower landing page: a tab per JDA with progress, latest update, documents,
+                           key insights, challenges and cost; Sync from Drive and Add JDA (the Invoice Tracker's)
   jda-report.html          One template for every JDA: its Master Page at jda-report.html#/jda1 ... #/jda3,
                            and its Editor Page at #/jda1/edit
   css/
     styles.css               The reference stylesheet verbatim, plus a short portal-only block at the bottom
   assets/                    Shared images (extracted from the reference) - see assets/README.md
   js/
-    portal.js                Control Tower main page: JDA cards, link to the Invoice Tracker
+    control-tower.js         The landing page (it also runs the Invoice Tracker's sync and cost figures)
+    account.js               Who is signed in, and Sign out, in every top bar
     report.js                 JDA report page: the reference's script, ported
     editor.js                 The Editor Page: in-place editing of a Master Page and the progress screens
     block-editor.js           The full-page block editor for a solution's detail page
@@ -34,10 +36,17 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
 
 ## Pages and navigation
 
-- Control Tower top bar: two tabs, JDAs and Administration, which jump to those sections of the page.
-- Control Tower -> a JDA: the JDA cards. A JDA -> Control Tower: the "Control Tower" tab or the logo.
-- Control Tower -> Invoice Tracker: Administration card (`INVOICE_TRACKER_URL`).
-  Invoice Tracker -> Control Tower: "← Control Tower" in its top bar.
+- Control Tower landing page (`/control-tower/`, `#jda2` opens JDA 2's tab): a tab per JDA. Each shows
+  its progress (the average of its projects' % on Overall progress) and its latest key update (Weekly
+  progress), an **Agreement & BRD** button (the links written in edit mode), key insights, challenges
+  (from Overall progress unless written in edit mode) and cost (paid / sanctioned, with tax, from the
+  Invoice Tracker) with **Detail cost** into that JDA's page in the tracker. Links under the JDA's name
+  open its Master Page, Overall progress, Weekly progress and public Info page. **Sync from Drive** (the
+  tracker's invoice inbox) and **+ Add JDA (finance)** sit top right; Recent activity is at the bottom.
+- Top bar: CJI3 register, Payment tables, the public site, and Sign out.
+- A JDA -> Control Tower: the "Control Tower" tab or the logo. Invoice Tracker -> Control Tower:
+  "← Control Tower" or its logo. The tracker's old front page (a card per JDA) is gone: its address
+  leads to the Control Tower.
 - Inside a JDA: Overview, Overall progress, Weekly progress, plus project and solution detail
   screens and Edit report (footer link).
 

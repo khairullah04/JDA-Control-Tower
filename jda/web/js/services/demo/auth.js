@@ -1,5 +1,5 @@
 import { endSession } from '../../../../../shared/session.js';
-// Demo: no Firebase. Starts signed in so you land straight on the dashboard.
+// Demo: no Firebase. Starts signed in so the tracker opens straight away.
 const user = { email: 'demo@jda.app' };
 export const logout = () => endSession();
 export const onUser = cb => setTimeout(() => cb(user));

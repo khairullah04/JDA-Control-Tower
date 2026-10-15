@@ -1,0 +1,129 @@
+/* The JDA Control Tower landing page (index.html, js/control-tower.js), over the portal's styles. */
+.ct{padding-top:28px;padding-bottom:56px}
+.ct-topnav{display:flex;flex-wrap:wrap;gap:6px}
+.ct-topnav a{display:inline-flex;align-items:center;min-height:38px;padding:0 14px;border-radius:999px;color:#e3f5f3;text-decoration:none;font-size:13.5px;font-weight:600}
+.ct-topnav a:hover{background:rgba(255,255,255,.12);color:#fff}
+.ct-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:22px}
+.ct-eyebrow{font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-600)}
+.ct-head h2{margin:4px 0 6px;font-size:clamp(26px,4vw,34px);font-weight:800;color:var(--teal-900);letter-spacing:-.01em}
+.ct-lead{margin:0;color:var(--muted)}
+.ct-actions{display:flex;flex-wrap:wrap;gap:10px}
+.ct-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;border:1px solid transparent;font:700 14px/1 var(--font);cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s,box-shadow .15s,transform .15s}
+.ct-btn svg{width:17px;height:17px}
+.ct-btn.primary{background:linear-gradient(135deg,var(--teal-600),var(--teal-800));color:#fff;box-shadow:0 4px 14px rgba(0,133,124,.3)}
+.ct-btn.primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,133,124,.38)}
+.ct-btn.primary:disabled{opacity:.7;cursor:wait;transform:none}
+.ct-btn.ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
+.ct-btn.ghost:hover{background:var(--teal-050);border-color:var(--teal-100)}
+.ct-btn.small{min-height:38px;padding:0 14px;font-size:13px}
+.ct-btn:focus-visible,.ct-info-btn:focus-visible,.ct-more:focus-visible,.ct-links a:focus-visible,.ct-arrow:focus-visible{outline:3px solid var(--teal-500);outline-offset:2px}
+.ct-notice{margin:0 0 18px;padding:12px 16px;border-radius:12px;background:var(--teal-050);border:1px solid var(--teal-100);color:var(--teal-900);font-size:14px}
+.ct-notice.warn{background:#fbf1e3;border-color:#efd8b4;color:#6e4a12}
+.ct-loading,.ct-empty{color:var(--muted);font-size:14px;margin:4px 0}
+.ct-hint{font-size:12.5px;font-weight:500;color:var(--muted);letter-spacing:0;text-transform:none}
+
+/* ---- JDA tabs ---- */
+.ct-tabs{position:sticky;top:76px;z-index:20;display:flex;gap:8px;overflow-x:auto;padding:8px;margin-bottom:18px;border-radius:16px;
+  background:rgba(255,255,255,.86);backdrop-filter:blur(8px);border:1px solid var(--glass-brd);box-shadow:var(--elev-1);scrollbar-width:thin}
+.ct-tabs [role="tab"]{flex:none;display:inline-flex;align-items:center;gap:10px;min-height:46px;padding:0 18px;border-radius:12px;border:1px solid transparent;background:transparent;
+  font:700 15px/1 var(--font);color:var(--teal-800);cursor:pointer}
+.ct-tabs [role="tab"] small{font:600 12px/1 'IBM Plex Mono',monospace;color:var(--muted);padding:4px 7px;border-radius:999px;background:var(--teal-050)}
+.ct-tabs [role="tab"]:hover{background:var(--teal-050)}
+.ct-tabs [role="tab"][aria-selected="true"]{background:linear-gradient(135deg,var(--teal-600),var(--teal-800));color:#fff;box-shadow:0 4px 12px rgba(0,133,124,.28)}
+.ct-tabs [role="tab"][aria-selected="true"] small{background:rgba(255,255,255,.2);color:#fff}
+.ct-tabs [role="tab"]:focus-visible{outline:3px solid var(--teal-500);outline-offset:2px}
+@media (max-width:780px){.ct-tabs{top:auto;position:static}}
+
+/* ---- one JDA ---- */
+.ct-panel{display:grid;gap:18px;outline:none}
+.ct-panel-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px}
+.ct-info-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--glass-brd);background:#fff;color:var(--teal-800);font:700 13.5px/1 var(--font);cursor:pointer;box-shadow:var(--elev-1)}
+.ct-info-btn svg{width:18px;height:18px}
+.ct-info-btn:hover{background:var(--teal-050)}
+.ct-panel-title h3{margin:0;font-size:22px;font-weight:800;color:var(--teal-900)}
+.ct-panel-title p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.ct-links{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px 12px}
+.ct-links a{font-size:13.5px;font-weight:600;color:var(--teal-700);text-decoration:none;padding:6px 2px}
+.ct-links a:hover{text-decoration:underline}
+@media (max-width:860px){.ct-panel-head{grid-template-columns:1fr auto}.ct-links{grid-column:1/-1;justify-content:flex-start}.ct-panel-title{order:-1;grid-column:1/-1}}
+
+.ct-card{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:18px;box-shadow:var(--elev-1);padding:20px 22px;min-width:0}
+.ct-card h4{margin:0 0 12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-700)}
+.ct-status{display:grid;grid-template-columns:minmax(220px,auto) 1fr;gap:28px;align-items:center}
+.ct-status-ring{display:flex;align-items:center;gap:18px}
+.ct-status-meta{display:grid;gap:6px;justify-items:start;font-size:14px;color:#24363b}
+.ct-latest{border-left:1px solid var(--border);padding-left:28px;min-width:0}
+.ct-latest time{display:inline-block;margin-bottom:6px;font:600 12.5px/1 'IBM Plex Mono',monospace;color:var(--teal-700);background:var(--teal-050);padding:5px 9px;border-radius:999px}
+.ct-clamp{margin:0 0 10px;color:#1d2f34;font-size:15.5px;line-height:1.55;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+.ct-arrow{font-size:13.5px;font-weight:700;color:var(--teal-700);text-decoration:none}
+.ct-arrow:hover{text-decoration:underline}
+@media (max-width:760px){.ct-status{grid-template-columns:1fr}.ct-latest{border-left:0;border-top:1px solid var(--border);padding:18px 0 0}}
+
+.ct-ring{position:relative;width:132px;height:132px;flex:none}
+.ct-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ct-ring-bg{fill:none;stroke:var(--teal-100);stroke-width:11}
+.ct-ring-fg{fill:none;stroke:var(--teal-600);stroke-width:11;stroke-linecap:round;stroke-dasharray:var(--p) 100;transition:stroke-dasharray 1s cubic-bezier(.65,0,.35,1)}
+.ct-ring.over .ct-ring-fg{stroke:var(--red)}
+.ct-ring-label{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ct-ring-label b{font:700 28px/1 'IBM Plex Mono',monospace;color:var(--teal-900)}
+.ct-ring.over .ct-ring-label b{color:var(--red)}
+.ct-ring-label small{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+@media (prefers-reduced-motion:reduce){.ct-ring-fg{transition:none}}
+
+.ct-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
+@media (max-width:860px){.ct-two{grid-template-columns:1fr}}
+.ct-boxes{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.ct-box{position:relative;padding:14px 14px 12px;border-radius:14px;background:#fff;border:1px solid var(--border);min-width:0}
+.ct-box h5{margin:0 0 4px;font-size:14.5px;font-weight:700;color:var(--teal-900);line-height:1.35}
+.ct-box p{margin:0;font-size:13.5px;color:#3b4f54;line-height:1.5;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+.ct-boxes.insights .ct-box{border-left:4px solid var(--teal-500)}
+.ct-boxes.challenges .ct-box{border-left:4px solid var(--amber)}
+.ct-box.sev-high{border-left-color:var(--red)!important}
+.ct-box.sev-low{border-left-color:var(--teal-400)!important}
+.ct-sev{display:inline-block;margin-bottom:6px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:#fbf1e3;color:#7a5216}
+.sev-high .ct-sev{background:#f6e0de;color:#8f2f26}
+.sev-low .ct-sev{background:var(--teal-050);color:var(--teal-800)}
+.ct-more{margin-top:10px;background:none;border:none;padding:6px 0;font:700 13.5px var(--font);color:var(--teal-700);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.ct-tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:#ede7fb;color:#4b3592}
+
+.ct-cost{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:24px}
+.ct-cost-text p{margin:0 0 4px;font-size:15px;color:#1d2f34}
+.ct-cost-text b{font-family:'IBM Plex Mono',monospace;color:var(--teal-900)}
+@media (max-width:640px){.ct-cost{grid-template-columns:auto 1fr}.ct-cost .ct-btn{grid-column:1/-1}}
+
+/* ---- activity ---- */
+.ct-activity{margin-top:28px;background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:18px;box-shadow:var(--elev-1);padding:4px 22px}
+.ct-activity summary{cursor:pointer;padding:14px 0;font-weight:700;color:var(--teal-900);display:flex;flex-wrap:wrap;gap:10px;align-items:baseline}
+.ct-activity[open] summary{border-bottom:1px solid var(--border);margin-bottom:10px}
+.ct-activity .log-list{list-style:none;margin:0 0 14px;padding:0;max-height:320px;overflow:auto}
+.ct-activity .log-list li{font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--border)}
+.ct-activity .log-time{font:500 12px 'IBM Plex Mono',monospace;color:var(--muted);margin-right:10px}
+.ct-activity .log-user{font-size:11.5px;font-weight:700;color:var(--teal-800);background:var(--teal-050);padding:2px 8px;border-radius:999px;margin-right:8px}
+.ct-activity .legend{color:var(--muted)}
+
+/* ---- dialogs: the Agreement & BRD panel, and the Invoice Tracker's own (Drive sync result, Add JDA) ---- */
+dialog{border:none;border-radius:20px;padding:0;width:min(520px,92vw);color:var(--text);box-shadow:var(--elev-2)}
+dialog::backdrop{background:rgba(1,39,36,.55);backdrop-filter:blur(3px)}
+.ct-dialog-body,dialog form{display:grid;gap:12px;padding:26px 26px 22px}
+dialog h3{margin:0;font-size:19px;font-weight:800;color:var(--teal-900)}
+dialog h4{margin:10px 0 0;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-700)}
+dialog p{margin:0}
+.ct-doclist{margin:0;padding-left:18px;display:grid;gap:6px}
+.ct-dialog-actions,dialog .row{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+dialog label{display:grid;gap:6px;font-size:13px;font-weight:600;color:var(--muted)}
+dialog input,dialog select{font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;width:100%}
+dialog input:focus{outline:none;border-color:var(--teal-500);box-shadow:0 0 0 3px rgba(0,161,156,.2)}
+dialog .msg{color:var(--red);font-size:13.5px;min-height:1em}
+dialog .primary,dialog .ghost{min-height:42px;padding:0 18px;border-radius:12px;font:700 14px var(--font);cursor:pointer;border:1px solid transparent}
+dialog .primary{background:linear-gradient(135deg,var(--teal-600),var(--teal-800));color:#fff}
+dialog .ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
+
+/* ---- phones: a short top bar, its links in one row that scrolls, the two actions side by side ---- */
+@media (max-width:700px){
+  .topbar{padding-top:10px;padding-bottom:10px}
+  .ct-topnav{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -6px}
+  .ct-topnav a{flex:none;min-height:36px}
+  .topbar-account{margin-left:auto}
+  .ct-actions{width:100%}
+  .ct-actions .ct-btn{flex:1;padding:0 12px}
+}

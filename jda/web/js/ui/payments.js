@@ -121,7 +121,7 @@ export async function renderPaymentsPage(jdaId = '', projectId = '') {
   const r0 = startRender('Loading the Payment Table…', () => renderPaymentsPage(jdaId, projectId)), { page } = r0;
   const ctx = await loadCtx(r0);
   const jda = ctx.jdas.find(j => j.id === jdaId) || ctx.jdas[0];
-  if (!jda) throw new Error('There are no JDAs yet. Add one on the dashboard first.');
+  if (!jda) throw new Error('There are no JDAs yet. Add one from the JDA Control Tower first (+ Add JDA).');
   const project = ctx.projects.find(p => p.id === projectId && p.jdaId === jda.id);
   r0.current();
   page.innerHTML = `

@@ -1,11 +1,11 @@
-import { initializeApp } from '/shared/vendor/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, signOut } from '/shared/vendor/firebase-auth.js';
-import { firebaseConfig, USERNAME_DOMAIN } from '/shared/firebase-config.js';
+import { USERNAME_DOMAIN } from '/shared/firebase-config.js';
+import { mainApp } from '/shared/firebase-main.js';
 import { nextPath, startSession, me } from '/shared/session.js';
 
 // Employee sign-in. A correct password is not enough: the server also checks the account is on the
 // access list (ALLOWED_EMAILS) before it hands out the session cookie.
-const auth = getAuth(initializeApp(firebaseConfig));
+const auth = getAuth(mainApp());
 const $ = id => document.getElementById(id);
 const next = nextPath(new URLSearchParams(location.search).get('next'), { hash: location.hash });
 // Errors in the alert line, marking the fields; progress in the status line; the button says what is happening.

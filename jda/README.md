@@ -7,7 +7,7 @@ web/      Frontend (no build step, ES modules)
   js/finance  money · core · sheets · service · book: the rules of the CJI3 register and the Payment Tables
               (also run by the server), and the page's own copy of the register
   js/services auth · db · ai · finance · analytics · sync (+ live/ Firebase and the server, demo/ sample data)
-  js/ui       dashboard · jda · project · cji3 · payments · finance-ui · finance-io · timeline · sync · log
+  js/ui       jda · project · cji3 · payments · finance-ui · finance-io · timeline · sync · log
               · copilot · markdown · modal · render · checks · state · dom
 server/   Node + Express. Serves every page (app.js), holds the Claude key, checks the sign-in, and
           saves the invoices, payments and reports. scripts/ has backup, restore and the one-off move to Firestore

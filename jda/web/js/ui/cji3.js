@@ -172,7 +172,7 @@ export async function renderCji3(jdaId = '', projectId = '') {
   r.current();
   page.innerHTML = `
     <div class="section-head"><h2>CJI3 register</h2>
-      <div class="row"><a class="ghost" href="${jda ? `#/jda/${esc(jda.id)}` : '#/'}">← ${esc(jda ? jda.name : 'All JDAs')}</a>
+      <div class="row"><a class="ghost" href="${jda ? `#/jda/${esc(jda.id)}` : '/control-tower/'}">← ${esc(jda ? jda.name : 'Control Tower')}</a>
         <a class="ghost" href="#/payments${jda ? '/' + esc(jda.id) : ''}${project ? '/' + esc(project.id) : ''}">Payment table</a></div></div>
     ${scopeBar(ctx, '#/cji3', jda?.id || '', project?.id || '', true)}
     ${storageNotice(ctx)}

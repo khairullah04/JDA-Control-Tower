@@ -10,10 +10,11 @@ import { getAuth } from '../../../shared/vendor/firebase-auth.js';
 import { getFirestore, doc } from '../../../shared/vendor/firebase-firestore.js';
 import { FIREBASE_PROJECTS as CONFIGS } from '../../../shared/firebase-config.js';
 import { needFirebaseUser } from '../../../shared/session.js';
+import { mainApp } from '../../../shared/firebase-main.js';
 
 const sourceOf = jda => jda.source || { project: 'portal', collection: 'jdaReports', doc: jda.id };
 const apps = {};
-const appFor = key => (apps[key] ??= key === 'portal' ? initializeApp(CONFIGS.portal) : initializeApp(CONFIGS[key], key));
+const appFor = key => (apps[key] ??= key === 'portal' ? mainApp() : initializeApp(CONFIGS[key], key));
 
 export const auth = getAuth(appFor('portal'));
 await needFirebaseUser(auth); // reads wait until the sign-in is known, or the person is sent to /login

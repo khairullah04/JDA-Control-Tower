@@ -100,14 +100,14 @@ written beside it. Review findings are logged under each phase.
 
 ## Phase 4 (Priority 4): Control Tower landing page
 
-- [ ] Replaces the old portal main page and the tracker dashboard.
-- [ ] Top tab bar to switch JDAs.
-- [ ] Sync from Drive button (the tracker's existing sync), with loading, success and error states.
-- [ ] Per JDA: progress circle (left), latest key update and date from Weekly Progress (right).
-- [ ] Info button: Agreement and BRD documents.
-- [ ] Key Insights boxes and Challenges boxes.
-- [ ] Cost circle: paid / sanctioned (decided 2026-10-15), with Detail cost opening the tracker for that JDA.
-- [ ] CJI3 to Payment Table flow verified end to end after the move (tax, forex, status, sanctioned checks).
+- [x] Replaces the old portal main page and the tracker dashboard (`portal/index.html`, `portal/js/control-tower.js`; `portal/js/portal.js` and `jda/web/js/ui/dashboard.js` deleted; the tracker's own front-page address leads to it). *Checked: browser, `/control-tower/tracker/` redirects to `/control-tower/`.*
+- [x] Top tab bar to switch JDAs (each tab shows its progress %; arrow keys; `#jda2` opens a tab). *Checked: browser, ArrowRight moved to JDA 2 and set `#jda2`.*
+- [x] Sync from Drive button, top right (the tracker's own `runSync`, not rewritten): the button shows "Syncing: <file>" while it runs, then a result dialog, or the error in the same dialog. *Checked: browser in demo mode, 6 files, "6 invoice(s) created".*
+- [x] Per JDA: progress circle (left; average of its projects' %, A1) and the latest key update with its date, from Weekly progress (right). *Checked: browser with JDA 1's and JDA 3's real reports (44%, 24%).*
+- [x] Info button ("Agreement & BRD", left corner) opens a dialog with the Agreement and BRD links (written in edit mode, Phase 6; "not linked yet" until then). *Checked: browser.*
+- [x] Key Insights boxes and Challenges boxes (challenges from Overall progress with severity, unless written in edit mode; four shown, then "Show all"). *Checked: browser.*
+- [x] Cost circle: paid / sanctioned, both with tax (A2), from the Invoice Tracker's Payment Table totals; red over 100%; Detail cost opens that JDA's page in the tracker (CJI3, payment tables, projects). *Checked: browser, JDA 3 33%, Detail cost → `tracker/#/jda/j2` opened JDA 2.*
+- [x] CJI3 to Payment Table flow verified after the move (tax, forex, status, sanctioned checks). *Checked: `npm test` (finance-core, finance-api, finance-store: hand-worked tax and forex, status, duplicates, sanctioned-over checks, Excel in and out); CJI3, Payment Table and project pages loaded in a browser under `/control-tower/tracker/` with no console errors.*
 
 ## Phase 5 (Priority 5): richer Weekly Progress tasks
 
@@ -150,6 +150,10 @@ written beside it. Review findings are logged under each phase.
 | A17 | Changes to private APIs must be sent as JSON (415 otherwise). | With SameSite=Lax this closes form-post CSRF, including from another subdomain. |
 | A18 | A JDA's landing-page title is its Master Page tagline, its press release overview the Master Page press release, and its projects the names on Overall progress, unless written in edit mode. Status, when not set, is "In progress" if it has projects, otherwise "In the works". | Shows real content before anyone edits; edit mode overrides each one. |
 | A19 | The public pages' report reads are cached for a minute and rate-limited (120 per minute per address). | Public traffic must not become a stream of database reads. |
+| A20 | **Needs the user's confirmation.** What the Master Page shows stays public on the Info page: banner, winning aspiration (including targets such as "Unit Production Cost below USD 6/BOE" and "30% NPV"), solution cards and detail pages (less targets and delivery leads), collaborators (including their "Read more" text, e.g. the IP terms) and sections added in the editor. | The old portal showed all of it with no sign-in, but that does not prove it was meant to be public. |
+| A21 | The landing page's text in `PUBLIC_DEFAULTS` (`jda/server/site-content.js`) is draft copy for the user to rewrite in edit mode; contacts are empty ("To be announced") until written. | No real copy or contacts were supplied. |
+| A22 | The tracker's old front page (a card per JDA, Sync from Drive, Add JDA, Recent activity) is replaced by the Control Tower landing page, which carries Sync from Drive, Add JDA and Recent activity; the tracker's own address now leads there. | The brief scraps that page; its tools stay reachable. |
+| A23 | A JDA added with Add JDA exists only in the Invoice Tracker until it is also added to `portal/js/config/app-config.js` (`JDAS`), which gives it a tab, a report and an Info page. The page says so after adding. | The two JDA lists are separate records (A8). |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
 | A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
 | A11 | An invoice or sanctioned amount filed under another JDA (e.g. Unsorted) but against a JDA 4+ project is deleted with that project. | It would otherwise point at a project that no longer exists. |
@@ -162,8 +166,9 @@ Not sent by the server at all (`infoPage`, `publicJda` in `jda/server/site-conte
 - **Overall progress**: projects' owners, % complete, status, descriptions; overall status; challenges; the S-curve.
 - **Weekly progress**: tasks (names, owners, due dates), key updates, the week label.
 - **The system architecture diagram** (internal systems and data flows).
-- **Solution detail pages' targets and delivery leads** (built-in content); detail pages written as blocks are kept as written.
+- **Solution detail pages' targets and delivery leads**: a "Targets" or "Delivery lead" heading and everything under it is dropped, also from detail pages saved by the editor (which keeps the built-in ones as blocks). *Tested: `site-content.test.mjs`, "a detail page saved by the editor...".*
 - **Editing**: the editor, Edit report, Drive sync and Master File folder links, saved versions, `overviewBackup`.
+- **Anything stored with the public page that the page does not use** (who saved it, notes): only the known text fields are sent.
 - **Anything that is not a safe picture or link**: images other than this site's stock pictures or `https://` addresses; links other than `http(s)://`.
 - **Invoices, payments, costs**: never on a Master Page in the first place (decided 2026-10-12), and not read by these endpoints.
 
@@ -180,6 +185,8 @@ Kept, because the Master Page has always shown them publicly (the old portal had
 - Sign out clears the cookie in the browser only; a copied cookie keeps working until it runs out (8 hours). A server-side revocation list is not built.
 - `REQUIRE_AUTH=false` is only refused when `NODE_ENV=production` is set; a server deployed without it and with `false` would be open (the start-up log says so loudly).
 - The tracker's top bar (seven items) wraps to three rows on a phone and its buttons are under 44px; not changed in this overhaul yet.
+- `app.set('trust proxy', 1)` assumes one proxy in front; reached directly, a caller can set `X-Forwarded-For` and dodge the public rate limit (the one-minute cache limits the cost). Set it to match the real deployment.
+- No Content-Security-Policy header yet on the public pages (all output is escaped; a CSP would be a second line of defence).
 
 ## Review findings
 
@@ -224,3 +231,29 @@ Kept, because the Master Page has always shown them publicly (the old portal had
 | lead | Low | "Portal" left in Drive errors, a comment, test-file notes. | Fixed. |
 | lead | Low | Phase 2 choices not logged. | Fixed: A13 to A17. |
 | designer | Low | "Edit report" vs the editor naming; token differences between site.css and styles.css; primary gradient contrast; tracker whoami loading state. | Logged for Phase 6 / final pass. |
+
+### Phase 3 (all four)
+
+No High findings.
+
+| Who | Sev. | Finding | Done |
+|---|---|---|---|
+| lead, dev | Med | Targets and delivery leads published once a Master Page is saved by the editor. | Fixed: those headings and what is under them are dropped; tested through the editor's own save path. |
+| dev | Med | A report part of the wrong type gave the Info page a 500. | Fixed: shapes checked before use; tested with hostile values. |
+| dev | Med | Any key stored with the public page was published. | Fixed: only known text fields; tested. |
+| lead | Med | What stays public was not confirmed. | Logged as A20 for the user to confirm. |
+| lead | Med | Landing page fell back to built-in tagline and press text an editor had removed. | Fixed: both public pages read the Master Page the same way. |
+| lead, member | Med | Made-up contacts and placeholder people looked real. | Fixed: contacts empty and shown as "To be announced", no links; A21. People stay "Name TBC" until edit mode. |
+| member | Med | Info page did not say it is public, nor lead to the real report. | Fixed: a strip says so; "Open full report" (through sign-in when needed). |
+| member | Med | Info page footer named the private Control Tower. | Fixed: a public note instead. |
+| member | Med | Phone menu dead if the content failed to load. | Fixed: menu wired first; error offers Try again and sign-in. |
+| member | Med | No way from a report to its public page. | Fixed on the Control Tower landing page ("Public page ↗" per JDA, "Public site" in the top bar). |
+| designer | Med | Closed drawer reachable by Tab; open drawer let Tab escape; scrim did not return focus. | Fixed with `inert`, focus back to the menu button. |
+| designer | Med | Sections hidden under the phone bar; empty `aria-current`; weak selected tab; button contrast 3.2:1; Read more cut off; focus lost after a solution page. | Fixed. |
+| dev | Low | Failed read cached as "no report"; silent 403; no shared reads. | Fixed: last good report kept, reason logged, one read shared; tested. |
+| dev | Low | Unchecked `col`; unknown `art` gave a broken image; unknown public API path gave 401; `#solution/constructor` and bad `%` broke the page. | Fixed. |
+| lead, dev | Low | JDA 3 lists "Project 2b" twice (two dash styles). | Counted once now; the data itself should be fixed in JDA 3's feed. |
+| lead, designer, member | Low | Tab count vs card count; chip names cut off; "+N more" went nowhere; footer said sign-in when signed in; no sign out on the public page; "← All JDAs" lost the JDA; hard-coded eyebrow and footer; logo alt read twice; heading levels; mono font; tier names unexplained; error pages with no way on. | Fixed. |
+| dev | Low | `trust proxy` lets `X-Forwarded-For` dodge the public rate limit when no proxy is in front; no Content-Security-Policy on public pages. | Logged (Known issues). |
+| designer | Low | Shared tokens differ between `site.css` and `styles.css`; status stripe colours alike; detail-page block headings are `div`s. | Logged for the final pass. |
+| member | Low | "Program Lead" vs "Programme". | Kept the brief's wording ("Program Lead"). |

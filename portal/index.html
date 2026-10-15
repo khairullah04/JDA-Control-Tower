@@ -9,90 +9,67 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/control-tower.css">
 </head>
 <body>
 <div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
-<div id="scrollProgress"></div>
 
 <div class="app">
 <div class="topbar">
  <div class="topbar-inner">
   <div class="brand">
-    <a href="index.html" aria-label="JDA Control Tower"><img class="brand-logo" src="assets/carigali-logo.png" alt="Petronas Carigali"></a>
-    <div><div class="mark">Petronas Carigali</div><h1>JDA Control Tower</h1></div>
+    <a href="index.html" aria-label="JDA Control Tower, home"><img class="brand-logo" src="assets/carigali-logo.png" alt="Petronas Carigali"></a>
+    <div><div class="mark">TriCipta AI</div><h1>JDA Control Tower</h1></div>
   </div>
-
-  <nav class="pagenav" aria-label="Control Tower sections">
-    <div class="pagenav-scroll">
-      <div class="pagenav-inner" id="portalNav">
-        <a class="pagenav-tab active" href="#jdas">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          JDAs
-        </a>
-        <span class="pagenav-sep">›</span>
-        <a class="pagenav-tab" href="#administration">Administration</a>
-      </div>
-    </div>
+  <nav class="ct-topnav" aria-label="Control Tower">
+    <a href="tracker/#/cji3">CJI3 register</a>
+    <a href="tracker/#/payments">Payment tables</a>
+    <a href="/" target="_blank" rel="noopener">Public site ↗</a>
   </nav>
   <div class="topbar-account"><span class="whoami" id="whoami"></span><button type="button" class="signout-btn" id="signOutBtn">Sign out</button></div>
  </div>
 </div>
 
-<div class="page-wrap">
-  <section class="screen active">
-    <div class="hero">
-      <div class="hero-inner">
-        <div class="eyebrow">Petronas Carigali · Joint Development Agreements</div>
-        <h2>JDA Control Tower</h2>
-        <p class="sub">Overall progress across every JDA, each with its own report of projects, tasks, weekly updates and challenges.</p>
-      </div>
+<main class="page-wrap ct" id="main">
+  <header class="ct-head">
+    <div>
+      <div class="ct-eyebrow">TriCipta AI · Joint Development Agreements</div>
+      <h2>JDA Control Tower</h2>
+      <p class="ct-lead">Each JDA at a glance: progress, the latest update, insights, challenges and cost.</p>
     </div>
+    <div class="ct-actions" id="ctActions">
+      <button type="button" class="ct-btn ghost" id="addJdaBtn" title="Adds a JDA to the Invoice Tracker, for its projects and invoices">+ Add JDA (finance)</button>
+      <button type="button" class="ct-btn primary" id="syncBtn" title="Reads new invoices from the Drive inbox into the CJI3 register">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+        <span>Sync from Drive</span>
+      </button>
+    </div>
+  </header>
 
-    <div class="block reveal" style="margin-top:36px;" id="jdas">
-      <h3>JDAs</h3>
-      <p class="block-intro">Open a JDA for its overview, overall progress and weekly progress.</p>
-      <div class="jda-grid" id="jdaGrid"></div>
-    </div>
+  <p class="ct-notice" id="ctNotice" role="status" hidden></p>
 
-    <div class="block reveal" id="administration">
-      <h3>Administration</h3>
-      <p class="block-intro">Internal tools — not part of the JDA reports above.</p>
-      <div class="arch-teaser admin-card">
-        <div class="arch-teaser-top">
-          <div class="arch-teaser-head">
-            <span class="arch-teaser-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg></span>
-            <div>
-              <h4 class="arch-teaser-title">Invoice Tracker</h4>
-              <p class="arch-teaser-sub">Budgets, sanctioned amounts and invoices for every JDA's projects.</p>
-            </div>
-          </div>
-          <span class="arch-teaser-badge">Finance</span>
-        </div>
-        <div class="admin-row">
-          <a class="arch-view-btn" id="adminLink" href="tracker/">Open Invoice Tracker <span class="go">&#8250;</span></a>
-        </div>
-      </div>
-    </div>
-  </section>
-</div>
+  <div class="ct-tabs" role="tablist" aria-label="JDAs" id="ctTabs"></div>
+  <div id="ctPanels"><p class="ct-loading" role="status">Loading the JDAs…</p></div>
+
+  <details class="ct-activity" id="ctActivity">
+    <summary>Recent activity <span class="ct-hint">changes to JDAs, projects, invoices and payments</span></summary>
+    <div id="activityBody"><p class="ct-hint">Opening…</p></div>
+  </details>
+</main>
 
 <footer class="site-footer">
   <div class="foot-inner">
-    <div>
-      <div class="foot-brand">
-        <img src="assets/carigali-logo.png" alt="Petronas Carigali">
-        <span>JDA Control Tower</span>
-      </div>
-    </div>
-    <div class="foot-note">Overall progress across every Joint Development Agreement.</div>
+    <div><div class="foot-brand"><img src="assets/carigali-logo.png" alt="Petronas Carigali"><span>JDA Control Tower</span></div></div>
+    <div class="foot-note">Private to TriCipta AI staff. Progress comes from each JDA's report; cost from the Invoice Tracker.</div>
   </div>
-</footer>
-
-<footer>
-  <span class="footer-left"><span class="live-dot"></span>Live data, backed by Firestore</span>
 </footer>
 </div>
 
-<script type="module" src="js/portal.js"></script>
+<!-- The Invoice Tracker's own dialogs (Drive sync result, Add JDA) open here -->
+<dialog id="modal" class="ct-dialog"></dialog>
+<!-- A JDA's documents: its signed Agreement and its Business Requirement Document -->
+<dialog id="infoDialog" class="ct-dialog" aria-labelledby="infoTitle"></dialog>
+
+<script type="module" src="js/control-tower.js"></script>
 </body>
 </html>
