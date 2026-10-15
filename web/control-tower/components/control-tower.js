@@ -97,7 +97,6 @@ function panel(j, f, written, costsFailed) {
   return `
   <div class="ct-panel-head">
     <div class="ct-panel-title">
-      <a class="ct-info-btn" href="/control-tower/${encodeURIComponent(j.id)}/documents">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></a>
       <div><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}
         <a class="ct-master-link" href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener" title="View or edit it on the public Info page (Edit Master Page)">Master Page (public)<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (opens in a new tab)</span></a></div>
     </div>
@@ -119,7 +118,10 @@ function panel(j, f, written, costsFailed) {
       <h4><a class="ct-head-link" href="${reportUrl(j, 'weekly')}">Latest key update</a></h4>
       ${f.latest ? `<p class="ct-when"><time datetime="${esc(f.latest.date || '')}">${fmtDate(f.latest.date)}</time><span class="${stale !== null && stale > STALE_DAYS ? 'ct-stale' : 'ct-hint'}">${age(stale)}</span></p><p class="ct-clamp">${esc(f.latest.text)}</p>`
         : `<p class="ct-empty">No key updates yet. They come from the Weekly progress page.</p>`}
-      <p class="ct-arrows"><a class="ct-arrow" href="${reportUrl(j, 'weekly')}#updates">All updates${f.updates > 1 ? ` (${f.updates})` : ''} →</a><a class="ct-arrow" href="${reportUrl(j, 'weekly')}#tasks">View tasks →</a></p>
+      <div class="ct-latest-foot">
+        <p class="ct-arrows"><a class="ct-arrow" href="${reportUrl(j, 'weekly')}#updates">All updates${f.updates > 1 ? ` (${f.updates})` : ''} →</a><a class="ct-arrow" href="${reportUrl(j, 'weekly')}#tasks">View tasks →</a></p>
+        <a class="ct-info-btn" href="/control-tower/${encodeURIComponent(j.id)}/documents">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></a>
+      </div>
     </div>
     <div class="ct-gauge cost">
       <h4>Cost ${f.cost?.override ? tag('Set by hand') : ''}</h4>

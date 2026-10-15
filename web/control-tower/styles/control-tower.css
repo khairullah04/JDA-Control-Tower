@@ -163,3 +163,9 @@ dialog .ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
 .doc-edit h3{margin:calc(20px * var(--space-scale)) 0 calc(10px * var(--space-scale));font-size:max(min(1.05rem, 14px), calc(1.05rem * var(--type-scale)));color:var(--teal-900)}
 .doc-edit h3:first-child{margin-top:0}
 @media (max-width:700px){.doc-top{grid-template-columns:auto minmax(0,1fr)}.doc-actions{grid-column:1 / -1;justify-content:flex-start}.doc-preview iframe{height:60vh}}
+
+/* Latest key update: its links, and Agreement & BRD at the bottom right */
+.ct-latest{display:flex;flex-direction:column}
+.ct-latest-foot{margin-top:auto;padding-top:calc(16px * var(--space-scale));display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:calc(12px * var(--space-scale))}
+.ct-latest-foot .ct-arrows{margin:0}
+.ct-latest-foot .ct-info-btn{margin-left:auto}
