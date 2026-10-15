@@ -110,3 +110,23 @@
 .site-frame-bar a{color:var(--teal-700);font-weight:600}
 .site-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:480px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--elev-1)}
 .site-editor{max-width:none}
+
+/* Tools: one menu for the page's actions, Edit public site and View public site */
+.ct-drop{position:relative}
+.ct-drop-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:130;min-width:240px;display:grid;gap:2px;padding:8px;border-radius:14px;background:#fff;color:var(--text);box-shadow:var(--elev-3);border:1px solid var(--border)}
+.ct-drop-panel[hidden]{display:none}
+.ct-tools-btn{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px 0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;font:700 14px/1 var(--font);cursor:pointer}
+.ct-tools-btn:hover,.ct-tools-btn[aria-expanded="true"]{background:rgba(255,255,255,.2)}
+.ct-tools-btn svg{width:18px;height:18px;flex:none}
+.ct-tools-btn svg:last-child{width:14px;height:14px;opacity:.8}
+.ct-menu-item{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:0 12px;border:0;border-radius:10px;background:none;color:var(--teal-900);font:600 14px/1.2 var(--font);text-decoration:none;text-align:left;cursor:pointer;white-space:nowrap}
+.ct-menu-item[hidden]{display:none}
+.ct-menu-item:hover,.ct-menu-item:focus-visible{background:var(--teal-050)}
+.ct-menu-item:focus-visible{outline:2px solid var(--teal-500);outline-offset:-2px}
+.ct-menu-item[aria-current]{background:var(--teal-050);box-shadow:inset 3px 0 0 var(--teal-600)}
+.ct-menu-item:disabled{opacity:.55;cursor:wait}
+.ct-menu-item svg{width:18px;height:18px;flex:none;color:var(--teal-700)}
+.ct-menu-item span:not(.visually-hidden){position:static!important;width:auto!important;height:auto!important;overflow:visible!important;clip:auto!important}
+.ct-tools-status{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d4efec;font-size:14px}
+.ct-tools-status:empty{display:none}
+@media (max-width:640px){.ct-tools-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.ct-tools-status{max-width:120px}}

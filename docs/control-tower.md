@@ -20,9 +20,10 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
   open Weekly progress; the cost ring and **Detail cost** open its Invoices & payments. **+ Add JDA
   (invoices)** sits in the page header; Recent activity is at the bottom.
 - Sidebar (every private page; collapses to a rail of icons, a drawer on a phone): Control Tower, each JDA, CJI3 register, Payment tables, View public site.
-- Top bar (the Control Tower and every JDA page): the JDA tabs; the page's own actions (on the landing
-  page **Sync from Drive**, the tracker's invoice inbox, and **Edit page**; on a JDA page its **Edit
-  page**); **View public site**; the user menu with Sign out.
+- Top bar (the Control Tower and every JDA page): the JDA tabs; **Tools**, a menu with the page's own
+  actions (on the landing page **Edit page** and **Sync invoices from Drive**, the tracker's invoice inbox;
+  on a JDA page its **Edit page**), **Edit public site** and **View public site** (a running sync says
+  what it is doing beside the menu); the user menu with Sign out.
 - A JDA's pages (Agreement & BRD, Overall progress, Weekly progress, Invoices & payments at
   `/control-tower/<jda>/invoices`): a breadcrumb and links to the others under the top bar, and the JDA
   tabs there keep the page (JDA 1's Weekly progress → JDA 2's).
