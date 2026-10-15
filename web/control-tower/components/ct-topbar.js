@@ -10,9 +10,9 @@ import { JDAS } from '../../shared/config/jdas.js';
 const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 // A JDA's pages, in the order of its sub-navigation. `invoices` is the Invoice Tracker's page for it.
 export const JDA_PAGES = [
+  { key: 'documents', label: 'Agreement & BRD' },
   { key: 'overall-progress', label: 'Overall progress' },
   { key: 'weekly-progress', label: 'Weekly progress' },
-  { key: 'documents', label: 'Agreement & BRD' },
   { key: 'invoices', label: 'Invoices & payments' }
 ];
 export const jdaPage = (id, key) => `/control-tower/${encodeURIComponent(id)}/${key}`;

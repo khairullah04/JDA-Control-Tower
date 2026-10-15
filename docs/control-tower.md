@@ -23,7 +23,7 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
 - Top bar (the Control Tower and every JDA page): the JDA tabs; the page's own actions (on the landing
   page **Sync from Drive**, the tracker's invoice inbox, and **Edit page**; on a JDA page its **Edit
   page**); **View public site**; the user menu with Sign out.
-- A JDA's pages (Overall progress, Weekly progress, Agreement & BRD, Invoices & payments at
+- A JDA's pages (Agreement & BRD, Overall progress, Weekly progress, Invoices & payments at
   `/control-tower/<jda>/invoices`): a breadcrumb and links to the others under the top bar, and the JDA
   tabs there keep the page (JDA 1's Weekly progress → JDA 2's).
 - **Edit page** (top right): per JDA, its key insights, challenges, and the progress and cost figures when they must be set by hand (shown as "Set by hand"). The public TriCipta AI page has the same button in its sidebar for anyone signed in. Both save on the server (`/api/site/...`), and a save made after someone else's is refused until confirmed.
