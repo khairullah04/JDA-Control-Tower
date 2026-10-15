@@ -77,6 +77,12 @@ for (const f of fs.existsSync(publicDir) ? fs.readdirSync(publicDir).filter(n =>
   fs.copyFileSync(path.join(publicDir, f), path.join(out, 'site-public', f));
   manifest.saved.push(`site-public/${f} (a landing page picture)`);
 }
+const uploadsDir = path.join(publicDir, 'uploads');
+for (const f of fs.existsSync(uploadsDir) ? fs.readdirSync(uploadsDir) : []) {
+  fs.mkdirSync(path.join(out, 'site-public', 'uploads'), { recursive: true });
+  fs.copyFileSync(path.join(uploadsDir, f), path.join(out, 'site-public', 'uploads', f));
+  manifest.saved.push(`site-public/uploads/${f} (a Master Page picture: logo or press release)`);
+}
 const previousDir = path.resolve(here, '../.roles-previous');
 for (const f of fs.existsSync(previousDir) ? fs.readdirSync(previousDir) : []) {
   fs.mkdirSync(path.join(out, 'roles-previous'), { recursive: true });

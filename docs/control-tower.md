@@ -80,6 +80,9 @@ signed in). In edit mode:
 - every piece of text is editable in place (dashed outline);
 - dashed buttons add or remove aspirations, solution groups, solutions (with their detail pages),
   collaborators, the press release, and whole new sections of cards;
+- a collaborator's **Logo** and the press release's **Picture** are uploaded (Choose file: JPEG, PNG
+  or WebP up to 8 MB, checked by the server and stored under `web/public/assets/uploads/` by a name made
+  from the picture itself); they show at once and go public with Save changes. **Remove logo** takes one away;
 - drag handles (the dotted grip) reorder an aspiration, solution, collaborator or card (solutions can
   be dragged between groups), and **Move section** moves a whole section. With the keyboard, focus a
   handle and use the arrow keys;

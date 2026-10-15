@@ -113,3 +113,14 @@ test('every landing page picture: uploaded, published on Save, removed out of pu
   for (const bad of ['secret', '../roles', 'index']) assert.throws(() => savePicture(bad, png, pending), e => e.status === 404, bad);
   assert.throws(() => discardPicture('../x', pending), e => e.status === 404);
 });
+
+test('a Master Page picture upload: checked like the others, named by its content, the same picture once', async () => {
+  const { saveUpload } = await import('./site-content.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'uploads-')) + path.sep;
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(20)]).toString('base64');
+  const a = saveUpload(png, dir), b = saveUpload(png, dir);
+  assert.match(a.url, /^\/public\/assets\/uploads\/[a-f0-9]{24}\.png$/);
+  assert.deepEqual([b.url, fs.readdirSync(dir).length], [a.url, 1]);
+  assert.throws(() => saveUpload(Buffer.from('<svg onload=alert(1)>').toString('base64'), dir), e => e.status === 415);
+  assert.throws(() => saveUpload('', dir), e => e.status === 400);
+});

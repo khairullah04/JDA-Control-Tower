@@ -22,7 +22,7 @@ const reports = {
         { title: 'Seismic AI', tier: 'Tier 1', art: 'vision', tags: [{ text: 'Data', accent: true }], blocks: [{ id: 'a', type: 'body', html: 'Hello <b>world</b>' }, { type: 'script', html: 'x' }] },
         { title: 'Odd art', tier: 'Other', art: '../../etc/passwd', tags: [], blocks: [] }
       ] }],
-      collaborators: [{ name: 'IBM Malaysia', role: 'Partner', text: 'Builds it', more: '', logo: 'assets/ibm-logo.jpg' }, { name: 'Evil', logo: 'javascript:alert(1)' }, { name: 'Up', logo: 'assets/../../jda/server/.env' }],
+      collaborators: [{ name: 'IBM Malaysia', role: 'Partner', text: 'Builds it', more: '', logo: 'assets/ibm-logo.jpg' }, { name: 'Evil', logo: 'javascript:alert(1)' }, { name: 'Up', logo: 'assets/../../jda/server/.env' }, { name: 'Uploaded', logo: '/public/assets/uploads/0123456789abcdef01234567.png' }, { name: 'Sneaky', logo: '/public/assets/uploads/../../../server/.env' }],
       press: { text: 'Signed on 1 July.', more: 'More', url: 'javascript:alert(1)', linkText: 'Read', img: 'kai' },
       sectionOrder: ['press', 'architecture', 'aspiration'], extraSections: []
     }
@@ -101,7 +101,7 @@ test('the Info page: the Master Page only, with pictures and links checked', asy
   assert.deepEqual(seismic.blocks.map(b => b.type), ['body', 'body']);                    // an unknown block type is drawn as text
   assert.equal(odd.img, '');                                                              // not one of the stock pictures
   assert.equal(odd.tier, 'Competitive Edge');
-  assert.deepEqual(info.collaborators.map(c => c.logo), ['/shared/assets/brand/ibm-logo.jpg', '', '']);
+  assert.deepEqual(info.collaborators.map(c => c.logo), ['/shared/assets/brand/ibm-logo.jpg', '', '', '/public/assets/uploads/0123456789abcdef01234567.png', '']); // an upload's own address only
   assert.deepEqual([info.press.href, info.press.img], ['', '']);                          // javascript: link and "kai" dropped
 });
 

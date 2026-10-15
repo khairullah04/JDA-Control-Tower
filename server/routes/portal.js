@@ -3,6 +3,7 @@ import { syncJda } from '../portal-sync.js';
 import { masterFolderUrl } from '../portal-drive.js';
 import { reports } from '../report-store.js';
 import { forgetReport } from '../report-reader.js';
+import { saveUpload } from '../site-content.js';
 import { JDAS } from '../../web/shared/config/jdas.js';
 
 const router = Router();
@@ -23,6 +24,12 @@ router.use((req, res, next) => {
 router.post('/save', async (req, res) => {
   try { const saved = await reports().save(req.jda.source, req.body); forgetReport(req.jda.id); res.json({ saved }); }
   catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: e.message, changed: e.changed }); }
+});
+
+// A picture for the Master Page (a logo, the press release picture): stored now, named in the page when saved.
+router.post('/upload', (req, res) => {
+  try { res.json(saveUpload(req.body?.image)); }
+  catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: e.status ? e.message : 'The picture could not be stored just now.' }); }
 });
 
 router.post('/master-folder', async (req, res) => {

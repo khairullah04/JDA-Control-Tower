@@ -589,3 +589,8 @@ table.tasks .task-detail td{background:var(--teal-050);padding:calc(4px * var(--
 .blk-btn,.blk-add .blk-btn,.blk-box .box-x,.task-toggle,.ed-pill{min-height:24px;min-width:24px}
 .blk-handle{width:24px;height:32px}
 @media (pointer:coarse){.blk-btn,.blk-add .blk-btn,.blk-box .box-x,.task-toggle,.ed-pill,.ed-btn,.blk-handle{min-height:40px;min-width:40px}.ed-btn.ed-dot{width:40px;height:40px}}
+/* A picture uploaded in the Master Page's edit mode (a logo, the press release picture) */
+.ed-upload{display:grid;gap:6px;margin-top:12px}
+.ed-upload input[type="file"]{font:inherit;font-size:14px;max-width:100%}
+.ed-upload-msg{margin:0;font-size:14px;color:var(--muted)}
+.ed-upload .ed-btn{justify-self:start}

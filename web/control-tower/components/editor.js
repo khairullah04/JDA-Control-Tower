@@ -79,6 +79,31 @@ export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScre
     wrap.lastChild.addEventListener('change', () => show(d));
     return wrap;
   }
+  // A picture (a collaborator's logo, the press release picture), uploaded like the landing page's: the
+  // file is checked and stored by the server at once, shows on the page now, and goes public with Save.
+  function uploadField(label, value, set){
+    const wrap = document.createElement('div');
+    wrap.className = 'ed-upload';
+    const file = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/jpeg,image/png,image/webp' });
+    file.setAttribute('aria-label', `${label}: choose a picture`);
+    const msg = Object.assign(document.createElement('p'), { className: 'ed-upload-msg', textContent: value ? 'JPEG, PNG or WebP, up to 8 MB. A new one replaces this.' : 'JPEG, PNG or WebP, up to 8 MB.' });
+    msg.setAttribute('role', 'status');
+    const remove = button(`Remove ${label.toLowerCase()}`, change(() => set('')), 'danger');
+    remove.hidden = !value;
+    file.onchange = async () => {
+      const f = file.files[0];
+      if (!f) return;
+      if (f.size > 8 * 1024 * 1024) { msg.textContent = 'That picture is larger than 8 MB.'; return; }
+      msg.textContent = 'Uploading…';
+      try {
+        const image = await new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = fail; r.readAsDataURL(f); });
+        const { url } = await api('upload', { image });
+        set(url); touched(); show(d); // the page is drawn again with the new picture; it goes public with Save changes
+      } catch (e) { msg.textContent = `Not uploaded: ${e.message}`; }
+    };
+    wrap.append(Object.assign(document.createElement('label'), { textContent: label }), file, msg, remove);
+    return wrap;
+  }
   function tools(...children){
     const el = document.createElement('div');
     el.className = 'ed-tools'; el.append(...children);
@@ -221,8 +246,8 @@ export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScre
       text(card.querySelector(':scope > p'), v => p.text = v, 'What it contributes');
       text(card.querySelector('.collab-more p'), v => p.more = v, 'More detail (under “Read more”)');
       card.append(tools(
-        linkField('Logo', p.logo, v => p.logo = v.trim(), 'Image link, or empty for none'),
-        bar(button('Remove', change(() => d.collaborators.splice(i, 1)), 'danger'))));
+        uploadField('Logo', p.logo, v => p.logo = v),
+        bar(button('Remove collaborator', change(() => d.collaborators.splice(i, 1)), 'danger'))));
       sortable(card, 'collaborator', d.collaborators, i);
     });
     $('collabBody').append(bar(button('+ Add collaborator', change(() => d.collaborators.push({ name: '', role: '', text: '', more: '', logo: '' })))));
@@ -237,7 +262,7 @@ export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScre
       link.addEventListener('click', e => e.preventDefault());
       $('pressBody').append(tools(
         linkField('Link to the full release', d.press.url, v => d.press.url = v.trim(), 'https://…'),
-        linkField('Picture', d.press.img, v => d.press.img = v.trim(), 'Image link, or empty for none'),
+        uploadField('Picture', d.press.img, v => d.press.img = v),
         bar(button('Remove press release', change(() => d.press = null), 'danger'))));
     } else {
       $('pressBody').append(bar(button('+ Add press release', change(() => d.press = { ...NEW_PRESS }))));

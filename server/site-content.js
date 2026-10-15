@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { JDAS } from '../web/shared/config/jdas.js';
 import { contentFor, SOLUTION_ICONS } from '../web/control-tower/config/jda-content.js';
@@ -123,6 +124,7 @@ export async function publicSite(store) {
 const asset = v => {
   const s = text(v).trim();
   if (/^assets\/[\w.-]+$/.test(s)) return assetUrl(s);
+  if (UPLOADED.test(s)) return s; // a picture uploaded in the Master Page's edit mode (saveUpload)
   return /^https:\/\/[^\s"'<>]+$/i.test(s) ? s : '';
 };
 const webLink = v => /^https?:\/\/[^\s"'<>]+$/i.test(text(v).trim()) ? text(v).trim() : '';
@@ -337,13 +339,33 @@ function keepPrevious(key, dir, prevDir) {
 const findIn = (dir, stem) => EXTS.map(e => `${dir}${stem}.${e}`).find(f => fs.existsSync(f));
 const writeAtomic = (file, bytes) => { fs.writeFileSync(`${file}.tmp`, bytes); fs.renameSync(`${file}.tmp`, file); };
 
-export function savePicture(key, base64, pendingDir = PENDING_DIR) {
-  known(key);
+// The bytes of a picture sent as base64, and its kind, or why it is refused.
+function pictureBytes(base64) {
   const bytes = Buffer.from(text(base64), 'base64');
   if (!bytes.length) throw Object.assign(new Error('No picture was sent.'), { status: 400 });
   if (bytes.length > MAX_IMAGE) throw Object.assign(new Error('The picture is larger than 8 MB.'), { status: 413 });
   const kind = KINDS.find(([, is]) => is(bytes))?.[0];
   if (!kind) throw Object.assign(new Error('Use a JPEG, PNG or WebP picture.'), { status: 415 });
+  return { bytes, kind };
+}
+
+// A Master Page picture (a collaborator's logo, the press release picture), uploaded in its edit mode:
+// stored under a name made from its own content (the same picture twice is one file, and the name
+// cannot be guessed), in web/public/assets/uploads/. It shows on the public page once the Master Page
+// that names it is saved.
+export const UPLOAD_DIR = fileURLToPath(new URL('../web/public/assets/uploads/', import.meta.url));
+const UPLOADED = /^\/public\/assets\/uploads\/[a-f0-9]{24}\.(jpg|png|webp)$/;
+export function saveUpload(base64, dir = UPLOAD_DIR) {
+  const { bytes, kind } = pictureBytes(base64);
+  const name = `${createHash('sha256').update(bytes).digest('hex').slice(0, 24)}.${kind}`;
+  fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(`${dir}${name}`)) writeAtomic(`${dir}${name}`, bytes);
+  return { url: `/public/assets/uploads/${name}` };
+}
+
+export function savePicture(key, base64, pendingDir = PENDING_DIR) {
+  known(key);
+  const { bytes, kind } = pictureBytes(base64);
   fs.mkdirSync(pendingDir, { recursive: true });
   discardPicture(key, pendingDir);
   writeAtomic(`${pendingDir}${key}.${kind}`, bytes);
