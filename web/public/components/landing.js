@@ -76,9 +76,9 @@ const figures = c => {
   <section class="figures" aria-labelledby="figuresTitle">
     <h2 class="figures-title" id="figuresTitle" data-field="figures.title">${esc(c.figures.title)}</h2>
     <dl class="figure-strip">
-      <div><dt data-field="figures.jdas">${esc(c.figures.jdas)}</dt><dd>${c.jdas.length}</dd></div>
-      <div><dt data-field="figures.underWay">${esc(c.figures.underWay)}</dt><dd>${projects}</dd></div>
-      <div><dt data-field="figures.finished">${esc(c.figures.finished)}</dt><dd>${finished}</dd></div>
+      <div><dt data-field="figures.jdas">${esc(c.figures.jdas || 'Joint Development Agreements')}</dt><dd>${c.jdas.length}</dd></div>
+      <div><dt data-field="figures.underWay">${esc(c.figures.underWay || 'Projects under way')}</dt><dd>${projects}</dd></div>
+      <div><dt data-field="figures.finished">${esc(c.figures.finished || 'Projects finished')}</dt><dd>${finished}</dd></div>
     </dl>
   </section>`;
 };
