@@ -30,14 +30,16 @@ export function setPath(obj, path, value) {
 
 // The bar along the bottom while editing: what state the edit is in, Cancel and Save.
 // `save(force)` returns a promise; a 409 (someone else saved first) offers "Save anyway" for that one save.
-export function editBar({ title, intro, save, cancel }) {
+// `discard`: the editor's own pages (Edit public site), where leaving edit mode only reloads it: the button
+// says "Discard changes" and is off until something has changed.
+export function editBar({ title, intro, save, cancel, discard = false }) {
   const bar = document.createElement('div');
   bar.className = 'edit-bar';
   bar.setAttribute('role', 'region');
   bar.setAttribute('aria-label', 'Edit mode');
   bar.innerHTML = `<div class="edit-bar-text"><b>${esc(title)}</b><span class="edit-status" role="status">${esc(intro)}</span></div>
-    <div class="edit-bar-actions"><button type="button" class="eb-btn ghost" data-cancel>Cancel</button><button type="button" class="eb-btn primary" data-save disabled>Save changes</button></div>`;
-  const status = bar.querySelector('.edit-status'), saveBtn = bar.querySelector('[data-save]');
+    <div class="edit-bar-actions"><button type="button" class="eb-btn ghost" data-cancel${discard ? ' disabled' : ''}>${discard ? 'Discard changes' : 'Cancel'}</button><button type="button" class="eb-btn primary" data-save disabled>Save changes</button></div>`;
+  const status = bar.querySelector('.edit-status'), saveBtn = bar.querySelector('[data-save]'), cancelBtn = bar.querySelector('[data-cancel]');
   let dirty = false;
   const leaving = e => { if (dirty) e.preventDefault(); };
   addEventListener('beforeunload', leaving);
@@ -55,11 +57,11 @@ export function editBar({ title, intro, save, cancel }) {
       if (e.status === 409) { saveBtn.textContent = 'Save anyway'; saveBtn.dataset.force = '1'; }
     }
   };
-  bar.querySelector('[data-cancel]').onclick = () => { if (!dirty || confirm('Leave edit mode without saving your changes?')) { close(); cancel(); } };
+  cancelBtn.onclick = () => { if (!dirty || confirm(discard ? 'Discard your changes? The page goes back to what is saved.' : 'Leave edit mode without saving your changes?')) { close(); cancel(); } };
   return {
     el: bar,
     get dirty() { return dirty; },
-    changed() { if (dirty) return; dirty = true; saveBtn.disabled = false; status.textContent = 'Unsaved changes. Nothing is published until you save.'; },
+    changed() { if (dirty) return; dirty = true; saveBtn.disabled = false; cancelBtn.disabled = false; status.textContent = 'Unsaved changes. Nothing is published until you save.'; },
     say(text) { status.textContent = text; },
     close
   };

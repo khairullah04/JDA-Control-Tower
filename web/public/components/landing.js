@@ -324,7 +324,10 @@ async function account() {
 }
 async function openEditor() {
   if (!current) return toast('The page has not loaded, so it cannot be edited. Reload and try again.');
-  try { await (await import('/public/components/edit.js')).start({ site: current, show, reload, done: () => location.reload() }); }
+  let note = ''; // the message from before the reload (saved, or changes discarded)
+  try { note = sessionStorage.getItem('editorNote') || ''; sessionStorage.removeItem('editorNote'); } catch { /* storage blocked */ }
+  const done = text => { try { sessionStorage.setItem('editorNote', text); } catch { /* the message is lost */ } location.reload(); };
+  try { await (await import('/public/components/edit.js')).start({ site: current, show, reload, done, discard: true }); if (note) toast(note); }
   catch (e) { toast(`Edit mode could not open: ${e.message}`); }
 }
 // A short message after edit mode (saved, cancelled, or why it could not open), read out by screen readers.

@@ -183,3 +183,4 @@ body.editing .contact-card.optional{display:flex}
 /* inside the Control Tower's editor the page is shown on its own, without its menu */
 body.in-editor .sidebar,body.in-editor .mobilebar,body.in-editor .scrim{display:none}
 body.in-editor .with-side{margin-left:0}
+@media (min-width:901px){body.landing.in-editor.editing .edit-bar{left:0}} /* no sidebar here: the bar spans the page */

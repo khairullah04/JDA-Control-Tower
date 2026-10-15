@@ -13,7 +13,7 @@ const SECTION = { header: 'Top of the page', overview: 'Overview', roles: 'Roles
 const FIELD = { title: 'heading', subtitle: 'subheading', body: 'text', eyebrow: 'small heading above the title', tagline: 'tagline', email: 'email', phone: 'phone', address: 'address', jdas: 'first figure\'s label', underWay: 'second figure\'s label', finished: 'third figure\'s label', linkedin: 'LinkedIn address', website: 'website address', text: 'text', alt: 'picture description' };
 const nameOf = path => { const [s, f] = path.split('.'); return `${SECTION[s] || s}: ${FIELD[f] || f}`; };
 
-export async function start({ site, show, reload, done }) {
+export async function start({ site, show, reload, done, discard = false }) {
   const { content, reports, updatedAt } = await api('GET', '/api/site/public');
   const draft = structuredClone(content);
   let base = updatedAt;
@@ -22,7 +22,7 @@ export async function start({ site, show, reload, done }) {
   document.body.classList.add('editing');
 
   const bar = editBar({
-    title: 'Editing the public page',
+    title: 'Editing the public page', discard,
     intro: "Click or tap any text with a dashed outline to change it. Each JDA's details are in its tab under Existing JDAs.",
     save: async force => {
       const out = await api('PUT', '/api/site/public', { content: draft, base, force, pictures });
@@ -31,7 +31,7 @@ export async function start({ site, show, reload, done }) {
     },
     cancel: async () => {
       for (const [key, act] of Object.entries(pictures)) if (act === 'publish') await api('DELETE', `/api/site/image/${key}`).catch(() => {});
-      finish(); await show(site); done('Edit cancelled. Nothing was changed.');
+      finish(); await show(site); done(discard ? 'Changes discarded. The page is as saved.' : 'Edit cancelled. Nothing was changed.');
     }
   });
   const changed = () => bar.changed();
