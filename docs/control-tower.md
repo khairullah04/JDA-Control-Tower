@@ -14,16 +14,22 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
 
 - Control Tower landing page (`/control-tower/`, `#jda2` opens JDA 2's tab): a tab per JDA. Each shows
   its progress (the average of its projects' % on Overall progress) and its latest key update (Weekly
-  progress), an **Agreement & BRD** button (the links written in edit mode), key insights, challenges
+  progress), an **Agreement & BRD** button (its documents page, below), key insights, challenges
   (from Overall progress unless written in edit mode) and cost (paid / sanctioned, with tax, from the
   Invoice Tracker) with **Detail cost** into that JDA's page in the tracker. Links under the JDA's name
-  open its Master Page, Overall progress, Weekly progress and public Info page. **Sync from Drive** (the
+  open its Overall progress, Weekly progress and its Master Page (the public Info page). **Sync from Drive** (the
   tracker's invoice inbox) and **+ Add JDA (finance)** sit top right; Recent activity is at the bottom.
 - Sidebar (every private page; collapses to a rail of icons, a drawer on a phone): Control Tower, each JDA, CJI3 register, Payment tables, View public site. Top bar: Sign out.
-- **Edit page** (top right): per JDA, its Agreement and BRD links, key insights, challenges, and the progress and cost figures when they must be set by hand (shown as "Set by hand"). The public TriCipta AI page has the same button in its sidebar for anyone signed in. Both save on the server (`/api/site/...`), and a save made after someone else's is refused until confirmed.
+- **Edit page** (top right): per JDA, its key insights, challenges, and the progress and cost figures when they must be set by hand (shown as "Set by hand"). The public TriCipta AI page has the same button in its sidebar for anyone signed in. Both save on the server (`/api/site/...`), and a save made after someone else's is refused until confirmed.
 - A JDA -> Control Tower: the "Control Tower" tab, the logo or the sidebar. Invoice Tracker -> Control Tower:
   the sidebar or its logo. The tracker's old front page (a card per JDA) is gone: its address
   leads to the Control Tower.
+- **Agreement & BRD** (`/control-tower/<jda>/documents`): the signed agreement and the Business
+  Requirement Document, each with its title, version, date and source (worked out from the link when
+  not written), a preview (Google Drive / Docs, SharePoint, or a plain PDF link), Open and Download.
+  **Edit page** there adds, replaces (paste the new link), removes and reorders them. The newest by date
+  is marked Latest. Previewing a private file needs the viewer to be signed in to Google or SharePoint
+  in the same browser.
 - Inside a JDA: **Overall progress** (`/control-tower/<jda>/overall-progress`, a project's page at
   `#project/<name>`) and **Weekly progress** (`/control-tower/<jda>/weekly-progress`), with **Edit progress**
   and **Edit report** in the bar at the bottom. Its **Master Page** is public: the JDA's Info page

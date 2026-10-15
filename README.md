@@ -12,7 +12,8 @@ web/                      The front end. Plain HTML, CSS and ES modules, no buil
   control-tower/          Private (/control-tower, sign-in needed): the JDA Control Tower. jda-report.html is
                           each JDA's Overall and Weekly progress (/control-tower/<id>/overall-progress,
                           /weekly-progress); master-page.html is the Master Page's edit mode, drawn on the
-                          public Info page for people signed in
+                          public Info page for people signed in; documents.html is each JDA's Agreement & BRD
+                          (/control-tower/<id>/documents)
     components/           the landing page and its edit mode, the sidebar, the progress pages, the editors
     lib/                  the Control Tower's figures (progress %, cost %, latest update); old addresses
     config/               jda-content.js: each JDA's built-in content (private: it holds starter data)
