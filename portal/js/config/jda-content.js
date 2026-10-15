@@ -183,7 +183,7 @@ const OVERRIDES = {
 export function contentFor(jda) {
   const n = jda.name;
   return {
-    short: n, mark: 'JDA Programme Portal', reportTitle: `${n} Report`, docTitle: `${n} — Weekly Management Report`,
+    short: n, mark: 'JDA Control Tower', reportTitle: `${n} Report`, docTitle: `${n} — Weekly Management Report`,
     eyebrow: 'Joint Development Agreement', tagline: '', sub: '', more: '',
     aspirationIntro: `The transformation ${n} is aiming for.`, aspiration: [],
     solutionsIntroHtml: 'The solution portfolio being delivered.', solutionGroups: [], solutions: {},
@@ -192,7 +192,7 @@ export function contentFor(jda) {
     pressIntro: `The official announcement of ${n}.`, press: null,
     progressIntro: `Cumulative completion against the ${n} baseline plan.`,
     tasksIntro: "This week's active items.",
-    footBrand: n, footNote: 'Part of the JDA Programme Portal.',
+    footBrand: n, footNote: 'Part of the JDA Control Tower.',
     starter: null, defaultStartMonth: '',
     ...OVERRIDES[jda.id]
   };

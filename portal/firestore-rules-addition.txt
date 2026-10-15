@@ -1,17 +1,16 @@
 Firestore rules for the portal's report documents
 =================================================
 
-The portal's pages read each JDA's report document straight from Firestore and have no sign-in, so
-reading is open. Writing is closed: every save goes through the JDA server
-(POST /api/portal/save), which checks the JDA's passkey session and writes with its
-service-account key. The rules below are what makes the passkey real.
+The JDA Control Tower's report pages read each JDA's report document straight from Firestore, with
+the person's sign-in. Writing is closed: every save goes through the JDA server
+(POST /api/portal/save), which checks the sign-in and writes with its service-account key.
 
 JDA 1 and 2 (project test-invoice-c38a4)
 -------------------------------------------
 Nothing to add by hand: jda/firestore.rules already holds this block. Publish that file.
 
     match /jdaReports/{doc} {
-      allow read: if true;
+      allow read: if onAccessList();
       allow write: if false;
     }
 
@@ -23,6 +22,11 @@ In that project's console (Firestore Database -> Rules), replace the report bloc
       allow read: if true;
       allow write: if false;
     }
+
+JDA 3's report stays readable by anyone who knows the project while its read rule is "if true":
+the JDA Control Tower sign-in does not reach that project. To make it private too, the server must
+read it with JDA3_GOOGLE_APPLICATION_CREDENTIALS and the rule become "allow read: if false". That is
+listed under Known issues in OVERHAUL_CHECKLIST.md.
 
 Two things must be in place BEFORE you publish it, or JDA 3 stops updating:
   1. The JDA server needs a service-account key for jda3-9c0c5

@@ -1,18 +1,18 @@
-# JDA Programme Portal
+# JDA Control Tower (private)
 
 Every page uses the design of the JDA3 reference report (`index (5).html`): its stylesheet, markup,
 images and behaviour, shared from one place.
 
 ```
 portal/
-  index.html               Portal main page: one card per JDA (live progress) + Administration
+  index.html               Control Tower main page: one card per JDA (live progress) + the Invoice Tracker
   jda-report.html          One template for every JDA: its Master Page at jda-report.html#/jda1 ... #/jda3,
                            and its Editor Page at #/jda1/edit
   css/
     styles.css               The reference stylesheet verbatim, plus a short portal-only block at the bottom
   assets/                    Shared images (extracted from the reference) - see assets/README.md
   js/
-    portal.js                Portal main page: JDA cards, Administration passkey gate
+    portal.js                Control Tower main page: JDA cards, link to the Invoice Tracker
     report.js                 JDA report page: the reference's script, ported
     editor.js                 The Editor Page: in-place editing of a Master Page and the progress screens
     block-editor.js           The full-page block editor for a solution's detail page
@@ -28,16 +28,16 @@ portal/
                             the Firebase settings, and Chart.js, SortableJS and the Firebase SDK (shared/vendor)
 ```
 
-The pages are served by the JDA server (`jda/server`), which also serves `/shared`. They do not
-work opened from a plain file server that has only this folder.
+The pages are served by the JDA server (`jda/server`) at `/control-tower/`, only to people signed
+in (`/login`); it also serves `/shared`. They do not work opened from a plain file server that has
+only this folder. The public site (TriCipta AI landing page, Info pages, sign-in) is `site/`.
 
 ## Pages and navigation
 
-- Portal top bar: two tabs, JDAs and Administration, which jump to those sections of the page.
-- Portal -> a JDA: the JDA cards. A JDA -> Portal: the "Portal" tab or the logo.
-- Portal -> Invoice Tracker: Administration card, after the passkey (`INVOICE_TRACKER_URL`).
-  Invoice Tracker -> Portal: "Portal" in its top bar and on its login screen (`portalUrl` in
-  `jda/web/js/config/app-config.json`).
+- Control Tower top bar: two tabs, JDAs and Administration, which jump to those sections of the page.
+- Control Tower -> a JDA: the JDA cards. A JDA -> Control Tower: the "Control Tower" tab or the logo.
+- Control Tower -> Invoice Tracker: Administration card (`INVOICE_TRACKER_URL`).
+  Invoice Tracker -> Control Tower: "← Control Tower" in its top bar.
 - Inside a JDA: Overview, Overall progress, Weekly progress, plus project and solution detail
   screens and Edit report (footer link).
 
@@ -65,12 +65,12 @@ Document shape (all fields optional):
 }
 ```
 
-## Master Page, Editor Page and passkeys
+## Master Page and Editor Page
 
 The **Master Page** is a JDA's main page (the overview screen). Each one carries that JDA's own
 icon, top right of the banner (`icon` in `js/config/app-config.js`); it is the only way into the
-editor, and the tabs in the top bar then move between the three screens. Clicking it asks for the JDA's passkey ("Master Access JDA 1")
-and opens the **Editor Page** (`#/jda1/edit`, `/edit/progress`, `/edit/weekly`): the same three
+editor, and the tabs in the top bar then move between the three screens. Clicking it opens the
+**Editor Page** (`#/jda1/edit`, `/edit/progress`, `/edit/weekly`): the same three
 screens, drawn by the same code. On the Master Page it has
 
 - every piece of text editable in place (dashed outline);
@@ -98,7 +98,7 @@ overall status pill to change it. **Update from Google Drive** at the top of bot
 Overall Progress and Weekly Progress folders into the page as a draft. The S-curve is not editable
 here (it comes from Drive or the database).
 
-**Edit report**, in the footer, is housekeeping behind the same passkey, not a second editor: Sync
+**Edit report**, in the footer, is housekeeping, not a second editor: Sync
 from Drive, Load starter data (for a JDA that has some and no report yet), Clear completed tasks
 (asks first, and says how many), and Microsoft Calendar once it is configured. The left and right
 arrow keys move between the three reading screens only.
@@ -110,14 +110,9 @@ Once a Master Page has been saved from the editor, the saved version is what sho
 to that JDA's entry in `jda-content.js` do not appear until it is reset. The architecture diagram,
 header and footer are not editable here; they stay in the template and `jda-content.js`.
 
-Passkeys: one per JDA, in `jda/server/portal-passkeys.json` (`{"jda1": "...", ...}`). Change a value
-and save; no restart needed, and open sessions for that JDA end. The server checks the passkey and
-gives the browser a session token; the passkey never sits in the portal's code. The token is kept
-only while that page stays open: reloading, reopening the link, leaving the editor or clicking the
-icon again all ask for the passkey again. The same passkey unlocks that JDA's Edit report. Opening an Editor Page link
-without a session goes back to the Master Page. The JDA server must be running to unlock anything.
+Who may edit: everyone signed in to the JDA Control Tower (there are no per-JDA passkeys any more).
 
-Every save goes to the JDA server (`POST /api/portal/save`), which checks the passkey session and
+Every save goes to the JDA server (`POST /api/portal/save`), which checks the sign-in and
 writes with its service-account key; with the rules in `firestore-rules-addition.txt` published,
 no browser can write a report. A save is refused if someone else changed the same part of the
 report since the page loaded it (press Save again to overwrite knowingly), and the server keeps the
@@ -191,12 +186,11 @@ numbers, and never another JDA's content. To fill it in:
 1. Firestore rules: publish `jda/firestore.rules` on the portal's project (it holds the `jdaReports`
    block), and follow `firestore-rules-addition.txt` for the `report` block on the JDA 3 project.
    Read its warning first: two things must be in place before JDA 3's rule is closed.
-2. In `js/config/app-config.js`, set `INVOICE_TRACKER_URL`. Copy
-   `jda/server/portal-passkeys.example.json` to `portal-passkeys.json` and set a passkey of 8 or more
-   characters for each JDA and for the Invoice Tracker (`"admin"`); the server will not start on the
-   example values. In `jda/web/js/config/app-config.json`, set `portalUrl` to wherever this portal is served.
-3. Run everything with one command: `cd jda/server && npm start`. The server serves this portal at
-   http://localhost:8080 and the Invoice Tracker at http://localhost:8080/tracker/, alongside its API.
+2. Accounts: each person needs a Firebase account on `ALLOWED_EMAILS` in `jda/server/.env`
+   (`jda/README.md`, "Setup").
+3. Run everything with one command: `cd jda/server && npm start`. The server serves the public site
+   at http://localhost:8080, these pages at http://localhost:8080/control-tower/ and the Invoice
+   Tracker at http://localhost:8080/control-tower/tracker/, alongside its API.
    (No build step. The pages must come over http(s); browsers block ES modules on `file://`.)
 4. Microsoft Calendar sync is optional: see "Microsoft Calendar" below.
 
@@ -212,7 +206,7 @@ The card is hidden until a client ID is set. To turn it on:
    registration. Name it, and choose who may sign in (your organisation's accounts).
 2. Under Redirect URI choose **Single-page application (SPA)** and enter the address of the report
    page exactly as people open it, without anything after `.html`, for example
-   `https://jda.example.com/jda-report.html` (and `http://localhost:8080/jda-report.html` to try
+   `https://jda.example.com/control-tower/jda-report.html` (and `http://localhost:8080/control-tower/jda-report.html` to try
    it on your own computer).
 3. API permissions > Add a permission > Microsoft Graph > Delegated permissions >
    `Calendars.ReadWrite`.
@@ -222,7 +216,3 @@ The card is hidden until a client ID is set. To turn it on:
 Microsoft's sign-in library is fetched from its CDN only when "Connect Microsoft Calendar" is
 pressed, and only if it matches the integrity hash in `js/report.js`. Syncing again updates the
 same calendar events instead of adding new ones.
-
-The Administration card's passkey is the Invoice Tracker's (`"admin"` in `portal-passkeys.json`). The
-server checks it and hands the tracker a session; without one the tracker's invoices and payments
-cannot be read, whichever way it is opened.

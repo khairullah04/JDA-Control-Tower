@@ -1,4 +1,4 @@
-# JDA Invoice Tracker
+# JDA Invoice Tracker (inside the JDA Control Tower)
 
 ```
 web/      Frontend (no build step, ES modules)
@@ -9,24 +9,31 @@ web/      Frontend (no build step, ES modules)
   js/services auth · db · ai · finance · analytics · sync (+ live/ Firebase and the server, demo/ sample data)
   js/ui       dashboard · jda · project · cji3 · payments · finance-ui · finance-io · timeline · sync · log
               · copilot · markdown · modal · render · checks · state · dom
-server/   Node + Express. Serves both sites, holds the Claude key, checks sign-ins and passkeys, and
+server/   Node + Express. Serves every page (app.js), holds the Claude key, checks the sign-in, and
           saves the invoices, payments and reports. scripts/ has backup, restore and the one-off move to Firestore
 firestore.rules · firestore.indexes.json · firebase.json   the database rules and indexes, and how to publish them
 ../shared/   code and libraries both sites use (see ../README.md)
 ```
 
 ## Config switches (web/js/config/app-config.json)
-- `requireLogin`: true = login page shown. false = skip it (also set REQUIRE_AUTH=false in server/.env; the
-  database rules then refuse the tracker's JDAs and projects, so this is only for demo mode or the emulator).
 - `demoMode`: true = sample data, no Firebase/server needed. false = real system.
 - `fxToMYR`: only used once, when the old invoice list is brought over ("Bring over old tracker invoices"). Every invoice now stores its own rate.
 - `defaultJdaStart` / `defaultJdaEnd`: the timeline range for a JDA that has no dates of its own (those created before dates were required). New JDAs must state both; "Edit dates" on a JDA page changes them. Timelines always run to the end of the current month at least.
 
-## Portal Drive sync
-The server also serves `/api/portal/*` for the JDA Programme Portal: `unlock` checks a JDA's passkey
-(`server/portal-passkeys.json`) and returns a session token; `sync` reads one JDA's Drive folder and
-has Claude extract its Master Page (`scope: master`) or progress (`scope: progress`). Token-gated,
-not sign-in gated. Folder
+## Sign-in
+
+The tracker is part of the JDA Control Tower, at `/control-tower/tracker/`. It has no login of its own:
+people sign in once at `/login` with their Firebase account, which must be on `ALLOWED_EMAILS`, and
+the server gives the browser a signed session cookie (`server/session.js`, `server/auth.js`). The
+server checks that cookie before it sends any page or file under `/control-tower` (otherwise it
+redirects to `/login`) and on every `/api` call (otherwise 401). The tracker also keeps the Firebase
+sign-in `/login` made, because it reads JDAs and projects from Firestore. What is public and what is
+private is listed at the top of `server/app.js`; `server/app.test.mjs` checks every private file and API.
+
+## JDA report Drive sync
+The server also serves `/api/portal/*` for the JDA report pages: `save` writes a report, and `sync`
+reads one JDA's Drive folder and has Claude extract its Master Page (`scope: master`) or progress
+(`scope: progress`). Behind the same sign-in. Folder
 layout and setup are in `portal/README.md`, "Updating from Google Drive". `npm test` in `server/`
 checks the folder handling and assembly with Drive and Claude stubbed out.
 
@@ -73,9 +80,8 @@ from the top bar or from the "Invoices and payments" totals on a JDA or project 
   (month first or day first), with a switch.
 - **Sync from Drive** reads each file in the invoice inbox once. A file already read is skipped, and
   the register refuses it if asked again, so a sync that was interrupted or run twice adds nothing twice.
-- **Passkey**: the tracker's invoices and payments are for passkey holders only. The passkey is
-  `"admin"` in `server/portal-passkeys.json`; the server checks it (on the portal's Administration
-  card, or on the tracker's own prompt) and every finance request needs the session it hands back.
+- **Who sees it**: invoices and payments are for people signed in to the JDA Control Tower only.
+  Every finance request is checked by the server, and the person's name goes into the audit log.
 
 ### Where invoices and payments are saved
 The browser never writes them. The server does, after validating and working out each change:
@@ -89,7 +95,7 @@ The browser never writes them. The server does, after validating and working out
   shows a red notice while this is the case. `FINANCE_STORE=file` or `firestore` in `.env` forces one.
 
 `npm test` in `server/` covers the calculations (hand-worked figures), the Payment Table, the audit
-log, import/export, the passkey and sign-in checks, the Drive syncs and the Bank Negara rate lookup.
+log, import/export, the sign-in checks and which pages are private, the Drive syncs and the Bank Negara rate lookup.
 It runs on Node 22.3 or newer and needs no network and no keys.
 
 ## Setup
@@ -109,26 +115,24 @@ Do these once. Steps 1 to 4 are in the Firebase console (https://console.firebas
        cd jda/server
        npm install
        cp .env.example .env
-       cp portal-passkeys.example.json portal-passkeys.json
 
 6. In `server/.env` fill in:
    - `ANTHROPIC_API_KEY`: the Claude key.
    - `FIREBASE_API_KEY`: the `apiKey` from step 2.
    - `ALLOWED_EMAILS`: the addresses from step 4, comma-separated. Only these can sign in.
+   - `SESSION_SECRET`: 32 or more random characters (signs the session cookie).
    - `DRIVE_ROOT_FOLDER_ID`: the Drive folder that is the invoice inbox. Share that folder with the
      `client_email` inside `service-account.json` (Viewer is enough).
-7. In `server/portal-passkeys.json` set a passkey of 8 or more characters for each JDA and for
-   `"admin"` (the Invoice Tracker). The server will not start on the example values or short ones.
-8. Publish the database rules and indexes (asks you to sign in to Firebase the first time):
+7. Publish the database rules and indexes (asks you to sign in to Firebase the first time):
 
        cd jda
        npx firebase-tools login
        npx firebase-tools deploy --only firestore --project YOUR_PROJECT_ID
 
-9. Start the server: `cd jda/server && npm start`. One command serves everything on port 8080
-   (`PORT` in `.env`): the portal at http://localhost:8080 and this tracker at
-   http://localhost:8080/tracker/.
-10. Open the tracker, sign in, and enter the Invoice Tracker passkey.
+8. Start the server: `cd jda/server && npm start`. One command serves everything on port 8080
+   (`PORT` in `.env`): the public TriCipta AI site at http://localhost:8080, the JDA Control Tower at
+   http://localhost:8080/control-tower/ and this tracker at http://localhost:8080/control-tower/tracker/.
+9. Open http://localhost:8080/login and sign in.
 
 ## Running in production
 
@@ -137,16 +141,16 @@ The server is one Node process. Everything else follows from that.
 - **Node**: 22.3 or newer (`engines` in `server/package.json`). Install with `npm ci` in `server/`.
 - **One reverse proxy in front, with HTTPS.** The server speaks plain HTTP on `PORT` and expects
   exactly one proxy before it (nginx, Caddy, a cloud load balancer). It takes the caller's address
-  from the proxy's `X-Forwarded-For`, which the lock-out after wrong passkeys depends on. Passkeys
-  and sign-in tokens travel in every request, so never expose it without HTTPS. If there is no
-  proxy, or more than one, change `app.set('trust proxy', 1)` in `server/server.js` to match.
+  from the proxy's `X-Forwarded-For`, which the rate limits depend on. The session cookie travels in
+  every request (and is marked Secure behind HTTPS), so never expose it without HTTPS. If there is no
+  proxy, or more than one, change `app.set('trust proxy', 1)` in `server/app.js` to match.
 - **Set in `.env` on the server**: everything from Setup step 6, plus `NODE_ENV=production` and
   `FINANCE_STORE=firestore`. With `NODE_ENV=production` the server refuses to start unless it is
   told where invoices are kept, so it can never quietly fall back to a local file.
   `ALLOWED_ORIGIN` only matters if a site is served from a different address than the server; when
   the server serves both sites (the usual way) set it to that one address, e.g. `https://jda.example.com`.
 - **Secrets that live only on the server**, never in git: `.env`, `service-account.json`
-  (and `service-account-jda3.json` if JDA 3's report is saved from here), `portal-passkeys.json`.
+  (and `service-account-jda3.json` if JDA 3's report is saved from here).
 - **Keep it running** with whatever restarts a process on your host. With systemd, for example,
   save this as `/etc/systemd/system/jda.service` (change the paths and the user), then
   `sudo systemctl enable --now jda`:
@@ -165,17 +169,17 @@ The server is one Node process. Everything else follows from that.
       [Install]
       WantedBy=multi-user.target
 
-- **What a restart does.** Every passkey session ends: editors and tracker users are asked for the
-  passkey again, and an Editor Page that is open at that moment can no longer save what was typed
-  into it. Restart when nobody is editing. Sign-ins are not affected. Changing a passkey in `portal-passkeys.json` needs
-  no restart; changing `.env` (including `ALLOWED_EMAILS`) does.
-- **One process only.** The passkey sessions, the lock-outs and the "one sync at a time" rule are
+- **What a restart does.** With `SESSION_SECRET` set, nothing for the people signed in. Without it,
+  everyone is signed out and sent to `/login`; an Editor Page open at that moment loses what was typed
+  into it. Changing `.env` (including `ALLOWED_EMAILS`) needs a restart; someone taken off the list
+  is refused on their next request.
+- **One process only.** The rate limits and the "one sync at a time" rule are
   kept in the process's memory. Do not run two copies behind a load balancer.
 - **The database indexes** (`firestore.indexes.json`) make the change log and the audit log read
   only the lines a page shows. Without them the pages still work, more slowly, and the server log
-  says so. Publish them with the command in Setup step 8.
+  says so. Publish them with the command in Setup step 7.
 - **After updating the code**: `git pull`, `npm ci` in `server/`, `npm test`, restart. If
-  `firestore.rules` or `firestore.indexes.json` changed, publish them again (Setup step 8).
+  `firestore.rules` or `firestore.indexes.json` changed, publish them again (Setup step 7).
 
 ## Backup and restore
 

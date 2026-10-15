@@ -78,15 +78,15 @@ written beside it. Review findings are logged under each phase.
 
 ## Phase 2 (Priority 2): access control and routing
 
-- [ ] `/`, `/jda/<id>/info` and `/login` open without signing in.
-- [ ] Everything under `/control-tower` needs a session; without one, a page request redirects to `/login` and an API request gets 401.
-- [ ] Old addresses (`/tracker/`, `/jda-report.html`, `/index.html`) redirect into `/control-tower` (and so to `/login` when signed out).
-- [ ] Every private API endpoint rejects a request with no session.
-- [ ] Sign in leads to the Control Tower landing page (or the private page that was asked for).
-- [ ] The tracker's own login and passkey are removed; the tracker is not reachable without the main sign-in.
-- [ ] Per-JDA editor passkeys are replaced by the main sign-in.
-- [ ] Firestore rules: report documents readable only by signed-in people on the access list.
-- [ ] "Portal" renamed to "JDA Control Tower" in every user-facing place.
+- [x] `/`, `/jda/<id>/info` and `/login` open without signing in; an unknown JDA id is 404. *Checked: `app.test.mjs` "the public pages...".*
+- [x] Everything under `/control-tower` needs a session; without one, a page request redirects to `/login?next=<page>`. *Checked: `app.test.mjs` requests every file in `portal/` and `jda/web/` (over 40) signed out and expects 302 to /login.*
+- [x] Old addresses (`/tracker/...`, `/jda-report.html`, `/index.html`) redirect (301) into `/control-tower`, and so to `/login` when signed out. *Checked: `app.test.mjs`.*
+- [x] Every private API endpoint rejects a request with no session (401): `requireUser` sits in front of all of `/api` except `/api/auth`. Made-up, altered and expired cookies, and a person taken off the access list, are refused too. *Checked: `app.test.mjs`, 15 endpoints including an unknown one.*
+- [x] Sign in leads to the Control Tower landing page, or to the private page that was asked for (`next`, same-site paths only). *Checked: `app.test.mjs` (token for cookie, me, sign out); `/login` loaded in a browser. A real Firebase sign-in has not been tried: no account on `ALLOWED_EMAILS` in this Codespace.*
+- [x] The tracker's own login and passkey are removed; the tracker is not reachable without the main sign-in. *Checked: `app.test.mjs` (every tracker file 302 signed out, finance API 401); tracker loaded in a browser with no console errors.*
+- [x] Per-JDA editor passkeys are replaced by the main sign-in; `passkeys.js`, its test and `portal-passkeys.example.json` are deleted. *Checked: editor opened in a browser from the JDA icon with no prompt; grep finds no passkey code.*
+- [ ] Firestore rules: report documents readable only by signed-in people on the access list. *Written in `jda/firestore.rules` (and `site` closed to browsers); not yet published: needs `npx firebase-tools deploy --only firestore` by the user. JDA 3's project is outside this repository (Known issues).*
+- [x] "Portal" renamed to "JDA Control Tower" in every user-facing place (page titles, headings, top bars, footers, built-in JDA text, error messages, READMEs). Left: internal names (`portal/` folder, `/api/portal`, `portalApi`), which other code and tests depend on. *Checked: grep for user-facing "Portal" in html and js.*
 
 ## Phase 3 (Priority 3): public landing page
 
@@ -154,6 +154,8 @@ written beside it. Review findings are logged under each phase.
 
 ## Known issues
 
+- JDA 1's saved report has `"kai"` in its press release image field, which is not an image address. The page now skips such a field; correct it in the JDA 1 editor.
+- Real Firebase sign-in not tried in this Codespace: `ALLOWED_EMAILS` in `jda/server/.env` is empty. Tested with the Google check stubbed (`app.test.mjs`).
 - JDA 3's report document lives in another Firebase project (`jda3-9c0c5`) whose rules this
   repository does not control. Until its rules require sign-in, that document stays readable by
   anyone who knows the project, whatever this server does.

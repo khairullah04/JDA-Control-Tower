@@ -1,19 +1,15 @@
 import { Router } from 'express';
-import { ADMIN, validToken } from '../passkeys.js';
 import { bnmRate } from '../forex.js';
 import { readSheets, writeWorkbook } from '../finance-xlsx.js';
 import { isDate } from '../../web/js/finance/core.js';
 
-// The CJI3 register, the sanctioned amounts and their audit log. Every route needs the Invoice
-// Tracker's passkey session (and, unless REQUIRE_AUTH=false, a signed-in user, whose name goes into
-// the audit log). The browser never writes this data itself: each change is validated, worked out
+// The CJI3 register, the sanctioned amounts and their audit log. Every route sits behind the JDA
+// Control Tower sign-in (app.js), and the signed-in person's name goes into the audit log. The browser never writes this data itself: each change is validated, worked out
 // and logged here, by the rules in web/js/finance.
 export default function financeRoutes(finance, storage) {
   const router = Router();
-  router.use((req, res, next) => validToken(req.headers['x-finance-token'], ADMIN) ? next()
-    : res.status(401).json({ error: 'Enter the Invoice Tracker passkey to continue.', passkey: true }));
 
-  const actor = req => req.user?.name || 'passkey holder';
+  const actor = req => req.user?.name || 'unknown';
   const kindOf = req => ({ entries: 'entry', sanctioned: 'sanctioned' })[req.params.kind];
   const ids = req => Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
   const run = fn => async (req, res) => {
@@ -21,7 +17,6 @@ export default function financeRoutes(finance, storage) {
     catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: e.message }); }
   };
 
-  router.get('/session', run(async () => ({ ok: true })));
   router.get('/data', run(async () => ({ ...(await finance.data()), storage })));
   router.put('/settings', run(req => finance.saveSettings(req.body || {}, actor(req))));
   // ?entityId= one record's history, ?projectId= or ?jdaId= that project's or JDA's, none: everything. Newest first, `limit` lines (500 at most).

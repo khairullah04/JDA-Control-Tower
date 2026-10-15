@@ -16,6 +16,8 @@ import { localToday } from '../../shared/dates.js';
 import { withProjectIds, linkTasks, tasksOf } from './progress.js';
 
 const $ = id => document.getElementById(id);
+// An image field holds an address (https://..., /..., assets/..., data:image/...). Anything else typed into it is not drawn as a broken image.
+const isImageSrc = v => /^(https?:\/\/|\/|assets\/|data:image\/)/i.test(String(v || '').trim());
 const empty = (text = 'Not added yet.', style = '') => `<p class="detail-tasks-empty"${style ? ` style="${style}"` : ''}>${text}</p>`;
 
 // The JDA is named in the hash (#/jda3, #/jda3/project/<slug>), not the query string: static servers
@@ -28,18 +30,9 @@ if (!jda) { location.replace('index.html'); throw new Error('Unknown JDA'); }
 const baseContent = contentFor(jda);
 let c = { ...baseContent, extraSections: [], sectionOrder: ['aspiration', 'project', 'architecture', 'collaborators', 'press'] }; // + the saved Master Page content, once the report document arrives
 
-/* ---------- Passkey sessions: the JDA server checks the passkey and hands back a session token ---------- */
-// A session lasts for one visit only. The token is held in memory; sessionStorage is used just to
-// carry it across the single reload that opens the Editor Page, and is emptied as soon as it is
-// read - so a reload, a reopened link or a second click on the icon always asks for the passkey again.
-const TOKEN_KEY = `jda-edit-${jda.id}`;
-let token = sessionStorage.getItem(TOKEN_KEY) || '';
-sessionStorage.removeItem(TOKEN_KEY);
+/* ---------- Saving goes through the JDA server, behind the JDA Control Tower sign-in ---------- */
 const masterHash = `#/${jda.id}`;
-const api = (path, body = {}) => portalApi(path, { jda: { id: jda.id, name: jda.name }, ...body }, token);
-async function unlock(passkey){
-  token = (await api('unlock', { jdaId: jda.id, passkey })).token;
-}
+const api = (path, body = {}) => portalApi(path, { jda: { id: jda.id, name: jda.name }, ...body });
 // The Master Page and the Editor Page differ only in the hash, so moving between them swaps the
 // hash and reloads to start again in the other mode.
 function goTo(hash, notice){
@@ -48,10 +41,8 @@ function goTo(hash, notice){
   location.reload();
 }
 
-// The Editor Page is this same page in editing mode. Opened without a session it goes straight
-// back to the Master Page; with one, nothing is editable until the server has confirmed it.
+// The Editor Page is this same page in editing mode, for anyone signed in to the JDA Control Tower.
 const editing = hashParts[0] === 'edit';
-if (editing && !token){ goTo(masterHash); throw new Error('Editor needs a passkey'); }
 let editor = null, firstLoadDone;
 const firstLoad = new Promise(resolve => { firstLoadDone = resolve; });
 const starterData = baseContent.starter; // only a JDA with its own starter dataset has one
@@ -129,7 +120,7 @@ function renderOverview(){
   const pr = c.press;
   $('pressBody').innerHTML = pr ? `
     <div class="press-card">
-      ${pr.img ? `<div class="press-visual"><img src="${esc(pr.img)}" alt="${esc(pr.alt)}"></div>` : ''}
+      ${isImageSrc(pr.img) ? `<div class="press-visual"><img src="${esc(pr.img)}" alt="${esc(pr.alt)}"></div>` : ''}
       <div class="press-body">
         <p>${esc(pr.text)}</p>
         ${pr.more || editing ? `<button type="button" class="collab-more-toggle" data-target="pressMore" aria-expanded="false">
@@ -250,9 +241,6 @@ function showScreen(id){
   $('pagenavEditTab').style.display = onEdit ? 'inline-flex' : 'none';
   window.scrollTo({top:0, behavior:'smooth'});
   updateScrollProgress();
-  if (id === 'screen-edit'){
-    lockEditScreen();
-  }
 }
 document.querySelectorAll('.btn[data-target], .back-link, .crumb-link, .pagenav-tab[data-target]').forEach(btn => {
   btn.addEventListener('click', () => showScreen(btn.dataset.target));
@@ -604,10 +592,10 @@ function render(data){
   }
 }
 
-/* ---------- Edit report: housekeeping behind the passkey (Drive sync, calendar, clearing finished
-   tasks). The report itself is edited in one place, the Editor Page, opened from the icon on the
-   Master Page. Nothing here or there writes to the database: every save goes to the JDA server,
-   which checks the passkey session, refuses to overwrite a part someone else changed since this
+/* ---------- Edit report: housekeeping (Drive sync, calendar, clearing finished tasks). The report
+   itself is edited in one place, the Editor Page, opened from the icon on the Master Page. Nothing
+   here or there writes to the database: every save goes to the JDA server, which checks the
+   sign-in, refuses to overwrite a part someone else changed since this
    page loaded it, and keeps the previous version. ---------- */
 const REPORT_FIELDS = ['weekLabel', 'overallStatus', 'projects', 'challenges', 'tasks', 'updates', 'overview', 'overviewBackup'];
 const saveReport = (patch, { remove = [], base = digests(currentData, [...Object.keys(patch), ...remove]), force = false } = {}) =>
@@ -617,38 +605,6 @@ async function attempt(msgId, action){
   try { flash(msgId, await action()); }
   catch (e){ flash(msgId, `Not saved: ${e.message}`, true); }
 }
-
-let editUnlocked = false;
-
-function updateEditGateUI(){
-  $('editLockGate').style.display = editUnlocked ? 'none' : 'block';
-  $('editFormContent').style.display = editUnlocked ? 'block' : 'none';
-}
-
-function lockEditScreen(){
-  editUnlocked = false;
-  const input = $('editPasskeyInput');
-  input.value = "";
-  $('editLockMsg').textContent = "";
-  updateEditGateUI();
-}
-
-async function tryUnlock(){
-  const input = $('editPasskeyInput');
-  try {
-    await unlock(input.value);
-    editUnlocked = true;
-    input.value = "";
-    $('editLockMsg').textContent = "";
-    updateEditGateUI();
-  } catch (e){
-    $('editLockMsg').textContent = e.message;
-  }
-}
-$('editUnlockBtn').onclick = tryUnlock;
-$('editPasskeyInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') tryUnlock();
-});
 
 $('openEditBtn').onclick = () => showScreen('screen-edit');
 
@@ -677,7 +633,7 @@ $('driveSyncBtn').onclick = async () => {
   say("Reading the Drive folder and extracting — this can take a minute or two…");
   try {
     const out = await api('sync', { scope: 'progress', currentProjects: currentData.projects || [] });
-    if (!out.found) throw new Error(`No folder named "${jda.name}" in the portal's Drive folder.`);
+    if (!out.found) throw new Error(`No folder named "${jda.name}" in the JDA Control Tower's Drive folder.`);
     const { driveSync, ...sections } = out.patch;
     if (Object.keys(sections).length){
       // Projects from Drive keep the ids they had here, and tasks stay tied to them (progress.js).
@@ -885,32 +841,15 @@ if (!firebaseReady) {
   });
 }
 
-/* ---------- Master Page: this JDA's own edit icon -> passkey prompt -> Editor Page ---------- */
+/* ---------- Master Page: this JDA's own edit icon -> Editor Page ---------- */
 const jdaIcon = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${jda.icon || DEFAULT_JDA_ICON}</svg>`;
-const accessTitle = `Master Access ${jda.name}`;
-$('unlockIcon').innerHTML = jdaIcon;
-$('unlockTitle').textContent = accessTitle;
-function closeUnlock(){ $('unlockModal').hidden = true; }
-// The one way in: this JDA's icon on its Master Page, and the passkey every time. Inside the
-// editor, the tabs in the top bar move between the Master Page, Overall progress and Weekly progress.
+const editTitle = `Edit ${jda.name}`;
+// The one way in: this JDA's icon on its Master Page. Inside the editor, the tabs in the top bar move
+// between the Master Page, Overall progress and Weekly progress.
 $('masterEditBtn').innerHTML = jdaIcon;
-$('masterEditBtn').title = accessTitle;
-$('masterEditBtn').setAttribute('aria-label', accessTitle);
-$('masterEditBtn').onclick = () => {
-  $('unlockModal').hidden = false;
-  $('unlockInput').value = ""; $('unlockMsg').textContent = "";
-  $('unlockInput').focus();
-};
-$('unlockClose').onclick = closeUnlock;
-$('unlockBackdrop').onclick = closeUnlock;
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUnlock(); });
-async function openEditor(){
-  $('unlockBtn').disabled = true;
-  try { await unlock($('unlockInput').value); sessionStorage.setItem(TOKEN_KEY, token); goTo(masterHash + '/edit'); }
-  catch (e){ $('unlockMsg').textContent = e.message; $('unlockBtn').disabled = false; }
-}
-$('unlockBtn').onclick = openEditor;
-$('unlockInput').addEventListener('keydown', e => { if (e.key === 'Enter') openEditor(); });
+$('masterEditBtn').title = editTitle;
+$('masterEditBtn').setAttribute('aria-label', editTitle);
+$('masterEditBtn').onclick = () => goTo(masterHash + '/edit');
 
 const notice = sessionStorage.getItem('jda-notice');
 if (notice){
@@ -920,9 +859,9 @@ if (notice){
 }
 
 if (editing){
-  // Hidden until the server confirms the session, so an expired or made-up token never sees the editor.
+  // Hidden until the report has loaded, so nothing is edited from a half-drawn page.
   document.body.classList.add('editor-checking');
-  Promise.all([api('session'), firstLoad]).then(() => {
+  firstLoad.then(() => {
     document.body.classList.replace('editor-checking', 'editing');
     // The editor works on drafts taken now. `loaded` remembers each part as it was at this moment, so a
     // save is refused if someone else has changed that part since; saving again then overwrites, knowingly.

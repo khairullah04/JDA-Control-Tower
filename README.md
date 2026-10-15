@@ -1,12 +1,13 @@
-# JDA Control Tower
+# TriCipta AI and the JDA Control Tower
 
-Two sites and one server, in one repository.
+A public site, a private one, and one server, in one repository.
 
 | Folder | What it is | Read |
 |---|---|---|
-| [portal/](portal/) | The JDA Programme Portal: one report page per JDA (Master Page, Overall progress, Weekly progress) and the Editor Page behind each JDA's passkey. | [portal/README.md](portal/README.md) |
-| [jda/web/](jda/web/) | The Invoice Tracker: the CJI3 register (every invoice, entered once), the Payment Tables, budgets and the assistant. | [jda/README.md](jda/README.md) |
-| [jda/server/](jda/server/) | The server. It serves both sites, checks sign-ins and passkeys, saves every report, invoice and payment, and talks to Google Drive, Claude and Bank Negara. | [jda/README.md](jda/README.md) |
+| [site/](site/) | The public TriCipta AI site: landing page (`/`), employee sign-in (`/login`) and each JDA's Info page (`/jda/<id>/info`). | |
+| [portal/](portal/) | The JDA Control Tower (private, `/control-tower/`): one report page per JDA (Master Page, Overall progress, Weekly progress) and its Editor Page. | [portal/README.md](portal/README.md) |
+| [jda/web/](jda/web/) | The Invoice Tracker (private, `/control-tower/tracker/`): the CJI3 register (every invoice, entered once), the Payment Tables, budgets and the assistant. | [jda/README.md](jda/README.md) |
+| [jda/server/](jda/server/) | The server. It serves every page (what is public and what is private is listed in `app.js`), checks the sign-in, saves every report, invoice and payment, and talks to Google Drive, Claude and Bank Negara. | [jda/README.md](jda/README.md) |
 | [shared/](shared/) | Code both sites and the server use (escaping, dates, the Firebase settings) and the libraries kept in the repository ([shared/vendor/](shared/vendor/README.md)). | |
 | [OVERHAUL_CHECKLIST.md](OVERHAUL_CHECKLIST.md) | The TriCipta AI overhaul: what was asked, what is done and how each item was checked. | |
 
@@ -20,20 +21,19 @@ Nothing is built or compiled. The pages are plain files; the server is Node.
        cd jda/server
        npm install
        cp .env.example .env
-       cp portal-passkeys.example.json portal-passkeys.json
 
-3. Open `jda/server/portal-passkeys.json` and give every entry a passkey of your own, 8 characters or
-   more. The server refuses to start on the example values.
-4. Fill in `jda/server/.env` ([jda/README.md](jda/README.md), "Setup", says what each line is).
-5. Start it:
+3. Fill in `jda/server/.env` ([jda/README.md](jda/README.md), "Setup", says what each line is).
+4. Start it:
 
        npm start
 
-6. Open http://localhost:8080 for the portal and http://localhost:8080/tracker/ for the Invoice
-   Tracker. Stop the server with Ctrl+C.
+5. Open http://localhost:8080 for the public site and http://localhost:8080/login to sign in to the
+   JDA Control Tower. Stop the server with Ctrl+C.
 
-To look around with sample data and no Firebase, set `"demoMode": true` in
-`jda/web/js/config/app-config.json` and open the tracker.
+To look around with sample data and no Firebase accounts, on your own computer only: set
+`"demoMode": true` in `jda/web/js/config/app-config.json` and `REQUIRE_AUTH=false` in
+`jda/server/.env` (which opens every private page, so never on a network), then open
+http://localhost:8080/control-tower/.
 
 ## Check that everything still works
 
@@ -41,7 +41,7 @@ To look around with sample data and no Firebase, set `"demoMode": true` in
     npm test
 
 About a hundred tests: the money rules, the register, the Payment Table, imports and exports, the
-passkey and sign-in checks, report saves, the Drive syncs and the portal's page logic. They need
+sign-in checks and which pages are private, report saves, the Drive syncs and the portal's page logic. They need
 no network, no Firebase and no keys.
 
 ## Before putting it in front of people

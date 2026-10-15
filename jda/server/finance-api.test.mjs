@@ -1,52 +1,29 @@
 // node --test finance-api.test.mjs
-// The finance routes over real HTTP, with an in-memory store: the passkey gate, who is recorded in
+// The finance routes over real HTTP, with an in-memory store: who is recorded in
 // the audit log, and Excel out and back in.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import express from 'express';
-import { unlock } from './passkeys.js';
 import financeRoutes from './routes/finance.js';
 import { createFinance, memoryStore } from '../web/js/finance/service.js';
 import { entrySheet, entryInputs, tableIn, ENTRY_HEADERS } from '../web/js/finance/sheets.js';
 
-// The tests bring their own passkeys; the real file is never read.
-const passkeys = { jda1: 'test-passkey-jda-one', admin: 'test-passkey-tracker' };
-process.env.PASSKEYS_FILE = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'jda-')), 'passkeys.json');
-fs.writeFileSync(process.env.PASSKEYS_FILE, JSON.stringify(passkeys));
-let server, base, token;
-const call = async (path, { method = 'GET', body, as = 'aina', key = token } = {}) => {
-  const res = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'X-Finance-Token': key || '', 'X-Test-User': as }, body: body && JSON.stringify(body) });
+let server, base;
+const call = async (path, { method = 'GET', body, as = 'aina' } = {}) => {
+  const res = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'X-Test-User': as }, body: body && JSON.stringify(body) });
   return { status: res.status, body: res.headers.get('content-type')?.includes('json') ? await res.json() : Buffer.from(await res.arrayBuffer()) };
 };
-const unlockAs = (jdaId, passkey) => call('/api/portal/unlock', { method: 'POST', body: { jdaId, passkey } });
 const invoice = { jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA', partner: 'IBM', invoiceNo: 'IN-1', documentDate: '2025-08-14', currency: 'USD', amount: '100.00', rate: '4.7' };
 
 before(async () => {
   const app = express();
   app.use(express.json({ limit: '25mb' }));
-  app.post('/api/portal/unlock', unlock);
   app.use('/api', (req, res, next) => { req.user = { name: req.headers['x-test-user'] }; next(); }); // stands in for the Firebase sign-in check
   app.use('/api/finance', financeRoutes(createFinance(memoryStore()), 'memory'));
   server = app.listen(0);
   base = `http://localhost:${server.address().port}`;
 });
 after(() => server.close());
-
-test('nothing is readable or writable without the Invoice Tracker passkey', async () => {
-  assert.equal((await call('/api/finance/data', { key: '' })).status, 401);
-  assert.equal((await call('/api/finance/entries', { method: 'POST', body: invoice, key: '' })).status, 401);
-  assert.equal((await call('/api/finance/data', { key: 'admin.99999999999999.forged' })).status, 401);
-  assert.equal((await unlockAs('admin', 'not-it')).status, 401);
-  const jda = await unlockAs('jda1', passkeys.jda1);                         // a JDA editor's passkey is not the tracker's
-  assert.equal((await call('/api/finance/data', { key: jda.body.token })).status, 401);
-  const ok = await unlockAs('admin', passkeys.admin);
-  assert.equal(ok.status, 200);
-  token = ok.body.token;
-  assert.deepEqual((await call('/api/finance/session')).body, { ok: true });
-});
 
 test('an invoice is worked out, validated and logged by the server', async () => {
   const made = await call('/api/finance/entries', { method: 'POST', body: invoice });
@@ -84,7 +61,6 @@ test('sanctioned amounts and the tax setting', async () => {
   const span = ['2026-01', '2026-02'].map(month => ({ jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA', partner: 'TAI', month, currency: 'MYR', amount: '50.00' }));
   const many = await call('/api/finance/sanctioned/batch', { method: 'POST', body: { inputs: span } });
   assert.deepEqual([many.status, many.body.map(r => r.month)], [200, ['2026-01', '2026-02']]);
-  assert.equal((await call('/api/finance/sanctioned/batch', { method: 'POST', body: { inputs: span }, key: '' })).status, 401);
 });
 
 test('Excel: the register goes out as a workbook and reads back in', async () => {

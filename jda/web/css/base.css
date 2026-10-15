@@ -24,6 +24,4 @@ a{color:var(--teal-700)}
 [hidden]{display:none!important}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}}
-@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-40px,30px) scale(1.12)}}
-@keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,-20px) scale(1.08)}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

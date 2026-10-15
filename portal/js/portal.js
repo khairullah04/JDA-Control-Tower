@@ -1,7 +1,6 @@
-// The portal's main page: one card per JDA (live progress) and the Administration gateway.
+// The JDA Control Tower's main page: one card per JDA (live progress) and the way to the Invoice Tracker.
 import { getDoc } from '../../shared/vendor/firebase-firestore.js';
 import { JDAS, INVOICE_TRACKER_URL } from './config/app-config.js';
-import { portalApi } from './api.js';
 import { esc } from '../../shared/esc.js';
 import { isConfigured, reportRefFor } from './config/firebase.js';
 
@@ -66,22 +65,6 @@ async function renderGrid() {
   }));
 }
 
-// The Invoice Tracker's passkey ("admin" in jda/server/portal-passkeys.json) is checked by the server,
-// which hands back a session token. It is left in this tab's session storage, where the tracker
-// picks it up, so the passkey is asked for once. The tracker's invoices and payments cannot be read
-// without that token, however the tracker is reached.
-function wireAdmin() {
-  const open = () => { $('adminLocked').hidden = true; $('adminOpen').hidden = false; $('adminMsg').textContent = ''; };
-  $('adminLink').href = INVOICE_TRACKER_URL;
-  const tryUnlock = async () => {
-    $('adminMsg').textContent = '';
-    try { sessionStorage.setItem('jda-finance-token', (await portalApi('unlock', { jdaId: 'admin', passkey: $('adminPasskey').value })).token); open(); }
-    catch (e) { $('adminMsg').textContent = e.message; }
-  };
-  $('adminUnlock').onclick = tryUnlock;
-  $('adminPasskey').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
-}
-
 const revealObserver = new IntersectionObserver(entries => {
   entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('in'); revealObserver.unobserve(entry.target); } });
 }, { threshold: .12 });
@@ -93,4 +76,4 @@ document.addEventListener('scroll', () => {
 }, { passive: true });
 
 renderGrid();
-wireAdmin();
+$('adminLink').href = INVOICE_TRACKER_URL;

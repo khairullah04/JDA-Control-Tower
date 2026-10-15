@@ -10,8 +10,6 @@ await seedFinance(f);
 const who = () => (currentUser()?.email || 'demo@jda.app').split('@')[0];
 const RATES = { USD: '4.7', SGD: '3.5', EUR: '5.1', JPY: '0.031', GBP: '6' };
 
-export const session = async () => true; // no passkey in demo mode
-export const unlock = async () => {};
 export const data = async () => ({ ...(await f.data()), storage: 'demo' });
 export const save = (kind, input) => f.save(kind, input, who());
 export const saveSanctionedOver = inputs => f.saveAll('sanctioned', inputs, who());

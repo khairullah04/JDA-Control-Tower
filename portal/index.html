@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
-<title>JDA Programme Portal</title>
+<title>JDA Control Tower</title>
+<link rel="icon" href="/site/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
@@ -17,11 +18,11 @@
 <div class="topbar">
  <div class="topbar-inner">
   <div class="brand">
-    <a href="index.html" aria-label="JDA Programme Portal"><img class="brand-logo" src="assets/carigali-logo.png" alt="Petronas Carigali"></a>
-    <div><div class="mark">Petronas Carigali</div><h1>JDA Programme Portal</h1></div>
+    <a href="index.html" aria-label="JDA Control Tower"><img class="brand-logo" src="assets/carigali-logo.png" alt="Petronas Carigali"></a>
+    <div><div class="mark">Petronas Carigali</div><h1>JDA Control Tower</h1></div>
   </div>
 
-  <nav class="pagenav" aria-label="Portal sections">
+  <nav class="pagenav" aria-label="Control Tower sections">
     <div class="pagenav-scroll">
       <div class="pagenav-inner" id="portalNav">
         <a class="pagenav-tab active" href="#jdas">
@@ -41,7 +42,7 @@
     <div class="hero">
       <div class="hero-inner">
         <div class="eyebrow">Petronas Carigali · Joint Development Agreements</div>
-        <h2>JDA Programme Portal</h2>
+        <h2>JDA Control Tower</h2>
         <p class="sub">Overall progress across every JDA, each with its own report of projects, tasks, weekly updates and challenges.</p>
       </div>
     </div>
@@ -64,16 +65,11 @@
               <p class="arch-teaser-sub">Budgets, sanctioned amounts and invoices for every JDA's projects.</p>
             </div>
           </div>
-          <span class="arch-teaser-badge">Passkey required</span>
+          <span class="arch-teaser-badge">Signed in</span>
         </div>
-        <div class="admin-row" id="adminLocked">
-          <input id="adminPasskey" type="password" class="passkey-input" spellcheck="false" data-lpignore="true" autocomplete="off" placeholder="Passkey" aria-label="Passkey">
-          <button type="button" class="arch-view-btn" id="adminUnlock">Unlock <span class="go">&#8250;</span></button>
+        <div class="admin-row">
+          <a class="arch-view-btn" id="adminLink" href="tracker/">Open Invoice Tracker <span class="go">&#8250;</span></a>
         </div>
-        <div class="admin-row" id="adminOpen" hidden>
-          <a class="arch-view-btn" id="adminLink" href="/tracker/">Open Invoice Tracker <span class="go">&#8250;</span></a>
-        </div>
-        <div class="save-msg" id="adminMsg"></div>
       </div>
     </div>
   </section>
@@ -84,7 +80,7 @@
     <div>
       <div class="foot-brand">
         <img src="assets/carigali-logo.png" alt="Petronas Carigali">
-        <span>JDA Programme Portal</span>
+        <span>JDA Control Tower</span>
       </div>
     </div>
     <div class="foot-note">Overall progress across every Joint Development Agreement.</div>

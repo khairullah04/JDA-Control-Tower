@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>JDA Invoice Tracker</title>
+  <title>Invoice Tracker · JDA Control Tower</title>
+<link rel="icon" href="/site/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
@@ -11,36 +12,12 @@
   <link rel="stylesheet" href="css/finance.css">
 </head>
 <body>
-  <section id="login-view" class="login">
-    <form id="login-form" class="login-card">
-      <div class="login-brand"><span class="wordmark">JDA</span>
-        <div><h1>JDA Invoice Tracker</h1><p>Sign in to your workspace</p></div></div>
-      <label>Username<input id="username" autocomplete="username" required></label>
-      <label>Password<input id="password" type="password" autocomplete="current-password" minlength="6" required></label>
-      <p id="login-msg" class="msg"></p>
-      <button class="primary" id="login-btn">Sign in</button>
-      <a class="login-back" data-portal-link href="/">← Back to JDA Programme Portal</a>
-    </form>
-  </section>
-
-  <!-- Invoices and payments are for passkey holders only: asked for here when the portal has not already checked it -->
-  <section id="passkey-view" class="login" hidden>
-    <form id="passkey-form" class="login-card">
-      <div class="login-brand"><span class="wordmark">JDA</span>
-        <div><h1>JDA Invoice Tracker</h1><p>Enter the passkey to see invoices and payments</p></div></div>
-      <label>Passkey<input id="passkey" type="password" autocomplete="off" required></label>
-      <p id="passkey-msg" class="msg"></p>
-      <button class="primary">Unlock</button>
-      <a class="login-back" data-portal-link href="/">← Back to JDA Programme Portal</a>
-    </form>
-  </section>
-
   <div id="app-view" hidden>
     <header class="topbar">
       <a href="#/" class="brand"><span class="wordmark">JDA</span>Invoice Tracker</a>
       <a class="ghost light" href="#/cji3">CJI3</a>
       <a class="ghost light" href="#/payments">Payments</a>
-      <a class="ghost light" data-portal-link href="/">← Portal</a>
+      <a class="ghost light" href="/control-tower/">← Control Tower</a>
       <span id="whoami"></span>
       <button class="ghost light" id="ask-ai-btn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.9 5.6a4 4 0 0 0 2.5 2.5L22 12l-5.6 1.9a4 4 0 0 0-2.5 2.5L12 22l-1.9-5.6a4 4 0 0 0-2.5-2.5L2 12l5.6-1.9a4 4 0 0 0 2.5-2.5z"/></svg>Ask AI</button>
       <button class="ghost light" id="logout-btn">Sign out</button>

@@ -1,23 +1,11 @@
 import { request } from './http.js';
 import { parseCsv } from '../../finance/sheets.js';
 
-// The passkey is exchanged for a session token, kept for this tab only. The portal's Administration
-// card stores one under the same name, so coming from there the tracker does not ask again.
-const KEY = 'jda-finance-token';
-const token = () => { try { return sessionStorage.getItem(KEY) || ''; } catch { return ''; } };
-
-const call = (path, method = 'GET', body, quiet = false) => request(path, { method, body, headers: { 'X-Finance-Token': token() } }).catch(e => {
-  if (e.status === 401 && e.passkey && !quiet) window.dispatchEvent(new Event('finance-locked')); // the session ended: ask for the passkey again
-  throw e;
-});
+// Every call carries the JDA Control Tower session (http.js); one that has ended sends the person to sign in again.
+const call = (path, method = 'GET', body) => request(path, { method, body });
 const post = (path, body) => call(path, 'POST', body);
 const path = kind => `/api/finance/${kind === 'entry' ? 'entries' : kind}`;
 
-export const session = () => call('/api/finance/session', 'GET', undefined, true).then(() => true, e => { if (e.passkey) return false; throw e; });
-export async function unlock(passkey) {
-  const { token: t } = await post('/api/portal/unlock', { jdaId: 'admin', passkey });
-  sessionStorage.setItem(KEY, t);
-}
 export const data = () => call('/api/finance/data');
 export const save = (kind, input) => post(path(kind), input);
 export const saveSanctionedOver = inputs => post('/api/finance/sanctioned/batch', { inputs }); // one sanctioned amount, a record per month

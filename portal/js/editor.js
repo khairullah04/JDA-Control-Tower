@@ -424,7 +424,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
     sayP('Reading the progress folders and extracting — this can take a minute or two…');
     try {
       const out = await api('sync', { scope: 'progress', currentProjects: p.projects });
-      if (!out.found) throw new Error(`No folder named "${jda.name}" in the portal's Drive folder.`);
+      if (!out.found) throw new Error(`No folder named "${jda.name}" in the JDA Control Tower's Drive folder.`);
       const { driveSync, ...sections } = out.patch;
       if (!Object.keys(sections).length) sayP("Nothing to load: no readable files in this JDA's Overall Progress or Weekly Progress folders.");
       else {
@@ -453,7 +453,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
     status('Reading the Master File folder and extracting — this can take a minute or two…');
     try {
       const out = await api('sync', { scope: 'master' });
-      if (!out.found) throw new Error(`No folder named "${jda.name}" in the portal's Drive folder.`);
+      if (!out.found) throw new Error(`No folder named "${jda.name}" in the JDA Control Tower's Drive folder.`);
       const ov = out.patch.overview;
       if (!ov) status("Nothing to load: no readable files in this JDA's Master File folder.");
       else {
@@ -540,7 +540,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
   $('editorBackTop').onclick = e => { e.preventDefault(); toMaster(); };
   $('editorBack').onclick = e => { e.preventDefault(); leave(); };
 
-  $('editorHeading').textContent = `Master Access ${jda.name}: editing the Master Page`;
+  $('editorHeading').textContent = `Editing ${jda.name}: the Master Page`;
   $('editorTop').hidden = false;
   $('editorSaveBar').hidden = false;
   $('reportFooter').hidden = true;

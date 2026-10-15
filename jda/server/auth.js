@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { Router } from 'express';
+import { sessionEmail, setSession, clearSession } from './session.js';
 
 // Who may use the Invoice Tracker: the email addresses in ALLOWED_EMAILS (server/.env, comma-separated).
 // There is no self-registration; an administrator creates each account in the Firebase console and
@@ -18,32 +20,81 @@ function remember(key, email, token, now) {
   confirmed.set(key, { email, until: Math.min(now + KEEP_MS, runsOutAt(token)) });
 }
 
-// Only signed-in users on the access list may call the API (AI, Drive, invoices and payments).
-// Verifies the Firebase ID token via Google's REST API.
-export async function requireUser(req, res, next) {
-  if (process.env.REQUIRE_AUTH === 'false') return next();
-  const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) return res.status(401).json({ error: 'Not signed in' });
+// Who a Firebase ID token belongs to, checked with Google's REST API: { email } or { status, error }.
+async function tokenEmail(token) {
+  const key = createHash('sha256').update(token).digest('base64'), now = Date.now(), kept = confirmed.get(key);
+  if (kept && kept.until > now) return { email: kept.email };
   try {
-    const key = createHash('sha256').update(token).digest('base64'), now = Date.now(), kept = confirmed.get(key);
-    if (kept && kept.until > now) return admit(kept.email, req, res, next);
     const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }), signal: AbortSignal.timeout(15000)
     });
     if (!r.ok) {
       const reason = (await r.json().catch(() => ({}))).error?.message || '';
-      if (/API key/i.test(reason)) return res.status(500).json({ error: 'The server cannot check sign-ins: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in shared/firebase-config.js.' });
-      return res.status(401).json({ error: 'Session expired. Sign in again.' });
+      if (/API key/i.test(reason)) return { status: 500, error: 'The server cannot check sign-ins: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in shared/firebase-config.js.' };
+      return { status: 401, error: 'Session expired. Sign in again.' };
     }
     const email = ((await r.json()).users?.[0]?.email || '').toLowerCase();
     if (email) remember(key, email, token, now);
-    admit(email, req, res, next);
-  } catch { res.status(500).json({ error: 'Auth check failed' }); }
+    return { email };
+  } catch { return { status: 500, error: 'Auth check failed' }; }
 }
-function admit(email, req, res, next) {
+// Why `email` may not come in, or '' when it may.
+function refusal(email) {
   const allowed = allowedEmails();
-  if (!allowed.length) return res.status(403).json({ error: 'No one is on the access list yet. The administrator must set ALLOWED_EMAILS in server/.env.' });
-  if (!allowed.includes(email)) return res.status(403).json({ error: `${email || 'This account'} is not on the access list. Ask the administrator to add it.` });
-  req.user = { email, name: email.split('@')[0] }; // who made a change, for the audit log
+  if (!allowed.length) return 'No one is on the access list yet. The administrator must set ALLOWED_EMAILS in server/.env.';
+  if (!allowed.includes(email)) return `${email || 'This account'} is not on the access list. Ask the administrator to add it.`;
+  return '';
+}
+const signInOff = () => process.env.REQUIRE_AUTH === 'false';
+const userOf = email => ({ email, name: email.split('@')[0] }); // who made a change, for the audit log
+const LOCAL = userOf('local@sign-in-off');
+
+// Every private API call: the session cookie set at /login, or (for a caller that is not a browser
+// page) a Firebase ID token as "Authorization: Bearer ...". Either way the person must still be on
+// the access list, which is looked at afresh on every call.
+export async function requireUser(req, res, next) {
+  if (signInOff()) { req.user = LOCAL; return next(); }
+  let email = sessionEmail(req);
+  if (!email) {
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Not signed in', signIn: true });
+    const who = await tokenEmail(token);
+    if (who.error) return res.status(who.status).json({ error: who.error, signIn: who.status === 401 });
+    email = who.email;
+  }
+  const no = refusal(email);
+  if (no) return res.status(403).json({ error: no });
+  req.user = userOf(email);
   next();
 }
+
+// Every private page and file: without a valid session, the browser is sent to /login, which
+// brings it back here afterwards.
+export function requirePage(req, res, next) {
+  if (signInOff()) { req.user = LOCAL; return next(); }
+  const email = sessionEmail(req);
+  if (email && !refusal(email)) { req.user = userOf(email); return next(); }
+  if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(401).json({ error: 'Not signed in', signIn: true });
+  res.redirect(302, `/login?next=${encodeURIComponent(req.originalUrl)}`);
+}
+
+// /api/auth: the sign-in page trades a Firebase ID token for the session cookie; sign out clears it;
+// `me` tells a public page whether its visitor is signed in (to show Edit page).
+export const authRoutes = Router()
+  .post('/session', async (req, res) => {
+    if (signInOff()) return res.json({ email: LOCAL.email });
+    const token = (req.headers.authorization || '').replace('Bearer ', '');
+    if (!token) return res.status(400).json({ error: 'Sign in with your account first.' });
+    const who = await tokenEmail(token);
+    if (who.error) return res.status(who.status).json({ error: who.error });
+    const no = refusal(who.email);
+    if (no) return res.status(403).json({ error: no });
+    setSession(req, res, who.email);
+    res.json({ email: who.email });
+  })
+  .post('/logout', (req, res) => { clearSession(req, res); res.json({ ok: true }); })
+  .get('/me', (req, res) => {
+    if (signInOff()) return res.json({ signedIn: true, email: LOCAL.email, signInOff: true });
+    const email = sessionEmail(req);
+    res.json(email && !refusal(email) ? { signedIn: true, email } : { signedIn: false });
+  });

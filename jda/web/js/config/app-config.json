@@ -1,9 +1,6 @@
 {
   "demoMode": false,
-  "requireLogin": true,
   "apiBase": "",
-  "portalUrl": "/",
-  "usernameDomain": "jda.app",
   "baseCurrency": "MYR",
   "fxToMYR": { "MYR": "1", "USD": "4.7", "SGD": "3.5", "EUR": "5.1", "JPY": "0.031", "GBP": "6" },
   "defaultJdas": [

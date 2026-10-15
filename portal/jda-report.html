@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <title>JDA Report</title>
+<link rel="icon" href="/site/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="shared/vendor/chart.umd.min.js"></script>
+<script src="/shared/vendor/chart.umd.min.js"></script>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -19,7 +20,7 @@
 <div class="topbar">
  <div class="topbar-inner">
   <div class="brand">
-    <a href="index.html" aria-label="Back to the JDA Programme Portal"><img class="brand-logo" src="assets/carigali-logo.png" alt="Petronas Carigali"></a>
+    <a href="index.html" aria-label="Back to the JDA Control Tower"><img class="brand-logo" src="assets/carigali-logo.png" alt="Petronas Carigali"></a>
     <div><div class="mark" id="brandMark"></div><h1 id="brandTitle">JDA Report</h1></div>
   </div>
 
@@ -28,7 +29,7 @@
       <div class="pagenav-inner">
         <a class="pagenav-tab" href="index.html">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
-          Portal
+          Control Tower
         </a>
         <span class="pagenav-sep">›</span>
         <button type="button" class="pagenav-tab active" data-target="screen-overview">
@@ -51,7 +52,7 @@
 
   <!-- SCREEN 1: Overview (content comes from js/config/jda-content.js, one entry per JDA) -->
   <section class="screen active" id="screen-overview">
-    <!-- Editor Page only: shown once the passkey session is confirmed (js/editor.js) -->
+    <!-- Editor Page only: shown once the report has loaded (js/editor.js) -->
     <div class="editor-top" id="editorTop" hidden>
       <div class="edit-card">
         <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 19a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6-1.8A4 4 0 0 1 17 19"/><path d="M12 12v8M9 17l3 3 3-3"/></svg></span><h3>Update from Google Drive</h3></div>
@@ -502,7 +503,7 @@
     </div>
   </section>
 
-    <!-- SCREEN 4: Edit report (passkey-gated) -->
+    <!-- SCREEN 4: Edit report -->
   <section class="screen" id="screen-edit">
     <div class="page-title reveal">
       <h2>Edit Report</h2>
@@ -510,18 +511,7 @@
     </div>
 
     <div class="edit-page">
-      <div class="edit-lock-card reveal" id="editLockGate">
-        <div class="lock-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="#fff" stroke-width="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
-        </div>
-        <h3>Enter passkey</h3>
-        <p class="hint">Enter this JDA's passkey to sync its progress from Google Drive or clear finished tasks.</p>
-        <input id="editPasskeyInput" type="password" class="passkey-input" spellcheck="false" data-lpignore="true" autocomplete="off" placeholder="Passkey">
-        <button class="save" id="editUnlockBtn">Unlock</button>
-        <div class="save-msg" id="editLockMsg" style="color:var(--red);"></div>
-      </div>
-
-      <div class="edit-form-content" id="editFormContent" style="display:none;">
+      <div class="edit-form-content" id="editFormContent">
 
         <div class="edit-card">
           <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 19a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6-1.8A4 4 0 0 1 17 19"/><path d="M12 12v8M9 17l3 3 3-3"/></svg></span><h3>Update progress from Google Drive</h3></div>
@@ -566,7 +556,7 @@
     <div>
       <div class="foot-brand">
         <img src="assets/carigali-logo.png" alt="Petronas Carigali">
-        <span id="footBrand">JDA Programme Portal</span>
+        <span id="footBrand">JDA Control Tower</span>
       </div>
     </div>
     <div class="foot-note" id="footNote"></div>
@@ -584,20 +574,6 @@
     <button class="save" id="editorSaveBtn" disabled>Save changes</button>
   </span>
 </footer>
-</div>
-
-<!-- Passkey prompt for the Editor Page (opened by the JDA's icon on its Master Page) -->
-<div class="unlock-modal" id="unlockModal" hidden>
-  <div class="unlock-backdrop" id="unlockBackdrop"></div>
-  <div class="edit-lock-card" role="dialog" aria-modal="true" aria-labelledby="unlockTitle">
-    <button type="button" class="arch-modal-close" id="unlockClose" aria-label="Close">&times;</button>
-    <div class="lock-icon" id="unlockIcon"></div>
-    <h3 id="unlockTitle">Master Access</h3>
-    <p class="hint">Enter this JDA's passkey to edit its Master Page, Overall Progress and Weekly Progress.</p>
-    <input id="unlockInput" type="password" class="passkey-input" spellcheck="false" data-lpignore="true" autocomplete="off" placeholder="Passkey">
-    <button class="save" id="unlockBtn">Unlock</button>
-    <div class="save-msg" id="unlockMsg" style="color:var(--red);"></div>
-  </div>
 </div>
 
 <script type="module" src="js/report.js"></script>

@@ -479,15 +479,6 @@
 
   /* ---------- edit page (a screen, not an overlay) ---------- */
   .edit-page{max-width:760px;}
-  .edit-lock-card{max-width:400px;margin:24px auto 0;text-align:center;background:var(--glass-bg);border:1px solid var(--glass-brd);
-    border-radius:16px;box-shadow:var(--elev-2);padding:36px 32px;}
-  .edit-lock-card .lock-icon{width:52px;height:52px;border-radius:50%;background:linear-gradient(150deg,var(--teal-500),var(--teal-700));
-    display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 6px 16px rgba(0,133,124,.32);}
-  .edit-lock-card h3{margin:0 0 8px;font-size:19px;font-weight:800;color:var(--teal-800);}
-  .edit-lock-card .hint{margin:0 0 18px;}
-  .edit-lock-card input{text-align:center;font-size:19px;letter-spacing:6px;font-family:'IBM Plex Mono',monospace;}
-  .edit-lock-card button.save{width:100%;margin-top:14px;}
-  .edit-lock-card .save-msg{min-height:16px;}
   .edit-card{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:16px;box-shadow:var(--elev-1);
     padding:24px 26px 26px;margin-top:20px;transition:box-shadow .2s ease,border-color .2s ease;}
   .edit-card:first-of-type{margin-top:20px;}
@@ -551,13 +542,11 @@ a.jda-card:focus-visible{outline:2px solid var(--teal-500);outline-offset:2px;}
 .admin-card{cursor:default;}
 .admin-card:hover{transform:none;box-shadow:var(--elev-1);border-color:rgba(255,255,255,.08);}
 .admin-card .admin-row{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:12px;}
-.admin-card input{max-width:220px;}
-.admin-card .save-msg{position:relative;z-index:1;color:#ffb9ad;margin-top:0;}
 a.arch-view-btn{text-decoration:none;}
 /* overview sections are re-rendered inside wrapper divs; keep the first group label's reference spacing */
 #solutionsBody>.sol-group-label:first-child{margin-top:26px;}
 
-/* ---- Master Page edit icon, its passkey prompt, and the Editor Page (js/editor.js) ---- */
+/* ---- Master Page edit icon and the Editor Page (js/editor.js) ---- */
 .master-edit-btn{position:absolute;top:22px;right:32px;z-index:3;width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.34);color:#fff;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   transition:background .15s ease,transform .15s ease,box-shadow .15s ease;}
@@ -565,11 +554,6 @@ a.arch-view-btn{text-decoration:none;}
 .master-edit-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 @media (max-width:640px){.master-edit-btn{top:12px;right:16px;width:40px;height:40px;border-radius:12px;}}
 
-.unlock-modal{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;}
-.unlock-backdrop{position:absolute;inset:0;background:rgba(2,40,38,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
-.unlock-modal .edit-lock-card{position:relative;width:100%;margin:0;background:#fff;}
-.unlock-modal .lock-icon{color:#fff;}
-.unlock-modal .arch-modal-close{position:absolute;top:12px;right:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:18px;}
 
 body.editor-checking .page-wrap{visibility:hidden;}
 .editor-top{max-width:760px;margin:0 auto 26px;}
