@@ -28,7 +28,8 @@ test('a Control Tower save keeps safe links, boxes, and overrides in range', () 
     agreement: [{ label: 'Signed JDA', url: 'https://drive.example/x' }, { label: 'Bad', url: 'javascript:alert(1)' }],
     keyInsights: [{ title: 'Fast', text: 'Yes', extra: 1 }], challenges: [{ title: 'C', severity: 'huge' }], progressOverride: 140, costOverride: { spent: 10, sanctioned: -1 } } } });
   const j = out.jdas.jda1;
-  assert.deepEqual(j.agreement, [{ label: 'Signed JDA', url: 'https://drive.example/x' }, { label: 'Bad', url: '' }]);
+  const doc = (title, url) => ({ title, url, version: '', date: '', source: '' });
+  assert.deepEqual(j.agreement, [doc('Signed JDA', 'https://drive.example/x'), doc('Bad', '')]); // saved before titles: the label is the title
   assert.deepEqual(j.keyInsights, [{ title: 'Fast', text: 'Yes' }]);
   assert.deepEqual(j.challenges, [{ title: 'C', text: '', severity: 'medium' }]);
   assert.deepEqual([j.progressOverride, j.costOverride], [null, null]);
@@ -75,9 +76,16 @@ test('the Roles picture must be a JPEG, PNG or WebP, waits for Save, and keeps t
 
 test('document links: https only, and capped in length', () => {
   const j = cleanControlTower({ jdas: { jda1: { brd: [{ label: 'x'.repeat(5000), url: 'http://plain.example/brd' }, { label: 'ok', url: `https://drive.example/${'a'.repeat(5000)}` }] } } }).jdas.jda1;
-  assert.equal(j.brd[0].label.length, 300);
+  assert.equal(j.brd[0].title.length, 300);
   assert.equal(j.brd[0].url, '');
   assert.equal(j.brd[1].url.length, 2000);
+});
+
+test('a document keeps its title, version, date and source; a date must be a date', () => {
+  const [d] = cleanControlTower({ jdas: { jda2: { agreement: [{ title: 'JDA 2 signed', url: 'https://drive.google.com/file/d/abc/view', version: 'v1.2', date: '2026-03-01', source: 'Google Drive', secret: 1 }] } } }).jdas.jda2.agreement;
+  assert.deepEqual(d, { title: 'JDA 2 signed', url: 'https://drive.google.com/file/d/abc/view', version: 'v1.2', date: '2026-03-01', source: 'Google Drive' });
+  const [bad] = cleanControlTower({ jdas: { jda2: { brd: [{ title: 'B', date: '1 March', version: 'v'.repeat(100) }] } } }).jdas.jda2.brd;
+  assert.deepEqual([bad.date, bad.version.length], ['', 60]);
 });
 
 test('a save keeps the version before it, and only force === true overwrites', async () => {

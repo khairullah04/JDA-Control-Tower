@@ -1,11 +1,11 @@
-// Edit mode for the JDA Control Tower landing page: for each JDA, its document links (Agreement, BRD),
-// key insights, challenges, and the progress and cost figures when they must be set by hand. Values
+// Edit mode for the JDA Control Tower landing page: for each JDA, its key insights, challenges, and the
+// progress and cost figures when they must be set by hand (its Agreement & BRD have their own page). Values
 // worked out from the data are left alone unless "Set by hand" is chosen, and are then labelled as overrides.
 // Saved on the server (PUT /api/site/controlTower), which checks the sign-in and every field again.
-import { api, editBar, listEditor, httpsCheck } from '/shared/components/edit-kit.js';
+import { api, editBar, listEditor } from '/shared/components/edit-kit.js';
 
 const $ = id => document.getElementById(id);
-const LINK = () => ({ label: '', url: '' }), BOX = () => ({ title: '', text: '' }), CHALLENGE = () => ({ title: '', text: '', severity: 'medium' });
+const BOX = () => ({ title: '', text: '' }), CHALLENGE = () => ({ title: '', text: '', severity: 'medium' });
 
 // `token` gives the Firebase sign-in token, so a save still goes through after the session cookie ran out.
 export async function start({ jdas, figures, redraw, saved, token }) {
@@ -72,13 +72,9 @@ function override(label, on, fields, onToggle, note) {
 function form(j, w, f, changed, say) {
   const box = el('div', { className: 'ct-edit' });
   box.append(el('h4', { textContent: `${j.name}: edit`, tabIndex: -1 }));
-  const linkFields = [{ key: 'label', label: 'Name' }, { key: 'url', label: 'Link (https://…)', type: 'url', check: httpsCheck }];
 
-  box.append(el('h4', { textContent: 'Agreement (signed JDA)' }),
-    listEditor({ items: w.agreement, fields: linkFields, addLabel: '+ Add a document link', blank: LINK, onChange: changed, label: `${j.name} Agreement links`, say }),
-    el('h4', { textContent: 'Business Requirement Document (BRD)' }),
-    listEditor({ items: w.brd, fields: linkFields, addLabel: '+ Add a document link', blank: LINK, onChange: changed, label: `${j.name} BRD links`, say }),
-    hint('Links to the files in Drive or SharePoint. A link that does not start with https:// is not kept.'));
+  const docs = el('p', { className: 'edit-hint' }, 'The Agreement and BRD are edited on their own page: ', el('a', { href: `/control-tower/${encodeURIComponent(j.id)}/documents`, textContent: `${j.name}: Agreement & BRD` }), '.');
+  box.append(el('h4', { textContent: 'Agreement & BRD' }), docs);
 
   box.append(el('h4', { textContent: 'Key insights' }),
     listEditor({ items: w.keyInsights, fields: [{ key: 'title', label: 'Insight' }, { key: 'text', label: 'Detail', multiline: true }], addLabel: '+ Add a key insight', blank: BOX, onChange: changed, label: `${j.name} key insights`, say }));

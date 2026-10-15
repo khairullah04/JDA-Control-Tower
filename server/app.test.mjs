@@ -93,7 +93,7 @@ test('signed in and on the access list: the private pages and API open', async (
   assert.equal((await get('/control-tower/', as('aina@jda.app'))).status, 200);
   assert.equal((await get('/control-tower/invoices/', as('aina@jda.app'))).status, 200);
   assert.equal((await get('/control-tower/jda-report.html', as('aina@jda.app'))).status, 200);
-  for (const page of ['overall-progress', 'weekly-progress']) assert.equal((await get(`/control-tower/jda1/${page}`, as('aina@jda.app'))).status, 200, page);
+  for (const page of ['overall-progress', 'weekly-progress', 'documents']) assert.equal((await get(`/control-tower/jda1/${page}`, as('aina@jda.app'))).status, 200, page);
   assert.equal((await get('/control-tower/master-page.html', as('aina@jda.app'))).status, 200); // the Master Page editor, drawn on the Info page
   const data = await get('/api/finance/data', as('aina@jda.app'));
   assert.deepEqual([data.status, (await data.json()).storage], [200, 'memory']);
@@ -143,7 +143,7 @@ test('edit mode: a signed-in save is stored under that person, and the public pa
 });
 
 test("a JDA's private pages have addresses of their own; signed out they lead to sign-in, an unknown JDA nowhere", async () => {
-  for (const path of ['/control-tower/jda1/overall-progress', '/control-tower/jda3/weekly-progress', '/control-tower/jda1', '/control-tower/master-page.html', '/control-tower/components/master-edit.js']) {
+  for (const path of ['/control-tower/jda1/overall-progress', '/control-tower/jda3/weekly-progress', '/control-tower/jda2/documents', '/control-tower/jda1', '/control-tower/master-page.html', '/control-tower/components/master-edit.js']) {
     const res = await get(path);
     assert.equal(res.status, 302, path);
     assert.match(res.headers.get('location'), /^\/login\?next=/, path);

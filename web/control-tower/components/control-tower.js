@@ -94,7 +94,7 @@ function panel(j, f, written, costsFailed) {
   return `
   <div class="ct-panel-head">
     <div class="ct-panel-title">
-      <button type="button" class="ct-info-btn" data-info="${esc(j.id)}" aria-haspopup="dialog">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></button>
+      <a class="ct-info-btn" href="/control-tower/${encodeURIComponent(j.id)}/documents">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></a>
       <div><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}</div>
     </div>
     <nav class="ct-links" aria-label="${esc(j.name)} pages">
@@ -164,20 +164,6 @@ function select(tab, focus) {
   if (focus) tab.focus();
 }
 
-function openInfo(j) {
-  const w = state.written[j.id] || {};
-  const list = (items, what) => items?.length ? `<ul class="ct-doclist">${items.map(l => `<li>${l.url ? `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || l.url)} ↗</a>` : esc(l.label)}</li>`).join('')}</ul>`
-    : `<p class="ct-empty">No ${what} linked yet. Add the link with Edit page.</p>`;
-  const d = $('infoDialog');
-  d.innerHTML = `<div class="ct-dialog-body">
-    <h3 id="infoTitle">${esc(j.name)}: documents</h3>
-    <h4>Agreement</h4><p class="ct-hint">The signed Joint Development Agreement.</p>${list(w.agreement, 'agreement')}
-    <h4>Business Requirement Document (BRD)</h4>${list(w.brd, 'BRD')}
-    <div class="ct-dialog-actions"><button type="button" class="ct-btn primary" data-close>Close</button></div></div>`;
-  d.querySelector('[data-close]').onclick = () => d.close();
-  d.showModal();
-}
-
 // The Invoice Tracker's own Drive sync, with the whole button held while it runs (a second click would read the same files again).
 async function sync() {
   const btn = $('syncBtn');
@@ -211,8 +197,6 @@ function wire() {
     finally { $('editPageBtn').disabled = false; }
   };
   $('ctPanels').addEventListener('click', e => {
-    const info = e.target.closest('[data-info]');
-    if (info) return openInfo(state.jdas.find(j => j.id === info.dataset.info));
     const more = e.target.closest('[data-more-toggle]');
     if (more) {
       const open = more.getAttribute('aria-expanded') !== 'true';

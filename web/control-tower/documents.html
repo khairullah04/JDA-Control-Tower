@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Agreement &amp; BRD · JDA Control Tower</title>
+<link rel="icon" href="/shared/assets/brand/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/styles/tokens.css">
+<link rel="stylesheet" href="/shared/styles/report.css">
+<link rel="stylesheet" href="/shared/styles/sidebar.css">
+<link rel="stylesheet" href="/control-tower/styles/control-tower.css">
+<link rel="stylesheet" href="/shared/styles/edit.css">
+</head>
+<body>
+<!-- A JDA's Agreement & BRD (/control-tower/<jda>/documents): the signed agreement and the Business
+     Requirement Document, with a preview, Open and Download, and what is known about each. -->
+<div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+
+<div class="app">
+<div class="topbar">
+ <div class="topbar-inner">
+  <div class="brand">
+    <a href="/control-tower/" aria-label="JDA Control Tower, home"><img class="brand-logo" src="/shared/assets/brand/carigali-logo.png" alt="Petronas Carigali"></a>
+    <div><div class="mark">TriCipta AI</div><h1>JDA Control Tower</h1></div>
+  </div>
+  <div class="topbar-account"><span class="whoami" id="whoami"></span><button type="button" class="signout-btn" id="signOutBtn">Sign out</button></div>
+ </div>
+</div>
+
+<main class="page-wrap ct" id="main">
+  <nav class="ct-crumbs" aria-label="Breadcrumb"><ol><li><a href="/control-tower/" id="crumbHome">Control Tower</a></li><li><a id="crumbJda" href="/control-tower/">JDA</a></li><li aria-current="page">Agreement &amp; BRD</li></ol></nav>
+  <header class="ct-head">
+    <div>
+      <div class="ct-eyebrow" id="docEyebrow">Joint Development Agreement</div>
+      <h2 id="docTitle">Agreement &amp; BRD</h2>
+      <p class="ct-lead">The signed agreement and the Business Requirement Document, with what is known about each.</p>
+    </div>
+    <div class="ct-actions"><button type="button" class="ct-btn ghost" id="editPageBtn" hidden>Edit page</button></div>
+  </header>
+  <p class="ct-notice" id="ctNotice" role="status" hidden></p>
+  <div id="docs"><p class="ct-loading" role="status">Loading the documents…</p></div>
+</main>
+
+<footer class="site-footer">
+  <div class="foot-inner">
+    <div><div class="foot-brand"><img src="/shared/assets/brand/carigali-logo.png" alt="Petronas Carigali"><span>JDA Control Tower</span></div></div>
+    <div class="foot-note">Private to TriCipta AI staff. The files themselves stay in Drive or SharePoint; this page links to them.</div>
+  </div>
+</footer>
+</div>
+
+<script type="module" src="/control-tower/components/documents.js"></script>
+</body>
+</html>

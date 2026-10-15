@@ -399,8 +399,20 @@ Assumption: Microsoft Calendar's sign-in now returns to one fixed address, `/con
 
 ## R2 Phase 4: Agreement & BRD page
 
-- [ ] `/control-tower/<jda>/documents`: Agreement and BRD with preview/embed, open/download, metadata (title, version, date, source), edit mode to add, replace, remove and edit metadata.
-- [ ] Mapping of what the private master page linked to → its new home, listed here.
+- [x] `/control-tower/<jda>/documents`: Agreement and BRD with preview/embed, open/download, metadata (title, version, date, source), edit mode to add, replace, remove and edit metadata. Page: `web/control-tower/documents.html`, `components/documents.js`; link rules in `lib/documents.js` (tested). Google Drive files and Google Docs/Sheets/Slides are previewed and downloaded directly; SharePoint links preview with `action=embedview` and download with `download=1`; a plain `.pdf` link is previewed by the browser; any other https link has Open only. The first document of each kind is previewed on arrival, the others on **Preview**; the newest by date is marked **Latest**. Source is worked out from the link when not written. **Edit page**: add, replace (new link), remove, reorder, and edit title, version, date and source; saved with the Control Tower's written content (`/api/site/controlTower`, checked again on the server). Entries saved before (`{ label, url }`) read as `{ title, url }`. The Control Tower's **Agreement & BRD** button opens this page (the dialog is gone), and its edit form points here instead of holding a second copy of the document fields.
+- [x] Mapping of what the private master page linked to → its new home:
+
+| Was (private Master Page, `jda-report.html#/<jda>`) | Now |
+|---|---|
+| The Master Page itself (hero, aspiration, solutions, collaborators, press release, added sections) | The public Info page, `/jda/<jda>/info`; edited there with **Edit Master Page** (signed in) |
+| A solution's detail page (`#/<jda>/solution/<key>`) | `/jda/<jda>/info#solution/<key>` |
+| The JDA's edit icon → Editor Page (`#/<jda>/edit`) | **Edit Master Page** on the Info page; progress: **Edit progress** on its own pages |
+| Overall progress (`#/<jda>/progress`), a project (`#/<jda>/project/<name>`) | `/control-tower/<jda>/overall-progress`, `…#project/<name>` |
+| Weekly progress (`#/<jda>/weekly`), Edit tasks (`#/<jda>/edit/weekly`) | `/control-tower/<jda>/weekly-progress`, `…#edit` |
+| "Continue to overall progress / weekly progress" band | The top bar's Overall progress / Weekly progress, and the sidebar |
+| Architecture diagram ("View full architecture diagram") | Removed with the private Master Page (it was never public) |
+| Agreement & BRD (a dialog on the Control Tower) | `/control-tower/<jda>/documents` |
+| Edit report (footer) | Unchanged, in the bottom bar of the progress pages |
 
 ## R2 Phase 5: Control Tower top bar, no per-card action bar
 

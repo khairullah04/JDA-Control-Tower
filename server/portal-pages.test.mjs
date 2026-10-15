@@ -233,3 +233,17 @@ test('the old JDA page addresses lead to where each screen is now', async () => 
   ];
   for (const [hash, search, to] of cases) assert.equal(newAddress(hash, search), to, hash + search);
 });
+
+test('Agreement & BRD: what a link can be previewed, downloaded and called by', async () => {
+  const { previewUrl, downloadUrl, sourceOf } = await import('../web/control-tower/lib/documents.js');
+  const drive = 'https://drive.google.com/file/d/1AbC-d_9/view?usp=sharing';
+  assert.deepEqual([previewUrl(drive), downloadUrl(drive), sourceOf(drive)], ['https://drive.google.com/file/d/1AbC-d_9/preview', 'https://drive.google.com/uc?export=download&id=1AbC-d_9', 'Google Drive']);
+  assert.equal(previewUrl('https://drive.google.com/open?id=QQ'), 'https://drive.google.com/file/d/QQ/preview');
+  assert.equal(previewUrl('https://docs.google.com/spreadsheets/d/S1/edit#gid=0'), 'https://docs.google.com/spreadsheets/d/S1/preview');
+  assert.equal(downloadUrl('https://docs.google.com/spreadsheets/d/S1/edit'), 'https://docs.google.com/spreadsheets/d/S1/export?format=xlsx');
+  const sp = 'https://contoso.sharepoint.com/:w:/s/jda/EXabc?e=1';
+  assert.deepEqual([new URL(previewUrl(sp)).searchParams.get('action'), new URL(downloadUrl(sp)).searchParams.get('download'), sourceOf(sp)], ['embedview', '1', 'SharePoint']);
+  assert.deepEqual([previewUrl('https://example.com/a.pdf'), sourceOf('https://www.example.com/a.pdf')], ['https://example.com/a.pdf', 'example.com']);
+  for (const bad of ['https://example.com/page', 'http://drive.google.com/file/d/x/view', 'javascript:alert(1)', '', 'not a link'])
+    assert.equal(previewUrl(bad) + downloadUrl(bad), '', bad);                                           // nothing to embed: Open only
+});

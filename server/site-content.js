@@ -200,15 +200,19 @@ export async function infoPage(jda) {
 // worked out on the page from the JDA's report and the Invoice Tracker; a value written here overrides
 // one of them and is shown as an override.
 export const CT_JDA_DEFAULTS = () => ({
-  agreement: [], brd: [],            // links: { label, url }
+  agreement: [], brd: [],            // documents: { title, url, version, date, source } (the Agreement & BRD page)
   keyInsights: [],                    // boxes: { title, text }
   challenges: null,                   // null: the report's challenges; a list: { title, text, severity } written here
   progressOverride: null,             // a percentage, instead of the average of the report's projects
   costOverride: null                  // { spent, sanctioned } in MYR, instead of the Invoice Tracker's figures
 });
-// A document link: https only, and of a sensible length.
+// A document: its link (https only, of a sensible length) and what is known about it. Entries saved
+// before the Agreement & BRD page had only { label, url }: the label is read as the title.
 const httpsLink = v => /^https:\/\/[^\s"'<>]+$/i.test(text(v).trim()) ? text(v).trim().slice(0, 2000) : '';
-const links = list => (Array.isArray(list) ? list : []).filter(isObj).map(l => ({ label: text(l.label).slice(0, 300), url: httpsLink(l.url) })).filter(l => l.label || l.url);
+const isoDate = v => /^\d{4}-\d{2}-\d{2}$/.test(text(v)) ? text(v) : '';
+const links = list => (Array.isArray(list) ? list : []).filter(isObj)
+  .map(l => ({ title: text(l.title ?? l.label).slice(0, 300), url: httpsLink(l.url), version: text(l.version).slice(0, 60), date: isoDate(l.date), source: text(l.source).slice(0, 120) }))
+  .filter(l => l.title || l.url);
 const boxes = list => (Array.isArray(list) ? list : []).filter(isObj).map(b => ({ title: text(b.title), text: text(b.text), ...(b.severity && { severity: ['low', 'medium', 'high'].includes(b.severity) ? b.severity : 'medium' }) }));
 const pct = v => Number.isFinite(v) && v >= 0 && v <= 100 ? Math.round(v) : null;
 const myr = v => Number.isFinite(v) && v >= 0 ? v : null;

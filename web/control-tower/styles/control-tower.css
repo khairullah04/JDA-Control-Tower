@@ -124,12 +124,11 @@
 /* ---- dialogs: the Agreement & BRD panel, and the Invoice Tracker's own (Drive sync result, Add JDA) ---- */
 dialog{border:none;border-radius:calc(20px * var(--space-scale));padding:0;width:min(calc(520px * var(--space-scale)),92vw);color:var(--text);box-shadow:var(--elev-2)}
 dialog::backdrop{background:rgba(1,39,36,.55);backdrop-filter:blur(3px)}
-.ct-dialog-body,dialog form{display:grid;gap:calc(12px * var(--space-scale));padding:calc(26px * var(--space-scale)) calc(26px * var(--space-scale)) calc(22px * var(--space-scale))}
+dialog form{display:grid;gap:calc(12px * var(--space-scale));padding:calc(26px * var(--space-scale)) calc(26px * var(--space-scale)) calc(22px * var(--space-scale))}
 dialog h3{margin:0;font-size:max(min(19px, 14px), calc(19px * var(--type-scale)));font-weight:800;color:var(--teal-900)}
 dialog h4{margin:calc(10px * var(--space-scale)) 0 0;font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-700)}
 dialog p{margin:0}
-.ct-doclist{margin:0;padding-left:calc(18px * var(--space-scale));display:grid;gap:calc(6px * var(--space-scale))}
-.ct-dialog-actions,dialog .row{display:flex;justify-content:flex-end;gap:calc(10px * var(--space-scale));margin-top:calc(6px * var(--space-scale))}
+dialog .row{display:flex;justify-content:flex-end;gap:calc(10px * var(--space-scale));margin-top:calc(6px * var(--space-scale))}
 dialog label{display:grid;gap:calc(6px * var(--space-scale));font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));font-weight:600;color:var(--muted)}
 dialog input,dialog select{font:inherit;font-size:max(min(15px, 14px), calc(15px * var(--type-scale)));padding:calc(10px * var(--space-scale)) calc(12px * var(--space-scale));border:1px solid var(--border);border-radius:calc(10px * var(--space-scale));width:100%}
 dialog input:focus{outline:none;border-color:var(--teal-500);box-shadow:0 0 0 3px rgba(0,161,156,.2)}
@@ -153,3 +152,31 @@ dialog .ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
 
 /* Round 2: the same accents as the public site (one accent colour, under section headings) */
 .ct-head h2::after{content:'';display:block;width:calc(40px * var(--space-scale));height:3px;margin-top:calc(10px * var(--space-scale));border-radius:2px;background:var(--accent)}
+
+/* ---------- A JDA's Agreement & BRD page (documents.html) ---------- */
+.ct-crumbs ol{list-style:none;display:flex;flex-wrap:wrap;gap:calc(6px * var(--space-scale));margin:0 0 calc(14px * var(--space-scale));padding:0;font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));color:var(--muted)}
+.ct-crumbs li+li::before{content:'›';margin-right:calc(6px * var(--space-scale));color:var(--muted)}
+.ct-crumbs a{color:var(--teal-700);font-weight:600;text-decoration:none}
+.ct-crumbs a:hover{text-decoration:underline}
+.ct-crumbs [aria-current]{color:var(--text);font-weight:600}
+.doc-sec{margin-top:calc(28px * var(--space-scale))}
+.doc-sec-head{margin-bottom:calc(12px * var(--space-scale))}
+.doc-sec-head h3{margin:0 0 calc(4px * var(--space-scale));font-size:max(min(1.15rem, 14px), calc(1.15rem * var(--type-scale)));color:var(--teal-900)}
+.doc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--elev-1);padding:calc(18px * var(--space-scale)) calc(20px * var(--space-scale));margin-bottom:calc(14px * var(--space-scale))}
+.doc-top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:calc(16px * var(--space-scale));align-items:start}
+.doc-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:calc(12px * var(--space-scale));background:var(--teal-050);color:var(--teal-700)}
+.doc-icon svg{width:calc(22px * var(--space-scale));height:calc(22px * var(--space-scale))}
+.doc-main h4{margin:2px 0 calc(8px * var(--space-scale));font-size:max(min(1.02rem, 14px), calc(1.02rem * var(--type-scale)));color:var(--text);overflow-wrap:anywhere}
+.doc-badge{display:inline-block;margin-left:calc(6px * var(--space-scale));padding:2px calc(8px * var(--space-scale));border-radius:calc(999px * var(--space-scale));background:var(--green-tint);color:var(--green);font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:700;vertical-align:middle}
+.doc-facts{display:flex;flex-wrap:wrap;gap:calc(6px * var(--space-scale)) calc(22px * var(--space-scale));margin:0}
+.doc-facts div{display:flex;gap:calc(6px * var(--space-scale));font-size:max(min(14px, 14px), calc(14px * var(--type-scale)))}
+.doc-facts dt{color:var(--muted)}
+.doc-facts dd{margin:0;font-weight:600;color:var(--text)}
+.doc-actions{display:flex;flex-wrap:wrap;gap:calc(8px * var(--space-scale));justify-content:flex-end}
+.doc-actions .ct-btn{min-height:40px;padding:0 calc(14px * var(--space-scale));font-size:max(min(14px, 14px), calc(14px * var(--type-scale)))}
+.doc-preview{margin-top:calc(16px * var(--space-scale))}
+.doc-preview iframe{display:block;width:100%;height:min(70vh,calc(720px * var(--space-scale)));border:1px solid var(--border);border-radius:calc(12px * var(--space-scale));background:var(--teal-050)}
+.doc-preview .ct-hint{margin:calc(8px * var(--space-scale)) 0 0}
+.doc-edit h3{margin:calc(20px * var(--space-scale)) 0 calc(10px * var(--space-scale));font-size:max(min(1.05rem, 14px), calc(1.05rem * var(--type-scale)));color:var(--teal-900)}
+.doc-edit h3:first-child{margin-top:0}
+@media (max-width:700px){.doc-top{grid-template-columns:auto minmax(0,1fr)}.doc-actions{grid-column:1 / -1;justify-content:flex-start}.doc-preview iframe{height:60vh}}

@@ -69,10 +69,11 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
   app.use('/api', apiErrors, apiNotFound);
 
   app.use('/control-tower', requirePage);
-  // A JDA's private pages: /control-tower/jda1/overall-progress and /weekly-progress (one page, jda-report.html).
-  // Its Master Page is public now: /jda/jda1/info, edited there by people signed in.
+  // A JDA's private pages: /control-tower/jda1/overall-progress and /weekly-progress (one page, jda-report.html),
+  // and /documents (its Agreement & BRD). Its Master Page is public: /jda/jda1/info, edited there by people signed in.
   const known = id => JDAS.some(j => j.id === id);
-  app.get('/control-tower/:jda/:page(overall-progress|weekly-progress)', (req, res, next) => known(req.params.jda) ? res.sendFile('jda-report.html', { root: CONTROL_TOWER }) : next());
+  app.get('/control-tower/:jda/:page(overall-progress|weekly-progress|documents)', (req, res, next) => known(req.params.jda)
+    ? res.sendFile(req.params.page === 'documents' ? 'documents.html' : 'jda-report.html', { root: CONTROL_TOWER }) : next());
   app.get('/control-tower/:jda', (req, res, next) => known(req.params.jda) ? res.redirect(302, `/control-tower/${req.params.jda}/overall-progress`) : next());
   app.use('/control-tower', express.static(CONTROL_TOWER));
   return app;
