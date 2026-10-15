@@ -30,7 +30,7 @@ async function tokenEmail(token) {
     });
     if (!r.ok) {
       const reason = (await r.json().catch(() => ({}))).error?.message || '';
-      if (/API key/i.test(reason)) { console.error('Sign-ins cannot be checked: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in shared/firebase-config.js.'); return { status: 500, error: 'Sign-in is not set up on the server yet. Contact your administrator.' }; }
+      if (/API key/i.test(reason)) { console.error('Sign-ins cannot be checked: FIREBASE_API_KEY in server/.env is missing or wrong. It is the apiKey in web/shared/config/firebase-config.js.'); return { status: 500, error: 'Sign-in is not set up on the server yet. Contact your administrator.' }; }
       return { status: 401, error: 'Session expired. Sign in again.' };
     }
     const email = ((await r.json()).users?.[0]?.email || '').toLowerCase();

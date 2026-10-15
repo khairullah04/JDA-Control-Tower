@@ -16,10 +16,14 @@ export const reportChallenges = report => (Array.isArray(report?.challenges) ? r
 
 // Cost from the Invoice Tracker, by JDA name (A8): paid and sanctioned, both with tax (A2), and the
 // invoices still pending. Two tracker JDAs with the same name are added together, marked `twice`.
+// How a Control Tower JDA and an Invoice Tracker JDA are matched: by name, ignoring case and the
+// spaces around it (A8). The cost ring and Invoices & payments both use this.
+export const jdaNameKey = name => String(name || '').trim().toLowerCase();
+
 export function costsByName(trackerJdas, fin) {
   const out = {};
   for (const tj of trackerJdas) {
-    const mine = r => r.jdaId === tj.id, key = tj.name.trim().toLowerCase();
+    const mine = r => r.jdaId === tj.id, key = jdaNameKey(tj.name);
     const t = tableTotals(paymentTable(fin.sanctioned.filter(mine), fin.entries.filter(mine)));
     const pending = fin.entries.filter(e => mine(e) && live(e) && e.status === 'pending').length;
     const was = out[key];
@@ -42,7 +46,7 @@ export function jdaFigures(jda, report, written = {}, costs = null, { failed = f
   const r = failed ? null : report;
   const projects = Array.isArray(r?.projects) ? r.projects : [];
   const avg = averageProgress(projects), updates = latestUpdates(r?.updates), fromReport = reportChallenges(r);
-  const tracked = costs?.[jda.name.trim().toLowerCase()];
+  const tracked = costs?.[jdaNameKey(jda.name)];
   const dataCost = tracked ? { spent: tracked.spentMinor / 100, sanctioned: tracked.sanctionedMinor / 100 } : null;
   return {
     dataProgress: avg, dataCost, reportChallenges: fromReport, // what the data says, shown in edit mode

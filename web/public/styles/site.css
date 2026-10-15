@@ -20,7 +20,7 @@ h1,h2,h3,h4{line-height:1.2;margin:0}
 .btn.primary:hover{box-shadow:0 6px 18px rgba(0,133,124,.38);transform:translateY(-1px)}
 .btn.ghost{background:#fff;border-color:var(--border);color:var(--text)}
 .btn.ghost:hover{background:var(--teal-050);border-color:var(--teal-100);color:var(--teal-800)}
-.btn.small{min-height:calc(34px * var(--space-scale));padding:calc(.35rem * var(--space-scale)) calc(.85rem * var(--space-scale));font-size:max(min(.8rem, 14px), calc(.8rem * var(--type-scale)))}
+.btn.small{min-height:40px;padding:calc(.35rem * var(--space-scale)) calc(.85rem * var(--space-scale));font-size:max(min(.8rem, 14px), calc(.8rem * var(--type-scale)))}
 .btn:disabled{opacity:.6;cursor:wait;transform:none}
 .btn svg{width:calc(16px * var(--space-scale));height:calc(16px * var(--space-scale));flex:none}
 
@@ -36,3 +36,6 @@ label.field{display:grid;gap:calc(6px * var(--space-scale));font-size:max(min(.8
 .msg{margin:0;min-height:1.2em;font-size:max(min(.86rem, 14px), calc(.86rem * var(--type-scale)));color:var(--red)}
 .msg.ok{color:var(--green)}
 .login-back{font-size:max(min(.86rem, 14px), calc(.86rem * var(--type-scale)));text-align:center}
+
+/* phones: 16px fields, or iOS zooms in on focus */
+@media (max-width:900px){.field input,.field select,.field textarea{font-size:16px}}

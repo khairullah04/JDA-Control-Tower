@@ -54,11 +54,13 @@ test('every private page and file sends someone not signed in to /login, and bac
 
 test('the old addresses lead into the Control Tower, so they need the sign-in too', async () => {
   for (const [from, to] of [['/tracker/', '/control-tower/invoices/'], ['/control-tower/tracker/#x', '/control-tower/invoices/'], ['/tracker/js/main.js', '/control-tower/invoices/js/main.js'],
-    ['/jda-report.html', '/control-tower/jda-report.html'], ['/jda-report.html?jda=jda1', '/control-tower/jda-report.html?jda=jda1'], ['/index.html', '/control-tower/']]) {
+    ['/jda-report.html', '/control-tower/jda-report.html'], ['/jda-report.html?jda=jdaz', '/control-tower/jda-report.html?jda=jdaz'], ['/index.html', '/control-tower/']]) {
     const res = await get(from);
     assert.deepEqual([res.status, res.headers.get('location')], [301, to], from);
     assert.equal((await get(to)).status, 302, to);
   }
+  const master = await get('/jda-report.html?jda=jda1');                                 // the old Master Page: public now
+  assert.deepEqual([master.status, master.headers.get('location'), (await get('/jda/jda1/info')).status], [301, '/jda/jda1/info', 200]);
 });
 
 test('every private API answers 401 without a session', async () => {
@@ -148,7 +150,7 @@ test("a JDA's private pages have addresses of their own; signed out they lead to
     assert.equal(res.status, 302, path);
     assert.match(res.headers.get('location'), /^\/login\?next=/, path);
   }
-  assert.equal((await get('/control-tower/jda9/overall-progress', as('aina@jda.app'))).status, 404);
+  assert.equal((await get('/control-tower/jdaz/overall-progress', as('aina@jda.app'))).status, 404);
   assert.equal((await get('/control-tower/jda1/master', as('aina@jda.app'))).status, 404);
   const inv = await get('/control-tower/jda3/invoices', as('aina@jda.app'));                   // the Invoice Tracker's JDA of that name
   assert.deepEqual([inv.status, inv.headers.get('location')], [302, '/control-tower/invoices/#/named/JDA%203']);

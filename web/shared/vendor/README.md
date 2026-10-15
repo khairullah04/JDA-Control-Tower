@@ -47,5 +47,5 @@ All three Firebase files must be the same version.
 - **Fonts** (Google Fonts). If they cannot be fetched the pages fall back to the system fonts and
   everything still works.
 - **Microsoft's sign-in library** (MSAL 2.38.3), only when "Connect Microsoft Calendar" is pressed,
-  and only if it matches the integrity hash in `portal/js/report.js`. The Calendar feature needs
+  and only if it matches the integrity hash in `web/control-tower/components/report.js`. The Calendar feature needs
   Microsoft's servers in any case.

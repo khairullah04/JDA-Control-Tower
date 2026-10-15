@@ -1,4 +1,4 @@
-// node scripts/backup.mjs            (run from jda/server)
+// node scripts/backup.mjs            (run from server/)
 // Copies everything the system stores into backups/<timestamp>/ at the top of the repository,
 // which no web server serves and git ignores:
 //   - every Firestore collection of the main project, with subcollections (needs the service-account key)
@@ -76,6 +76,12 @@ for (const f of fs.existsSync(publicDir) ? fs.readdirSync(publicDir).filter(n =>
   fs.mkdirSync(path.join(out, 'site-public'), { recursive: true });
   fs.copyFileSync(path.join(publicDir, f), path.join(out, 'site-public', f));
   manifest.saved.push(`site-public/${f} (the Roles picture)`);
+}
+const previousDir = path.resolve(here, '../.roles-previous');
+for (const f of fs.existsSync(previousDir) ? fs.readdirSync(previousDir) : []) {
+  fs.mkdirSync(path.join(out, 'roles-previous'), { recursive: true });
+  fs.copyFileSync(path.join(previousDir, f), path.join(out, 'roles-previous', f));
+  manifest.saved.push(`roles-previous/${f} (the Roles picture before the current one)`);
 }
 
 save('MANIFEST.json', manifest);

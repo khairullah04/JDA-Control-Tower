@@ -185,7 +185,6 @@ export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScre
 
     text($('aspirationIntro'), v => d.intros.aspiration = v, 'Section introduction');
     text($('solutionsIntro'), v => d.intros.solutions = v, 'Section introduction');
-    text($('archIntro'), v => d.intros.architecture = v, 'Section introduction');
     text($('collabIntro'), v => d.intros.collaborators = v, 'Section introduction');
     text($('pressIntro'), v => d.intros.press = v, 'Section introduction');
 
@@ -591,7 +590,8 @@ export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScre
       if (dirty.progress){ p = cleanedProgress(); await saveProgress(p); savedTasks = JSON.parse(JSON.stringify(p.tasks)); dirty.progress = false; openDescriptions.clear(); redrawProgress(); }
       $('editorSaveStatus').textContent = 'Saved — the live pages are updated';
     } catch (e){
-      $('editorSaveStatus').textContent = `Not saved: ${e.message}`;
+      if (e.signIn) $('editorSaveStatus').innerHTML = 'Not saved: your sign-in has ended. <a href="/login" target="_blank" rel="noopener">Sign in again in a new tab</a>, then press Save changes here. Your changes are still on this page.';
+      else $('editorSaveStatus').textContent = `Not saved: ${e.message}`;
       $('editorSaveBtn').disabled = false;
       throw e;
     }

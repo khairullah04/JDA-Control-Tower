@@ -43,7 +43,7 @@ async function firestoreStore() {
       try { return rows(await query(coll, how).get()); }
       catch (e) {
         if (e.code !== 9 || !(how.where && how.latest)) throw e; // 9: FAILED_PRECONDITION, "the query requires an index"
-        if (!warned) console.warn(`Firestore has no index for ${coll} by ${how.where[0]} and ${how.by} yet. Deploy jda/firestore.indexes.json (see jda/README.md). Reading without it for now.`);
+        if (!warned) console.warn(`Firestore has no index for ${coll} by ${how.where[0]} and ${how.by} yet. Deploy firebase/firestore.indexes.json (see docs/server-and-invoices.md). Reading without it for now.`);
         warned = true;
         return rows(await query(coll, { where: how.where }).get());
       }

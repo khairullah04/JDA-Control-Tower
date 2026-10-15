@@ -14,8 +14,8 @@
 .ct-btn.primary:disabled{opacity:.7;cursor:wait;transform:none}
 .ct-btn.ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
 .ct-btn.ghost:hover{background:var(--teal-050);border-color:var(--teal-100)}
-.ct-btn.small{min-height:calc(38px * var(--space-scale));padding:0 calc(14px * var(--space-scale));font-size:max(min(13px, 14px), calc(13px * var(--type-scale)))}
-.ct-btn:focus-visible,.ct-info-btn:focus-visible,.ct-more:focus-visible,.ct-links a:focus-visible,.ct-arrow:focus-visible{outline:3px solid var(--teal-500);outline-offset:2px}
+.ct-btn.small{min-height:40px;padding:0 calc(14px * var(--space-scale));font-size:max(min(13px, 14px), calc(13px * var(--type-scale)))}
+.ct-btn:focus-visible,.ct-info-btn:focus-visible,.ct-more:focus-visible,.ct-arrow:focus-visible{outline:3px solid var(--teal-500);outline-offset:2px}
 
 /* JDA tabs on the dark bar: links on a JDA's page, the landing page's own tablist there */
 .ct-top-tabs,.ct-topbar .ct-tabs{display:flex;gap:calc(4px * var(--space-scale));overflow-x:auto;scrollbar-width:none;padding:calc(4px * var(--space-scale));margin:0;border-radius:calc(999px * var(--space-scale));background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);box-shadow:none;position:static}
@@ -76,3 +76,20 @@
 .ct-head-link{color:inherit;text-decoration:none}
 .ct-head-link:hover{text-decoration:underline}
 .ct-arrows{display:flex;flex-wrap:wrap;gap:calc(6px * var(--space-scale)) calc(18px * var(--space-scale));margin:auto 0 0}
+
+/* the user menu is a white panel: its button and focus ring are dark there (not the bar's white) */
+.ct-user-menu .ct-btn.ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
+.ct-user-menu .ct-btn.ghost:hover{background:var(--teal-050)}
+.ct-user-menu :focus-visible{outline-color:var(--teal-500)}
+/* JDA tabs on a light background (the Invoice Tracker's JDA page) */
+.ct-jda-nav .ct-top-tabs a:focus-visible{outline:2px solid var(--teal-500);outline-offset:2px}
+.ct-jda-nav .ct-top-tabs a:not([aria-current]){color:var(--teal-800)}
+
+/* the bar itself: the same deep teal as the sidebar, so text on it keeps its contrast */
+.topbar{background:linear-gradient(180deg,var(--teal-800),var(--teal-900))}
+.ct-top-tabs a:not([aria-current]),.ct-topbar .ct-tabs [role="tab"]:not([aria-selected="true"]){color:#fff}
+.ct-pending{display:inline-flex;align-items:center;min-height:40px}
+/* phones: the bar scrolls away with the page instead of covering a quarter of it */
+@media (max-width:640px){.topbar{position:static}}
+.ct-master-link{display:inline-block;margin-top:4px;font-size:14px;font-weight:600;color:var(--teal-700)}
+@media (max-width:640px){.ct-top-right .ct-btn[aria-busy] span{position:static;width:auto;height:auto;overflow:visible;clip:auto}} /* "Syncing: …" stays readable */

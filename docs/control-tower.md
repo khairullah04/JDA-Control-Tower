@@ -51,7 +51,7 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
 
 JDA 3 reads the same document the reference page does, so the Excel -> Power Automate sync that
 feeds it carries on working. To move a JDA, change its `source` in
-`js/config/app-config.js`.
+`web/shared/config/jdas.js`.
 
 Document shape (all fields optional):
 
@@ -161,10 +161,8 @@ One-time setup:
 2. In `server/.env` add `PORTAL_DRIVE_ROOT_FOLDER_ID` (the portal folder's id, the last part of
    its Drive URL).
 3. Restart the server (`cd server && npm install && npm start`).
-4. Nothing else. The server serves this portal itself, so the pages call it at the address they came
-   from (http://localhost:8080 on your own computer). Only if the portal is ever served from
-   somewhere else: set `SYNC_API_URL` in `js/config/app-config.js` to the server's address, and add
-   the portal's address to `ALLOWED_ORIGIN` in `.env`.
+4. Nothing else. The server serves these pages itself, so they call it at the address they came
+   from (http://localhost:8080 on your own computer).
 
 ## A JDA with nothing in it yet
 
@@ -207,7 +205,7 @@ The card is hidden until a client ID is set. To turn it on:
 3. API permissions > Add a permission > Microsoft Graph > Delegated permissions >
    `Calendars.ReadWrite`.
 4. Copy the **Application (client) ID** from the app's Overview page into `MS_CLIENT_ID` in
-   `js/config/app-config.js`.
+   `web/shared/config/jdas.js`.
 
 Microsoft's sign-in library is fetched from its CDN only when "Connect Microsoft Calendar" is
 pressed, and only if it matches the integrity hash in `web/control-tower/components/report.js`. Syncing again updates the

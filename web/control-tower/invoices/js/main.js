@@ -10,6 +10,7 @@ import { toLogin, me } from '../../../shared/lib/session.js';
 import { mountCtSidebar } from '../../components/ct-sidebar.js';
 import { jdaNav } from '../../components/ct-topbar.js';
 import { JDAS } from '../../../shared/config/jdas.js';
+import { jdaNameKey } from '../../lib/jda-figures.js';
 import { listJdas } from './services/db.js';
 import { esc } from './ui/dom.js';
 
@@ -24,6 +25,8 @@ async function route() {
     const name = decodeURIComponent(id || ''), hit = (await listJdas()).find(j => sameName(j.name, name));
     if (hit) return location.replace(`#/jda/${hit.id}`);
     $('#page').innerHTML = `<div class="card"><h2>${esc(name)} is not in the Invoice Tracker yet</h2><p>Add it with "+ Add JDA (invoices)" on the <a href="/control-tower/">Control Tower</a>, then its projects and invoices.</p></div>`;
+    const ct = JDAS.find(j => sameName(j.name, name));
+    if (ct) $('#jdaNavSlot').replaceChildren(jdaNav(ct, 'invoices', { tabs: true }));
     return;
   }
   if (!['project', 'jda', 'cji3', 'payments'].includes(kind) || ((kind === 'project' || kind === 'jda') && !id)) return location.replace('/control-tower/');
@@ -31,13 +34,14 @@ async function route() {
   await show(kind === 'project' && id ? () => renderProject(id) : kind === 'jda' && id ? () => renderJda(id)
     : kind === 'cji3' ? () => renderCji3(id, sub) : () => renderPaymentsPage(id, sub));
   refreshCopilot();
-  // A JDA's page here is its "Invoices & payments": the breadcrumb, its other pages and the JDA tabs.
-  if (kind === 'jda') {
+  // A JDA's page here, and its CJI3 register and Payment Table, are its "Invoices & payments": the
+  // breadcrumb, its other pages and the JDA tabs.
+  if (['jda', 'cji3', 'payments'].includes(kind) && id) {
     const tracked = (await listJdas()).find(j => j.id === id), ct = tracked && JDAS.find(j => sameName(j.name, tracked.name));
     if (ct) $('#jdaNavSlot').replaceChildren(jdaNav(ct, 'invoices', { tabs: true }));
   }
 }
-function sameName(a, b) { const n = v => String(v || '').toLowerCase().replace(/\s+/g, ''); return n(a) === n(b); }
+const sameName = (a, b) => jdaNameKey(a) === jdaNameKey(b);
 
 $('#logout-btn').onclick = logout;
 initCopilot();

@@ -224,12 +224,12 @@ test('the Weekly progress view filters by status, due date and owner, and sorts'
 test('the old JDA page addresses lead to where each screen is now', async () => {
   const { newAddress } = await import('../web/control-tower/lib/old-addresses.js');
   const cases = [
-    ['#/jda1', '', '/jda/jda1/info'], ['#/jda1/edit', '', '/jda/jda1/info'], ['', '?jda=jda2', '/jda/jda2/info'],
+    ['#/jda1', '', '/jda/jda1/info'], ['#/jda1/edit', '', '/jda/jda1/info#edit'], ['', '?jda=jda2', '/jda/jda2/info'],
     ['#/jda3/solution/sap', '', '/jda/jda3/info#solution/sap'],
     ['#/jda1/progress', '', '/control-tower/jda1/overall-progress'], ['#/jda2/weekly', '', '/control-tower/jda2/weekly-progress'],
     ['#/jda1/edit/progress', '', '/control-tower/jda1/overall-progress#edit'], ['#/jda1/edit/weekly', '', '/control-tower/jda1/weekly-progress#edit'],
     ['#/jda1/project/seismic-data-lake', '', '/control-tower/jda1/overall-progress#project/seismic-data-lake'],
-    ['#/jda9/weekly', '', '/control-tower/'], ['', '', '/control-tower/'], ['#/%E0%A4%A', '', '/control-tower/']
+    ['#/jdaz/weekly', '', '/control-tower/'], ['', '', '/control-tower/'], ['#/%E0%A4%A', '', '/control-tower/']
   ];
   for (const [hash, search, to] of cases) assert.equal(newAddress(hash, search), to, hash + search);
 });
@@ -246,4 +246,5 @@ test('Agreement & BRD: what a link can be previewed, downloaded and called by', 
   assert.deepEqual([previewUrl('https://example.com/a.pdf'), sourceOf('https://www.example.com/a.pdf')], ['https://example.com/a.pdf', 'example.com']);
   for (const bad of ['https://example.com/page', 'http://drive.google.com/file/d/x/view', 'javascript:alert(1)', '', 'not a link'])
     assert.equal(previewUrl(bad) + downloadUrl(bad), '', bad);                                           // nothing to embed: Open only
+  assert.equal(previewUrl('https://jda.example.com/files/a.pdf', 'https://jda.example.com'), '');           // this site's own address: never framed
 });

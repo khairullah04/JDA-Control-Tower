@@ -98,7 +98,8 @@ function panel(j, f, written, costsFailed) {
   <div class="ct-panel-head">
     <div class="ct-panel-title">
       <a class="ct-info-btn" href="/control-tower/${encodeURIComponent(j.id)}/documents">${svg('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}<span>Agreement &amp; BRD</span></a>
-      <div><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}</div>
+      <div><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}
+        <a class="ct-master-link" href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener" title="View or edit it on the public Info page (Edit Master Page)">Master Page (public)<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (opens in a new tab)</span></a></div>
     </div>
   </div>
   ${f.failed ? `<p class="ct-notice warn">${esc(j.name)}'s report could not be read just now, so its progress, update and challenges are missing. Reload to try again.</p>` : ''}
@@ -111,6 +112,7 @@ function panel(j, f, written, costsFailed) {
         ${f.status ? `<span class="status-pill ${f.status}">${STATUS[f.status]}</span>` : ''}
         <span>${f.projects ? `${f.projects} project${f.projects === 1 ? '' : 's'}` : 'No projects yet'}</span>
         ${f.progressOverride ? tag('Set by hand') : '<span class="ct-hint">Average of its projects</span>'}
+        <a class="ct-arrow" href="${reportUrl(j)}">Overall progress →</a>
       </div>
     </div>
     <div class="ct-latest">

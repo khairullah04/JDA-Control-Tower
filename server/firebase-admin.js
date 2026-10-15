@@ -14,7 +14,7 @@ export const hasKey = project => emulator() || !!(keyFile(project) && fs.existsS
 const open = {};
 export async function adminDb(project = 'portal') {
   if (open[project]) return open[project];
-  if (!hasKey(project)) throw Object.assign(new Error(`The server has no Firebase key for this (${KEY_ENV[project]} in server/.env), so nothing can be saved. See jda/README.md, "Running in production".`), { status: 503 });
+  if (!hasKey(project)) throw Object.assign(new Error(`The server has no Firebase key for this (${KEY_ENV[project]} in server/.env), so nothing can be saved. See docs/server-and-invoices.md, "Running in production".`), { status: 503 });
   const { initializeApp, cert } = await import('firebase-admin/app');
   const { getFirestore } = await import('firebase-admin/firestore');
   const projectId = (project === 'portal' && process.env.FIREBASE_PROJECT_ID) || FIREBASE_PROJECTS[project].projectId;

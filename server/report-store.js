@@ -2,7 +2,7 @@ import { adminDb } from './firebase-admin.js';
 import { createReportSaver } from './portal-save.js';
 
 // The report documents in Firestore, through the Admin SDK. `source` says where a JDA's document
-// lives: { project: 'portal' | 'jda3', collection, doc } (portal/js/config/app-config.js).
+// lives: { project: 'portal' | 'jda3', collection, doc } (web/shared/config/jdas.js).
 // Versions are kept beside each document, in its `versions` subcollection, which no browser can read.
 const firestoreReports = () => ({
   read: async s => { const d = await (await adminDb(s.project)).collection(s.collection).doc(s.doc).get(); return d.exists ? d.data() : null; },

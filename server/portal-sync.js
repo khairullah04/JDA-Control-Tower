@@ -120,7 +120,7 @@ export async function syncJda(jda, { scope, currentProjects = [] } = {}) {
     patch.tasks = list(latest.data.tasks).map(t => ({
       task: str(t.task), project: names.includes(t.project) ? t.project : '', owner: str(t.owner), due: isoDate(t.due),
       status: oneOf(t.status, ['Not started', 'In progress', 'Done'], 'Not started'),
-      // the richer task fields, when the report states them (portal/js/progress.js reads any that are missing as blank)
+      // the richer task fields, when the report states them (web/shared/lib/progress.js reads any that are missing as blank)
       description: str(t.description), priority: oneOf(t.priority, ['High', 'Medium', 'Low', ''], ''), start: isoDate(t.start), completed: isoDate(t.completed),
       progress: num(t.progress),
       checklist: list(t.checklist).map(c => ({ text: str(c?.text), done: !!c?.done })).filter(c => c.text), notes: str(t.notes)

@@ -1,5 +1,5 @@
 // A JDA's private pages: Overall progress (/control-tower/<jda>/overall-progress) and Weekly progress
-// (/weekly-progress), a project's page (#project/<slug>), Edit report (housekeeping), and edit mode
+// (/weekly-progress), a project's page (#project/<slug>), Housekeeping, and edit mode
 // (#edit). Its Master Page is public, on its Info page (/jda/<jda>/info), and edited there.
 // Behaviour is ported from the JDA3 reference file's inline script; what differs per JDA is its
 // content entry (config/jda-content.js) and where its report document lives (shared/config/jdas.js).
@@ -39,7 +39,7 @@ document.querySelector('.page-wrap').prepend(subnav);
 // Overall and Weekly progress are one page: moving between them needs no reload.
 subnav.addEventListener('click', e => {
   const a = e.target.closest('a[data-page]'), screen = Object.keys(PAGE_FOR).find(k => PAGE_FOR[k] === a?.dataset.page);
-  if (!screen || editing || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  if (!screen || e.metaKey || e.ctrlKey || e.shiftKey) return; // in edit mode too: the draft and #edit stay
   e.preventDefault(); showScreen(screen);
 });
 const baseContent = contentFor(jda);
@@ -52,7 +52,7 @@ const api = (path, body = {}) => portalApi(path, { jda: { id: jda.id, name: jda.
 // Reading and edit mode differ only in the hash (#edit), so moving between them swaps it and reloads
 // to start again in the other mode.
 function goTo(address, notice){
-  if (notice) sessionStorage.setItem('jda-notice', notice);
+  if (notice) try { sessionStorage.setItem('jda-notice', notice); } catch { /* storage blocked: the notice is lost, the page still works */ }
   history.replaceState(null, '', address);
   location.reload();
 }
@@ -140,11 +140,11 @@ function showScreen(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
   // The address follows the screen, so a reload, a shared link or Leave returns to the same one.
-  if (PAGE_FOR[id]) history.replaceState(null, '', pathFor(id) + (editor ? '#edit' : ''));
+  if (PAGE_FOR[id]) history.replaceState(null, '', pathFor(id) + (editing ? '#edit' : ''));
   // The breadcrumb, the JDA's pages and the JDA tabs say (and keep) which page this is.
   const page = PAGE_FOR[PAGE_OF_SCREEN[id]];
   if (page) {
-    subnav.querySelectorAll('a[data-page]').forEach(a => a.toggleAttribute('aria-current', a.dataset.page === page));
+    subnav.querySelectorAll('a[data-page]').forEach(a => a.dataset.page === page ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
     subnav.querySelector('[aria-current="page"]:not(a)').textContent = page === 'weekly-progress' ? 'Weekly progress' : 'Overall progress';
     topTabs.forEach(a => { a.href = a.href.replace(/[^/]+$/, page); });
   }
@@ -348,6 +348,7 @@ function renderTasks(raw){
   if (!owners.includes(taskView.owner)) taskView.owner = '';
   $('taskToolbar').hidden = editing;
   $('editTasksLink').href = `${pathFor('screen-weekly')}#edit`;
+  $('editTasksLink').onclick = e => { e.preventDefault(); goTo(`${pathFor('screen-weekly')}#edit`); };
   const shown = editing ? tasks : viewTasks(tasks, taskView, todayISO);
   $('taskCount').textContent = editing || !tasks.length ? '' : `${shown.length} of ${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
   const tbody = $('tasksBody');
@@ -469,8 +470,8 @@ function render(data){
   }
 }
 
-/* ---------- Edit report: housekeeping (Drive sync, calendar, clearing finished tasks). The report
-   itself is edited in one place, the Editor Page, opened from the icon on the Master Page. Nothing
+/* ---------- Housekeeping (Drive sync, starter data, calendar, clearing finished tasks). Progress and
+   tasks are edited with Edit page (#edit); the Master Page on its public Info page. Nothing
    here or there writes to the database: every save goes to the JDA server, which checks the
    sign-in, refuses to overwrite a part someone else changed since this
    page loaded it, and keeps the previous version. ---------- */
@@ -574,7 +575,7 @@ function setMsCalStatus(state, msg){
   }
 }
 
-// The card is shown only once a client ID has been configured (config/app-config.js); until then
+// The card is shown only once a client ID has been configured (web/shared/config/jdas.js); until then
 // there is nothing it could do. Microsoft's sign-in library is fetched when "Connect" is pressed,
 // not with every report view, and only if it is byte for byte the version this page was written for.
 const msCalConfigured = !!MS_CLIENT_ID && !MS_CLIENT_ID.startsWith('YOUR_');
@@ -603,7 +604,7 @@ function ensureMsalInstance(){
 
 $('connectMsCalBtn').onclick = async () => {
   if (!msCalConfigured){
-    setMsCalStatus('error', "Microsoft Client ID isn't configured yet — see portal/README.md, \"Microsoft Calendar\".");
+    setMsCalStatus('error', "Microsoft Client ID isn't configured yet — see docs/control-tower.md, \"Microsoft Calendar\".");
     return;
   }
   if (location.protocol === 'file:'){
@@ -714,7 +715,7 @@ if (!firebaseReady) {
     handleInitialRoute();
   }, (err) => {
     const banner = $('setupBanner');
-    banner.textContent = `Couldn't load this report from Firestore (${err.code || err.message}). ` +
+    banner.textContent = `This report could not be loaded just now (${err.code || err.message}). Reload, or tell the Control Tower administrator. ` +
       (starterData ? 'Showing the starter data below, not live figures.' : 'Nothing is shown below until it loads.');
     banner.style.display = "block";
     render(starterData);
@@ -726,9 +727,9 @@ if (!firebaseReady) {
 $('progressEditBtn').hidden = editing;
 $('progressEditBtn').onclick = () => goTo(location.pathname + '#edit');
 
-const notice = sessionStorage.getItem('jda-notice');
+let notice = null;
+try { notice = sessionStorage.getItem('jda-notice'); sessionStorage.removeItem('jda-notice'); } catch { /* storage blocked */ }
 if (notice){
-  sessionStorage.removeItem('jda-notice');
   $('setupBanner').textContent = notice;
   $('setupBanner').style.display = "block";
 }

@@ -19,7 +19,7 @@ export const jda3FirebaseConfig = {
   appId: "1:842256934283:web:c2f5610ca5b37ed0d13b8e",
   measurementId: "G-PJPPYFZ4MW"
 };
-// Which config a JDA's `source.project` names (portal/js/config/app-config.js).
+// Which config a JDA's `source.project` names (web/shared/config/jdas.js).
 export const FIREBASE_PROJECTS = { portal: firebaseConfig, jda3: jda3FirebaseConfig };
 // Firebase sign-in needs an email. A username typed at /login ("aina") is this address ("aina@jda.app").
 export const USERNAME_DOMAIN = 'jda.app';

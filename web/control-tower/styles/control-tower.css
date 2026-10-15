@@ -6,7 +6,7 @@
 .ct-lead{margin:0;color:var(--muted)}
 .ct-actions{display:flex;flex-wrap:wrap;gap:calc(10px * var(--space-scale))}
 .ct-notice{margin:0 0 calc(18px * var(--space-scale));padding:calc(12px * var(--space-scale)) calc(16px * var(--space-scale));border-radius:calc(12px * var(--space-scale));background:var(--teal-050);border:1px solid var(--teal-100);color:var(--teal-900);font-size:max(min(14px, 14px), calc(14px * var(--type-scale)))}
-.ct-notice.warn{background:#fbf1e3;border-color:#efd8b4;color:#6e4a12}
+.ct-notice.warn{background:var(--amber-tint);border-color:#efd8b4;color:var(--amber)}
 .ct-loading,.ct-empty{color:var(--muted);font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));margin:calc(4px * var(--space-scale)) 0}
 .ct-hint{font-size:max(min(12.5px, 14px), calc(12.5px * var(--type-scale)));font-weight:500;color:var(--muted);letter-spacing:0;text-transform:none}
 
@@ -40,15 +40,15 @@
 .ct-status{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:calc(28px * var(--space-scale));align-items:start}
 .ct-gauge{display:grid;justify-items:center;gap:calc(10px * var(--space-scale));min-width:calc(170px * var(--space-scale));text-align:center}
 .ct-gauge h4{justify-content:center;margin:0}
-.ct-gauge-meta{display:grid;gap:calc(5px * var(--space-scale));justify-items:center;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));color:#24363b}
-.ct-gauge .status-pill.amber{color:#7a5216}
-.ct-gauge .status-pill.green{color:#146c49}
-.ct-gauge .status-pill.red{color:#8f2f26}
-.ct-pending{font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));font-weight:700;color:#7a5216;text-decoration:none;display:inline-flex;min-height:calc(32px * var(--space-scale));align-items:center}
+.ct-gauge-meta{display:grid;gap:calc(5px * var(--space-scale));justify-items:center;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));color:var(--text)}
+.ct-gauge .status-pill.amber{color:var(--amber)}
+.ct-gauge .status-pill.green{color:var(--green)}
+.ct-gauge .status-pill.red{color:var(--red)}
+.ct-pending{font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));font-weight:700;color:var(--amber);text-decoration:none;display:inline-flex;min-height:calc(32px * var(--space-scale));align-items:center}
 .ct-pending:hover{text-decoration:underline}
 .ct-latest{border-left:1px solid var(--border);border-right:1px solid var(--border);padding:0 calc(28px * var(--space-scale));min-width:0;align-self:stretch}
 .ct-when{display:flex;flex-wrap:wrap;align-items:center;gap:calc(8px * var(--space-scale));margin:0 0 calc(8px * var(--space-scale))}
-.ct-stale{font-size:max(min(12.5px, 14px), calc(12.5px * var(--type-scale)));font-weight:700;color:#7a5216}
+.ct-stale{font-size:max(min(12.5px, 14px), calc(12.5px * var(--type-scale)));font-weight:700;color:var(--amber)}
 .ct-latest time{display:inline-block;font:600 max(min(12.5px, 14px), calc(12.5px * var(--type-scale)))/1 'IBM Plex Mono',monospace;color:var(--teal-700);background:var(--teal-050);padding:calc(5px * var(--space-scale)) calc(9px * var(--space-scale));border-radius:calc(999px * var(--space-scale))}
 .ct-clamp{margin:0 0 calc(10px * var(--space-scale));color:#1d2f34;font-size:max(min(15.5px, 14px), calc(15.5px * var(--type-scale)));line-height:1.55;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
 .ct-arrow{display:inline-flex;align-items:center;min-height:40px;font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));font-weight:700;color:var(--teal-700);text-decoration:none}
@@ -86,15 +86,14 @@
 .ct-boxes.challenges .ct-box{border-left:4px solid var(--amber)}
 .ct-box.sev-high{border-left-color:var(--red)!important}
 .ct-box.sev-low{border-left-color:#8a9a9e!important}
-.ct-sev{display:inline-block;margin-bottom:calc(6px * var(--space-scale));font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:calc(3px * var(--space-scale)) calc(8px * var(--space-scale));border-radius:calc(999px * var(--space-scale));background:#fbf1e3;color:#7a5216}
-.sev-high .ct-sev{background:#f6e0de;color:#8f2f26}
-.sev-low .ct-sev{background:#eef1f2;color:#3f5156}
+.ct-sev{display:inline-block;margin-bottom:calc(6px * var(--space-scale));font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:calc(3px * var(--space-scale)) calc(8px * var(--space-scale));border-radius:calc(999px * var(--space-scale));background:var(--amber-tint);color:var(--amber)}
+.sev-high .ct-sev{background:var(--red-tint);color:var(--red)}
+.sev-low .ct-sev{background:var(--idle-tint);color:#3f5156}
 .ct-more{margin-top:calc(6px * var(--space-scale));min-height:40px;background:none;border:none;padding:0;font:700 max(min(13.5px, 14px), calc(13.5px * var(--type-scale))) var(--font);color:var(--teal-700);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .ct-tag{display:inline-block;font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:calc(3px * var(--space-scale)) calc(8px * var(--space-scale));border-radius:calc(999px * var(--space-scale));background:#ede7fb;color:#4b3592}
 
 .ct-cost{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:calc(24px * var(--space-scale))}
-.ct-cost-text p{margin:0 0 calc(4px * var(--space-scale));font-size:max(min(15px, 14px), calc(15px * var(--type-scale)));color:#1d2f34}
-.ct-cost-text b{font-family:'IBM Plex Mono',monospace;color:var(--teal-900)}
+
 @media (max-width:640px){.ct-cost{grid-template-columns:auto 1fr}.ct-cost .ct-btn{grid-column:1/-1}}
 
 /* ---- activity ---- */
@@ -136,7 +135,7 @@ dialog .ghost{background:#fff;border-color:var(--border);color:var(--teal-800)}
 
 .mono{font-family:'IBM Plex Mono',monospace}
 /* after the 20% scale-down: the ring's label fits inside it, and the documents button stays on one line */
-.ct-ring-label small{font-size:10px;letter-spacing:.08em}
+.ct-ring-label small{font-size:12px;letter-spacing:0}
 .ct-info-btn{text-decoration:none;white-space:nowrap}
 
 /* Round 2: the same accents as the public site (one accent colour, under section headings) */

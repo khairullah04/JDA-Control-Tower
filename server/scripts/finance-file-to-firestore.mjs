@@ -1,4 +1,4 @@
-// node scripts/finance-file-to-firestore.mjs [path/to/.finance-data.json]      (run from jda/server)
+// node scripts/finance-file-to-firestore.mjs [path/to/.finance-data.json]      (run from server/)
 // One-off: copies what the server saved in its local finance file (invoices, sanctioned amounts,
 // audit log, settings) into Firestore, once the service-account key is in place. Every record
 // keeps its id, so running it twice writes the same documents again and duplicates nothing.

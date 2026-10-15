@@ -32,7 +32,8 @@ export function mountSidebar({ sidebar, menuBtn, scrim, main, storageKey }) {
   PHONE.addEventListener('change', () => open(false));
   if (menuBtn) menuBtn.onclick = () => open(!document.body.classList.contains('menu-open'));
   if (scrim) scrim.onclick = () => open(false, true);
-  sidebar.addEventListener('click', e => { if (e.target.closest('a[href^="#"]') && PHONE.matches) open(false); });
+  // any link closes the drawer: one on this page (a section, a JDA's tab) would otherwise stay covered by it
+  sidebar.addEventListener('click', e => { if (e.target.closest('a') && PHONE.matches) open(false); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) open(false, true); });
   return { close: () => open(false) };
 }

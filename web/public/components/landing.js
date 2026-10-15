@@ -50,11 +50,11 @@ function hero(c) {
   return `
   <section class="hero" id="home" aria-roledescription="carousel" aria-label="TriCipta AI">
     <div class="slides">
-      ${slides.map((s, i) => `<div class="slide${i === 0 ? ' on' : ''}" id="slide-${i}" role="tabpanel" aria-roledescription="slide" aria-label="${i + 1} of ${slides.length}: ${esc(s.tab)}" aria-labelledby="slidetab-${i}"${i === 0 ? '' : ' hidden'}
-        style="background-image:linear-gradient(100deg,rgba(1,39,36,.88) 0%,rgba(1,61,57,.7) 45%,rgba(1,61,57,.2) 100%),url('${esc(s.image)}');background-position:${s.pos || 'center'}">
+      ${slides.map((s, i) => `<div class="slide${i === 0 ? ' on' : ''}" id="slide-${i}" role="tabpanel" aria-roledescription="slide" aria-label="${i + 1} of ${slides.length}: ${esc(s.tab)}"${i === 0 ? '' : ' hidden'}
+        style="background-image:linear-gradient(100deg,rgba(1,39,36,.88) 0%,rgba(1,61,57,.7) 45%,rgba(1,61,57,.2) 100%),url('${esc(s.image)}');background-position:${s.pos || 'center'};--slide-img:url('${esc(s.image)}')">
         <div class="slide-inner">
           <span class="eyebrow">${s.eyebrow}</span>${s.title}${s.text}
-          <a class="btn primary on-dark" href="${esc(s.href)}">Read more ${icon('<path d="M5 12h14M13 6l6 6-6 6"/>')}</a>
+          <a class="btn primary on-dark" href="${esc(s.href)}">Read more<span class="visually-hidden"> about ${esc(s.tab)}</span> ${icon('<path d="M5 12h14M13 6l6 6-6 6"/>')}</a>
         </div>
       </div>`).join('')}
     </div>
@@ -68,7 +68,8 @@ function hero(c) {
 }
 
 const figures = c => {
-  const projects = c.jdas.reduce((n, j) => n + (j.projectCount || 0), 0), finished = c.jdas.reduce((n, j) => n + (j.finished || 0), 0);
+  // under way: each JDA's projects less those finished (100% on Overall progress), never below 0
+  const finished = c.jdas.reduce((n, j) => n + (j.finished || 0), 0), projects = c.jdas.reduce((n, j) => n + Math.max(0, (j.projectCount || 0) - (j.finished || 0)), 0);
   return `
   <section class="figures" aria-labelledby="figuresTitle">
     <h2 class="figures-title" id="figuresTitle" data-field="figures.title">${esc(c.figures.title)}</h2>
@@ -236,7 +237,12 @@ function wireHero(root) {
   const hero = root.querySelector('.hero');
   if (!hero) return;
   let at = 0, paused = matchMedia('(prefers-reduced-motion: reduce)').matches, held = false, timer;
-  const tabs = wireTabs(root, '.slide-tabs [role="tab"]', i => { at = i; restart(); });
+  const tabs = wireTabs(root, '.slide-tabs [role="tab"]', i => {
+    at = i; restart();
+    // keep the current slide's tab in view where the tabs scroll (a phone), without moving the page
+    const tab = hero.querySelectorAll('.slide-tabs [role="tab"]')[i], row = tab?.parentElement;
+    if (row && row.scrollWidth > row.clientWidth) row.scrollTo({ left: tab.offsetLeft - 16, behavior: 'smooth' });
+  });
   const pauseBtn = hero.querySelector('#slidePause');
   const restart = () => {
     clearInterval(timer);

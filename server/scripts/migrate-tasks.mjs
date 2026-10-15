@@ -1,4 +1,4 @@
-// node scripts/migrate-tasks.mjs                    (run from jda/server) lists the reports whose tasks are in the old shape
+// node scripts/migrate-tasks.mjs                    (run from server/) lists the reports whose tasks are in the old shape
 // node scripts/migrate-tasks.mjs --apply            backs up, then adds the new task fields to them
 // node scripts/migrate-tasks.mjs --revert           lists what a revert would take out
 // node scripts/migrate-tasks.mjs --revert --apply   backs up, then takes the new fields out again where they are blank

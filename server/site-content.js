@@ -104,7 +104,9 @@ export async function publicSite(store) {
   const content = withDefaults(await store.get('public'), PUBLIC_DEFAULTS);
   const jdas = await Promise.all(JDAS.map(j => publicJda(j, content.jdas?.[j.id])));
   const { jdas: _, ...sections } = content;
-  return { ...sections, roles: { ...sections.roles, image: rolesImage() }, jdas };
+  // What the report says and which values are derived only go to edit mode (editablePublic), signed in:
+  // a title, press text or project name written over in edit mode never reaches the public this way.
+  return { ...sections, roles: { ...sections.roles, image: rolesImage() }, jdas: jdas.map(({ report, derived, ...j }) => j) };
 }
 
 /* ---------- The Info page: a JDA's Master Page, read-only, with only what may be public ---------- */
@@ -296,7 +298,9 @@ export async function editablePublic(store) {
   const content = withDefaults(saved, PUBLIC_DEFAULTS);
   // each JDA from what is shown before anything is written (its placeholder people), so edit mode starts from what the public sees
   const jdas = Object.fromEntries(JDAS.map(j => [j.id, { ...JDA_DEFAULTS(), ...(isObj(content.jdas[j.id]) ? content.jdas[j.id] : {}) }]));
-  return { content: { ...content, jdas: cleanPublic({ jdas }).jdas }, updatedAt: text(saved.updatedAt), updatedBy: text(saved.updatedBy) };
+  // beside each JDA's fields, what its report says (shown greyed) and which values are derived
+  const reports = Object.fromEntries(await Promise.all(JDAS.map(async j => { const p = await publicJda(j, content.jdas?.[j.id]); return [j.id, { report: p.report, derived: p.derived }]; })));
+  return { content: { ...content, jdas: cleanPublic({ jdas }).jdas }, reports, updatedAt: text(saved.updatedAt), updatedBy: text(saved.updatedBy) };
 }
 
 // The Roles picture, uploaded in edit mode: a JPEG, PNG or WebP of up to 8 MB, recognised by its
@@ -308,6 +312,15 @@ const KINDS = [['jpg', b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff], ['
 export const MAX_IMAGE = 8 * 1024 * 1024;
 const EXTS = ['jpg', 'jpeg', 'png', 'webp'];
 export const PENDING_DIR = fileURLToPath(new URL('./.roles-pending/', import.meta.url));
+// The picture before the current one (or the one removed): kept beside the server, never served.
+export const PREVIOUS_DIR = fileURLToPath(new URL('./.roles-previous/', import.meta.url));
+function keepPrevious(dir, prevDir) {
+  const old = findIn(dir, 'roles');
+  if (!old) return;
+  fs.mkdirSync(prevDir, { recursive: true });
+  for (const e of EXTS) fs.rmSync(`${prevDir}roles.${e}`, { force: true });
+  fs.renameSync(old, `${prevDir}roles.${old.split('.').pop()}`);
+}
 const findIn = (dir, stem) => EXTS.map(e => `${dir}${stem}.${e}`).find(f => fs.existsSync(f));
 const writeAtomic = (file, bytes) => { fs.writeFileSync(`${file}.tmp`, bytes); fs.renameSync(`${file}.tmp`, file); };
 
@@ -325,18 +338,16 @@ export function saveRolesImage(base64, pendingDir = PENDING_DIR) {
 export function discardRolesImage(pendingDir = PENDING_DIR) {
   for (const e of EXTS) fs.rmSync(`${pendingDir}roles.${e}`, { force: true });
 }
-export function publishRolesImage(dir = PUBLIC_DIR, pendingDir = PENDING_DIR) {
+export function publishRolesImage(dir = PUBLIC_DIR, pendingDir = PENDING_DIR, prevDir = PREVIOUS_DIR) {
   const pending = findIn(pendingDir, 'roles');
   if (!pending) return rolesImage(dir);
   fs.mkdirSync(dir, { recursive: true });
   const ext = pending.split('.').pop(), bytes = fs.readFileSync(pending);
-  const old = findIn(dir, 'roles');
-  if (old) { for (const e of EXTS) fs.rmSync(`${dir}roles-previous.${e}`, { force: true }); fs.renameSync(old, `${dir}roles-previous.${old.split('.').pop()}`); }
+  keepPrevious(dir, prevDir);
   writeAtomic(`${dir}roles.${ext}`, bytes);
   discardRolesImage(pendingDir);
   return rolesImage(dir);
 }
-export function removeRolesImage(dir = PUBLIC_DIR) {
-  const old = findIn(dir, 'roles');
-  if (old) { for (const e of EXTS) fs.rmSync(`${dir}roles-previous.${e}`, { force: true }); fs.renameSync(old, `${dir}roles-previous.${old.split('.').pop()}`); }
+export function removeRolesImage(dir = PUBLIC_DIR, prevDir = PREVIOUS_DIR) {
+  keepPrevious(dir, prevDir);
 }

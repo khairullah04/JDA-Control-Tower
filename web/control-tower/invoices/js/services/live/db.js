@@ -67,7 +67,7 @@ export async function listLog(ids, max = 25) {
     try { found.push(...rows(await getDocs(query(log, mine, ...newest)))); }
     catch (e) {
       if (e.code !== 'failed-precondition') throw e;
-      console.warn('The change log has no index by projectId and ts yet. Deploy jda/firestore.indexes.json (see jda/README.md).');
+      console.warn('The change log has no index by projectId and ts yet. Deploy firebase/firestore.indexes.json (see docs/server-and-invoices.md).');
       found.push(...rows(await getDocs(query(log, mine))));
     }
   }

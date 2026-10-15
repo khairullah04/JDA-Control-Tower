@@ -15,7 +15,7 @@ firestore.rules · firestore.indexes.json · firebase.json   the database rules 
 ../shared/   code and libraries both sites use (see ../README.md)
 ```
 
-## Config switches (web/js/config/app-config.json)
+## Config switches (web/control-tower/invoices/js/config/app-config.json)
 - `demoMode`: true = sample data, no Firebase/server needed. false = real system.
 - `fxToMYR`: only used once, when the old invoice list is brought over ("Bring over old tracker invoices"). Every invoice now stores its own rate.
 - `defaultJdaStart` / `defaultJdaEnd`: the timeline range for a JDA that has no dates of its own (those created before dates were required). New JDAs must state both; "Edit dates" on a JDA page changes them. Timelines always run to the end of the current month at least.
@@ -125,7 +125,7 @@ Do these once. Steps 1 to 4 are in the Firebase console (https://console.firebas
      `client_email` inside `service-account.json` (Viewer is enough).
 7. Publish the database rules and indexes (asks you to sign in to Firebase the first time):
 
-       cd jda
+       cd firebase
        npx firebase-tools login
        npx firebase-tools deploy --only firestore --project YOUR_PROJECT_ID
 
@@ -202,10 +202,10 @@ partial backup is never mistaken for a whole one. Copy the folder somewhere off 
 
 To put things back, first look at what the backup holds. Nothing changes until you add `--write`:
 
-    node scripts/restore.mjs ../../backups/2026-10-12T07-18-24-372Z
-    node scripts/restore.mjs ../../backups/<folder> --write                          everything
-    node scripts/restore.mjs ../../backups/<folder> --only=financeEntries --write    one collection
-    node scripts/restore.mjs ../../backups/<folder> --report=jda1 --write            one JDA's report
+    node scripts/restore.mjs ../backups/2026-10-12T07-18-24-372Z
+    node scripts/restore.mjs ../backups/<folder> --write                          everything
+    node scripts/restore.mjs ../backups/<folder> --only=financeEntries --write    one collection
+    node scripts/restore.mjs ../backups/<folder> --report=jda1 --write            one JDA's report
 
 Each document in the backup replaces the one with the same id. Documents created after the backup
 are left alone; nothing is deleted. To restore a local finance file instead, stop the server and

@@ -30,7 +30,7 @@ export function mountCtSidebar({ wrap, bar, current = '' }) {
     <nav class="side-nav" aria-label="Control Tower">
       ${link('/control-tower/', 'home', 'Control Tower', ICON.home)}
       <p class="side-label">JDAs</p>
-      ${JDAS.map(j => link(`/control-tower/#${j.id}`, j.id, j.name, j.icon || DEFAULT_JDA_ICON)).join('')}
+      ${JDAS.map(j => link(`/control-tower/${j.id}/overall-progress`, j.id, j.name, j.icon || DEFAULT_JDA_ICON)).join('')}
       <p class="side-label">Invoice Tracker</p>
       ${link('/control-tower/invoices/#/cji3', 'cji3', 'CJI3 register', ICON.cji3)}
       ${link('/control-tower/invoices/#/payments', 'payments', 'Payment tables', ICON.pay)}

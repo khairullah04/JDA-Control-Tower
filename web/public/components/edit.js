@@ -14,7 +14,7 @@ const FIELD = { title: 'heading', subtitle: 'subheading', body: 'text', eyebrow:
 const nameOf = path => { const [s, f] = path.split('.'); return `${SECTION[s] || s}: ${FIELD[f] || f}`; };
 
 export async function start({ site, show, reload, done }) {
-  const { content, updatedAt } = await api('GET', '/api/site/public');
+  const { content, reports, updatedAt } = await api('GET', '/api/site/public');
   const draft = structuredClone(content);
   let base = updatedAt, roles = ''; // roles: 'publish' once a picture is uploaded, 'remove' to take it away
   await show(site);
@@ -46,7 +46,7 @@ export async function start({ site, show, reload, done }) {
   // Each JDA's tab: a form for what is written about it.
   site.jdas.forEach(j => {
     const panel = $(`panel-${j.id}`);
-    if (panel) panel.replaceChildren(jdaForm(j, draft.jdas[j.id], changed, bar.say));
+    if (panel) panel.replaceChildren(jdaForm(j, reports[j.id].report, draft.jdas[j.id], changed, bar.say));
   });
   document.querySelectorAll('.status-card .status-title').forEach(p => p.insertAdjacentHTML('afterend', '<p class="edit-hint">Set the status, title and number of projects in the JDA\'s tab under Existing JDAs.</p>'));
 
@@ -75,11 +75,10 @@ function input(value, set, { multiline = false, type = 'text', placeholder = '',
 }
 const shorten = (t, n = 120) => t.length > n ? `${t.slice(0, n).replace(/\s+\S*$/, '')}…` : t;
 
-function jdaForm(j, w, changed, say) {
+function jdaForm(j, r, w, changed, say) {
   const form = document.createElement('div');
   form.className = 'jda-edit';
   const set = (key, v) => { w[key] = v; changed(); };
-  const r = j.report;
   const status = document.createElement('select');
   status.innerHTML = `<option value="">Automatic (now: ${esc(STATUS[r.status].label)})</option>` + Object.entries(STATUS).map(([v, s]) => `<option value="${v}">${esc(s.label)}</option>`).join('');
   status.value = w.status || '';

@@ -17,9 +17,9 @@ export function sourceOf(url) {
 }
 
 // An address that shows the document inside the page, or '' when there is none.
-export function previewUrl(url) {
+export function previewUrl(url, here = globalThis.location?.origin) {
   const u = parse(url);
-  if (!u) return '';
+  if (!u || u.origin === here) return ''; // never this site's own pages: the preview frame would run them as this site
   const id = driveId(u);
   if (id) return `https://drive.google.com/file/d/${id}/preview`;
   const doc = docsFile(u);

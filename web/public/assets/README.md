@@ -4,4 +4,4 @@
   Put the file here with exactly that name; the page shows it on the next load. Until it is here, the
   page shows a "Roles chart coming soon" placeholder. If two are here, `.jpg` is used first.
 
-Everything in this folder is public (served at `/web/public/assets/...`). Put nothing private here.
+Everything in this folder is public (served at `/public/assets/...`). Put nothing private here.

@@ -134,7 +134,7 @@ export async function start({ id, main, leave }) {
     artKeys: Object.keys(SOLUTION_ICONS),
     leave,
     draft: overviewFromContent(c),
-    sectionOrder: () => [...c.sectionOrder],
+    sectionOrder: () => c.sectionOrder.filter(k => k !== 'architecture'), // the architecture section is gone: moving a section never steps over it
     show(overview) { c = contentFromOverview(overview, base); render(); },
     // `overview` is replaced whole (so parts removed here are gone). The first time a page stored in the
     // older (pre-block) shape is saved over, that version is kept as `overviewBackup`.

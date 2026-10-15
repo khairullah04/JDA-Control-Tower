@@ -20,7 +20,7 @@ export async function start({ jdas, figures, redraw, saved, token }) {
 
   const bar = editBar({
     title: 'Editing the Control Tower',
-    intro: "Each JDA tab has a form at its top. Its tagline, status, projects and latest update are edited in the JDA's report (links under its name).",
+    intro: "Each JDA tab has a form at its top. Its projects, status and latest update are edited on its Overall and Weekly progress pages; its tagline on its public Master Page.",
     save: async force => {
       const out = await api('PUT', '/api/site/controlTower', { content: { jdas: draft }, base, force }, { token });
       base = out.updatedAt;

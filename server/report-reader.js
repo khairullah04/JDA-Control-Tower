@@ -9,6 +9,8 @@ import { FIREBASE_PROJECTS } from '../web/shared/config/firebase-config.js';
 // public traffic cannot turn into a stream of database reads.
 const KEEP_MS = 60_000, kept = new Map();
 export const forgetReports = () => kept.clear();
+// After a save: the next read of that JDA's report (its Info page, the landing page) is fresh.
+export const forgetReport = id => kept.delete(id);
 export const sourceOf = jda => jda.source || { project: 'portal', collection: 'jdaReports', doc: jda.id };
 
 // Firestore's REST form ({ stringValue: 'x' }, { mapValue: { fields } }, ...) as plain values.
@@ -31,7 +33,7 @@ async function fetchReport(jda) {
   const cfg = FIREBASE_PROJECTS[s.project];
   const res = await fetch(`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/${s.collection}/${s.doc}?key=${cfg.apiKey}`, { signal: AbortSignal.timeout(10_000) });
   if (res.status === 404) return null; // no report yet
-  if (res.status === 403) throw new Error(`the database rules keep it private and the server has no key for ${s.project} (see jda/README.md, "Setup")`);
+  if (res.status === 403) throw new Error(`the database rules keep it private and the server has no key for ${s.project} (see docs/server-and-invoices.md, "Setup")`);
   if (!res.ok) throw new Error(`the database answered ${res.status}`);
   return fromRest({ mapValue: { fields: (await res.json()).fields || {} } });
 }

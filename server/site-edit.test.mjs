@@ -9,7 +9,7 @@ import path from 'node:path';
 import { mockModule } from './test-mocks.mjs';
 
 mockModule('./report-reader.js', { readReport: async () => null, sourceOf: j => j.source || { project: 'portal', collection: 'jdaReports', doc: j.id } });
-const { savePage, cleanPublic, cleanControlTower, editablePublic, publicSite, controlTowerContent, saveRolesImage, publishRolesImage, discardRolesImage } = await import('./site-content.js');
+const { savePage, cleanPublic, cleanControlTower, editablePublic, publicSite, controlTowerContent, saveRolesImage, publishRolesImage, discardRolesImage, removeRolesImage } = await import('./site-content.js');
 const { siteStore } = await import('./site-store.js');
 
 test('a public save keeps only known sections and fields, as text of a sensible length', () => {
@@ -60,16 +60,18 @@ test('the Control Tower save is what the Control Tower reads back', async () => 
 });
 
 test('the Roles picture must be a JPEG, PNG or WebP, waits for Save, and keeps the one before', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'roles-')) + path.sep, pending = fs.mkdtempSync(path.join(os.tmpdir(), 'pending-')) + path.sep;
+  const [dir, pending, prev] = ['roles-', 'pending-', 'previous-'].map(n => fs.mkdtempSync(path.join(os.tmpdir(), n)) + path.sep);
   const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(20)]).toString('base64');
   const jpg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(20)]).toString('base64');
   assert.deepEqual(saveRolesImage(png, pending), { pending: true, kind: 'png' });
   assert.deepEqual(fs.readdirSync(dir), []);                                            // nothing public until saved
-  assert.match(publishRolesImage(dir, pending), /^\/public\/assets\/roles\.png\?v=\d+$/);
+  assert.match(publishRolesImage(dir, pending, prev), /^\/public\/assets\/roles\.png\?v=\d+$/);
   saveRolesImage(jpg, pending); discardRolesImage(pending);                             // Cancel
   assert.deepEqual([fs.readdirSync(dir), fs.readdirSync(pending)], [['roles.png'], []]);
-  saveRolesImage(jpg, pending); publishRolesImage(dir, pending);
-  assert.deepEqual(fs.readdirSync(dir).sort(), ['roles-previous.png', 'roles.jpg']);       // the one before is kept
+  saveRolesImage(jpg, pending); publishRolesImage(dir, pending, prev);
+  assert.deepEqual([fs.readdirSync(dir), fs.readdirSync(prev)], [['roles.jpg'], ['roles.png']]); // the one before is kept, out of public reach
+  removeRolesImage(dir, prev);
+  assert.deepEqual([fs.readdirSync(dir), fs.readdirSync(prev)], [[], ['roles.jpg']]);         // removed: gone from the public folder
   assert.throws(() => saveRolesImage(Buffer.from('<svg onload=alert(1)>').toString('base64'), pending), e => e.status === 415);
   assert.throws(() => saveRolesImage('', pending), e => e.status === 400);
 });

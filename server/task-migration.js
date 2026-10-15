@@ -1,6 +1,6 @@
 import { normalizeTasks } from '../web/shared/lib/progress.js';
 
-// The Weekly progress task fields added in the overhaul (portal/js/progress.js). Reading never needs
+// The Weekly progress task fields added in the overhaul (web/shared/lib/progress.js). Reading never needs
 // this: every page reads a task through normalizeTask, which leaves stored values as they are. These
 // write the missing fields into the stored reports (migrate), or take them out again where they are
 // still blank (revert). Only missing fields are added, so a revert gives back exactly what was stored.

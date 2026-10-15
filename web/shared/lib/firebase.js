@@ -1,5 +1,5 @@
 // The Firebase SDK is kept in the repository (shared/vendor), not fetched from a CDN, so the pages
-// open on a network that blocks outside scripts. The project settings are in shared/firebase-config.js,
+// open on a network that blocks outside scripts. The project settings are in web/shared/config/firebase-config.js,
 // the one copy the Invoice Tracker and the server use too.
 //
 // The main project is opened as the default Firebase app, the same one /login and the Invoice Tracker

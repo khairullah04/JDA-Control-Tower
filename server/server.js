@@ -25,7 +25,7 @@ app.listen(port, () => {
   if (process.env.REQUIRE_AUTH === 'false') console.log('Sign-in is OFF (REQUIRE_AUTH=false): every private page is open. Never run it like this on a network.');
   console.log({
     firestore: 'Invoices and payments are saved in Firestore.',
-    file: 'Invoices and payments are being saved in server/.finance-data.json, NOT in Firebase. Add the service-account key to save them in Firebase (see jda/README.md).',
+    file: 'Invoices and payments are being saved in server/.finance-data.json, NOT in Firebase. Add the service-account key to save them in Firebase (see docs/server-and-invoices.md).',
     memory: 'Invoices and payments are kept in memory only (FINANCE_STORE=memory) and are lost when the server stops.'
   }[finance.kind]);
 });

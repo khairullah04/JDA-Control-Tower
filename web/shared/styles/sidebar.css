@@ -21,13 +21,13 @@
 .side-nav a svg{width:calc(19px * var(--space-scale));height:calc(19px * var(--space-scale));flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .side-nav a:hover{background:rgba(255,255,255,.08);color:#fff}
 .side-nav a[aria-current]{background:rgba(255,255,255,.14);color:#fff;box-shadow:inset 3px 0 0 var(--accent)}
-.side-nav a:focus-visible,.sidebar .btn:focus-visible,.sidebar .brand:focus-visible,.sidebar .side-brand:focus-visible,.side-collapse:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.side-nav a:focus-visible,.sidebar .btn:focus-visible,.sidebar .brand:focus-visible,.side-collapse:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .side-foot{margin-top:auto;display:grid;gap:calc(10px * var(--space-scale));padding:calc(16px * var(--space-scale)) calc(4px * var(--space-scale)) calc(4px * var(--space-scale));border-top:1px solid rgba(255,255,255,.12)}
 .side-note{margin:0;font-size:max(min(max(min(.76rem, 14px), calc(.76rem * var(--type-scale))), max(min(14px, 14px), calc(14px * var(--type-scale)))), calc(max(min(.76rem, 14px), calc(.76rem * var(--type-scale))) * var(--type-scale)));color:#b9dcd8;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .side-foot .btn{width:100%}
 .side-foot .btn.ghost{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff}
 .side-foot .btn.ghost:hover{background:rgba(255,255,255,.18)}
-.side-signout{min-height:calc(38px * var(--space-scale))}
+.side-signout{min-height:40px}
 /* --side-w: how much of the window the sidebar takes now, for full-bleed pieces such as a JDA's hero */
 body{--side-w:0px}
 body.has-side{--side-w:var(--side)}
@@ -61,7 +61,7 @@ body.has-side{--side-w:var(--side)}
   .menu-btn{width:44px;height:44px;display:grid;place-items:center;border-radius:calc(12px * var(--space-scale));border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
   .menu-btn svg{width:calc(22px * var(--space-scale));height:calc(22px * var(--space-scale))}
   .menu-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
-  .sidebar{transform:translateX(-105%);transition:transform .22s ease;width:min(calc(300px * var(--space-scale)),86vw)}
+  .sidebar{overflow-y:auto;overscroll-behavior:contain;transform:translateX(-105%);transition:transform .22s ease;width:min(calc(300px * var(--space-scale)),86vw)}
   .side-collapse{display:none}
   body.menu-open .sidebar{transform:none}
   body.menu-open{overflow:hidden}
@@ -70,3 +70,6 @@ body.has-side{--side-w:var(--side)}
   html{scroll-padding-top:calc(84px * var(--space-scale))}
 }
 
+/* Skip to content, on every page with the sidebar (it is the first thing a keyboard reaches) */
+.skip{position:absolute;left:12px;top:-60px;z-index:300;background:var(--teal-800);color:#fff;padding:10px 14px;border-radius:10px;font-weight:600}
+.skip:focus{top:12px}

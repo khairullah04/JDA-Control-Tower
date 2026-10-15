@@ -1,16 +1,16 @@
-// node scripts/restore.mjs <backup folder> [--only=<collection>] [--report=<jda id>] [--write]     (run from jda/server)
+// node scripts/restore.mjs <backup folder> [--only=<collection>] [--report=<jda id>] [--write]     (run from server/)
 // Puts back what scripts/backup.mjs saved. Without --write it only says what it would do.
 //
-//   node scripts/restore.mjs ../../backups/2026-10-12T07-18-24-372Z                     what is in the backup
-//   node scripts/restore.mjs ../../backups/<stamp> --write                              every collection of the main project
-//   node scripts/restore.mjs ../../backups/<stamp> --only=financeEntries --write        one collection
-//   node scripts/restore.mjs ../../backups/<stamp> --report=jda1 --write                one JDA's report document
+//   node scripts/restore.mjs ../backups/2026-10-12T07-18-24-372Z                     what is in the backup
+//   node scripts/restore.mjs ../backups/<stamp> --write                              every collection of the main project
+//   node scripts/restore.mjs ../backups/<stamp> --only=financeEntries --write        one collection
+//   node scripts/restore.mjs ../backups/<stamp> --report=jda1 --write                one JDA's report document
 //
 // Each document in the backup is written back whole, replacing the one of the same id. Documents
 // created after the backup are left alone: nothing is deleted. Needs the service-account key, as the
 // server does (GOOGLE_APPLICATION_CREDENTIALS in .env; JDA3_GOOGLE_APPLICATION_CREDENTIALS for JDA 3).
 // The local finance file is not handled here: stop the server and copy the backup's
-// finance-data.json over jda/server/.finance-data.json.
+// finance-data.json over server/.finance-data.json.
 import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,7 +20,7 @@ import { JDAS } from '../../web/shared/config/jdas.js';
 const args = process.argv.slice(2), folder = args.find(a => !a.startsWith('--'));
 const flag = name => args.find(a => a.startsWith(`--${name}=`))?.split('=')[1];
 const write = args.includes('--write'), only = flag('only'), report = flag('report');
-if (!folder || !fs.existsSync(folder)) { console.error('Which backup? Give the folder, e.g. node scripts/restore.mjs ../../backups/2026-10-12T07-18-24-372Z'); process.exit(1); }
+if (!folder || !fs.existsSync(folder)) { console.error('Which backup? Give the folder, e.g. node scripts/restore.mjs ../backups/2026-10-12T07-18-24-372Z'); process.exit(1); }
 const read = file => JSON.parse(fs.readFileSync(path.join(folder, file), 'utf8'));
 
 const { Timestamp } = await import('firebase-admin/firestore');

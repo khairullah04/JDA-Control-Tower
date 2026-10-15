@@ -1,4 +1,4 @@
-// node scripts/remove-jdas.mjs            (run from jda/server) lists what would be deleted, deletes nothing
+// node scripts/remove-jdas.mjs            (run from server/) lists what would be deleted, deletes nothing
 // node scripts/remove-jdas.mjs --apply    takes a full backup first, then deletes it
 //
 // Removes every JDA numbered 4 and above (JDA 4, JDA 5, ...) from the main Firebase project, with

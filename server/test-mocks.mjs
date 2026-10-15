@@ -4,7 +4,7 @@
 // understands, so `npm test` works on every version package.json allows.
 //   mockModule('./claude.js', { ask: async () => 'an answer' })
 //   mockModule('node:fs', { default: { readFileSync() {} } })
-// A relative path is relative to this folder (jda/server), where every test file lives.
+// A relative path is relative to this folder (server/), where every test file lives.
 import { mock } from 'node:test';
 
 const modern = Number(process.versions.node.split('.')[0]) >= 24;

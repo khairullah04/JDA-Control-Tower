@@ -65,7 +65,7 @@ body.editing{padding-bottom:calc(96px * var(--space-scale))}
   body.editing{padding-bottom:190px}
   .edit-bar-actions{width:100%}
   .edit-bar-actions .eb-btn{flex:1}
-  .ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font-size:max(min(16px, 14px), calc(16px * var(--type-scale)))}
+  .ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font-size:16px} /* 16px exactly: iOS zooms into smaller fields */
   .le-btn{min-height:44px;min-width:44px}
 }
 .ct-num{display:grid;gap:calc(4px * var(--space-scale));max-width:220px}

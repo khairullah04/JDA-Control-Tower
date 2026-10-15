@@ -30,7 +30,7 @@ export async function loadCtx(r) {
   return { ...places, fin: await finance.data({ cached: !!kept }), refresh: r.refresh };
 }
 export const storageNotice = ctx => ctx.fin.storage === 'file'
-  ? '<div class="banner over notice">Invoices and payments are being saved on this server only, not in Firebase, because the server has no Firebase service-account key yet. See jda/README.md, "Where invoices and payments are saved".</div>' : '';
+  ? '<div class="banner over notice">Invoices and payments are being saved on this server only, not in Firebase, because the server has no Firebase service-account key yet. See docs/server-and-invoices.md, "Where invoices and payments are saved".</div>' : '';
 export const partnersIn = fin => [...new Set([...fin.entries, ...fin.sanctioned].filter(r => !r.deletedAt).map(r => r.partner).filter(Boolean))].sort();
 
 // The Payment Table and the CJI3 register each have a page of their own, as wide as the window.

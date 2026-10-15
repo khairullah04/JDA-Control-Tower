@@ -1,6 +1,6 @@
 // A JDA's public Info page: its Master Page, read-only. What is drawn here is all the server sends
 // (/api/public/info/<id>); progress, people's names on tasks, figures and internal links never arrive.
-// Solution detail pages are drawn by the same code as in the Control Tower (portal/js/blocks.js).
+// Solution detail pages are drawn by the same code as in the Control Tower (web/shared/components/blocks.js).
 import { esc } from '/shared/lib/esc.js';
 import { blocksHtml } from '/shared/components/blocks.js';
 import { me } from '/shared/lib/session.js';
@@ -128,14 +128,19 @@ me().then(who => {
     edit.disabled = true; edit.textContent = 'Opening…';
     history.replaceState(null, '', location.pathname);
     try {
+      if (!(await me()).signedIn) throw Object.assign(new Error('Your sign-in has ended.'), { signIn: true });
+      window.removeEventListener('popstate', route); // the read-only screens are replaced by the editor
       const { start } = await import('/control-tower/components/master-edit.js');
       await start({ id, main: $('info-main'), leave: () => location.reload() });
       $('infoStrip').hidden = true;
       edit.remove();
     } catch (e) {
       edit.disabled = false; edit.textContent = 'Edit Master Page';
-      $('infoStrip').textContent = `Edit mode could not open: ${e.message}`; $('infoStrip').hidden = false;
+      window.addEventListener('popstate', route);
+      $('infoStrip').innerHTML = e.signIn ? `Your sign-in has ended. <a href="/login?next=${encodeURIComponent(location.pathname)}">Sign in again</a> to edit this page.` : `Edit mode could not open: ${esc(e.message)}`;
+      $('infoStrip').hidden = false;
     }
   };
   $('fullReport').before(edit);
+  if (location.hash === '#edit') edit.click(); // /jda/<id>/info#edit: straight into edit mode (old Editor Page bookmarks)
 });

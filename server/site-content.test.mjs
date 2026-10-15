@@ -31,7 +31,7 @@ const reports = {
   jda3: { projects: [{ name: 'Project 2a', pct: 15, owner: 'Hj Azrul' }, { name: 'Project 2b - Vision' }, { name: 'Project 2b — Vision' }] }
 };
 mockModule('./report-reader.js', { readReport: async jda => structuredClone(reports[jda.id] ?? null) });
-const { publicSite, infoPage, PUBLIC_DEFAULTS, withDefaults } = await import('./site-content.js');
+const { publicSite, editablePublic, infoPage, PUBLIC_DEFAULTS, withDefaults } = await import('./site-content.js');
 const { siteStore } = await import('./site-store.js');
 const { JDAS } = await import('../web/shared/config/jdas.js');
 
@@ -43,7 +43,8 @@ test('the landing page: defaults, every JDA from the config, derived values mark
   assert.deepEqual(site.jdas.map(j => j.id), JDAS.map(j => j.id));
   const [j1, j2, j3] = site.jdas;
   assert.deepEqual([j1.title, j1.pressRelease, j1.projects, j1.projectCount, j1.status], ['Geoscience Companion', 'Signed on 1 July.', ['Seismic Copilot', 'Well Advisor'], 2, 'in-progress']);
-  assert.deepEqual(j1.derived, { title: true, pressRelease: true, projects: true, status: true, projectCount: true });
+  assert.equal('report' in j1 || 'derived' in j1, false);                               // the report's own wording only goes to edit mode
+  assert.deepEqual((await editablePublic(siteStore('memory'))).reports.jda1.derived, { title: true, pressRelease: true, projects: true, status: true, projectCount: true });
   assert.deepEqual([j2.projects, j2.projectCount, j2.status], [[], 0, 'in-the-works']);   // no report yet
   assert.equal(j3.title, 'Surface Equipment Optimisation with AI');                       // JDA 3's built-in tagline
   assert.deepEqual(j3.projects, ['Project 2a', 'Project 2b - Vision']);                  // the same name with another dash counts once
@@ -63,7 +64,10 @@ test('what is written in edit mode wins over what is derived', async () => {
   assert.equal(site.contacts.phone, PUBLIC_DEFAULTS.contacts.phone);
   const j1 = site.jdas[0];
   assert.deepEqual([j1.title, j1.status, j1.projects, j1.projectCount], ['My title', 'finished', ['Only one'], 5]);
-  assert.deepEqual(j1.derived, { title: false, pressRelease: true, projects: false, status: false, projectCount: false });
+  const { reports } = await editablePublic(store);
+  assert.deepEqual(reports.jda1.derived, { title: false, pressRelease: true, projects: false, status: false, projectCount: false });
+  assert.deepEqual(reports.jda1.report.projects, ['Seismic Copilot', 'Well Advisor']);   // edit mode still sees what the report says
+  assert.doesNotMatch(JSON.stringify(site), /Seismic Copilot|Well Advisor/);              // the public never does, once written over
   assert.deepEqual(j1.programLeads, [{ name: 'Aina', title: 'Lead' }]);
 });
 

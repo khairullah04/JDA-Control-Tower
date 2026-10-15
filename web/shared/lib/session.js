@@ -1,4 +1,4 @@
-// The browser half of the JDA Control Tower sign-in (the server half is jda/server/auth.js).
+// The browser half of the JDA Control Tower sign-in (the server half is server/auth.js).
 // /login signs in with Firebase, then trades the Firebase ID token for the server's session cookie.
 // The private pages keep the Firebase sign-in too: they read JDAs and reports from Firestore with it.
 

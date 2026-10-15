@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { syncJda } from '../portal-sync.js';
 import { masterFolderUrl } from '../portal-drive.js';
 import { reports } from '../report-store.js';
+import { forgetReport } from '../report-reader.js';
 import { JDAS } from '../../web/shared/config/jdas.js';
 
 const router = Router();
@@ -20,7 +21,7 @@ router.use((req, res, next) => {
 
 // The one way a report document is changed: see portal-save.js. { patch, remove, base, force } -> the saved document.
 router.post('/save', async (req, res) => {
-  try { res.json({ saved: await reports().save(req.jda.source, req.body) }); }
+  try { const saved = await reports().save(req.jda.source, req.body); forgetReport(req.jda.id); res.json({ saved }); }
   catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: e.message, changed: e.changed }); }
 });
 

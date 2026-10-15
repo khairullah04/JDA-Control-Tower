@@ -13,8 +13,9 @@
 <link rel="stylesheet" href="/public/styles/info.css">
 </head>
 <body>
-<!-- A JDA's public Info page: a read-only copy of its Master Page in the JDA Control Tower, drawn from
-     what /api/public/info/<id> sends (jda/server/site-content.js decides what that is). -->
+<!-- A JDA's public Info page: its Master Page (there is no private copy), drawn from what
+     /api/public/info/<id> sends (server/site-content.js decides what that is). Signed in, Edit Master Page
+     turns it into the editor (web/control-tower/components/master-edit.js). -->
 <a class="skip" href="#info-main">Skip to content</a>
 <div class="app">
 <div class="topbar">

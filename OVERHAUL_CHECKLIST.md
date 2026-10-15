@@ -159,7 +159,14 @@ written beside it. Review findings are logged under each phase.
 | A26 | A completed date is only set when a task is marked Done in an edit; tasks that were Done before keep a blank date. Leaving Done clears it. | A made-up date is worse than none. |
 | A27 | A weekly report from Drive still decides which tasks are on the list, but each matching task keeps its id and every detail the report does not state. | Before the overhaul the sync replaced the list; typed details must not be lost. |
 | A28 | The JDA 3 Excel → Power Automate feed writes tasks in the old shape; its tasks get ids worked out from their titles, and details typed in the editor for JDA 3 are overwritten by the feed's next run. | The feed is outside this repository (Known issues). |
-| A30 | The roles picture is stored as a file on the server (`site/public/`, not in git), not in the database. An upload waits outside public reach until Save; Cancel throws it away; the picture before is kept as `roles-previous.*`; the backup copies both. | A picture is large; one server serves the site (see "One process only"). A second server would need the file copied. |
+| A30 | The roles picture is stored as a file on the server (`site/public/`, not in git), not in the database. An upload waits outside public reach until Save; Cancel throws it away; the picture before (or one removed) is kept in `server/.roles-previous/`, outside public reach (R2 review); the backup copies both. | A picture is large; one server serves the site (see "One process only"). A second server would need the file copied. |
+| A32 | (R2) The hero uses the two existing wide photos (`hero-banner.jpg`, `press.jpg`); project highlights use the stock solution pictures, at card size, in turn (not one per project). | No other pictures were supplied; a per-project picture would need a new edit field. |
+| A33 | (R2) One accent, gold `#e2b53e` (`--accent`), only for thin rules and the active slide line; never text on white. | "One primary + one accent". |
+| A34 | (R2) Microsoft Calendar's sign-in returns to `/control-tower/` (one address for every JDA page). | The progress pages' addresses differ per JDA. |
+| A35 | (R2) "Projects under way" on the public figures strip = each JDA's projects less those at 100% on Overall progress. | Reviewers found the first version counted finished projects twice. |
+| A36 | (R2) The progress ring opens Overall progress (not Weekly progress as the brief's mapping said); Latest key update, All updates and View tasks open Weekly progress. | Overall progress became its own page (the user's choice). |
+| A37 | (R2) The Invoice Tracker keeps its own top bar (brand, Ask AI, Sign out); it gets the sidebar and, on a JDA's pages, the breadcrumb, JDA pages and JDA tabs. The progress pages' top bar carries Edit page only; their Drive sync stays in Housekeeping. | The tracker's bar holds its own tools (Ask AI); moving them is a separate piece of work. |
+| A38 | (R2) The public Info page keeps its top bar, not the landing page's sidebar. | It is a single page with one way back ("All JDAs"); logged as a design follow-up. |
 | A31 | Each landing-page save keeps the version before it (`previous`); a save made after someone else's is refused until confirmed, and the check and the write are not one transaction. | Two saves in the same instant are very unlikely for two pages edited by a small team. |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
 | A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
@@ -179,18 +186,18 @@ Not sent by the server at all (`infoPage`, `publicJda` in `jda/server/site-conte
 - **Anything that is not a safe picture or link**: images other than this site's stock pictures or `https://` addresses; links other than `http(s)://`.
 - **Invoices, payments, costs**: never on a Master Page in the first place (decided 2026-10-12), and not read by these endpoints.
 
-Kept, because the Master Page has always shown them publicly (the old portal had no sign-in): the banner, winning aspiration (including its targets, e.g. "30% NPV"), solution cards, collaborators, press release and sections added in the editor. On the landing page each JDA shows only its title, press release text, project **names** and how many there are.
+Kept, because the Master Page has always shown them publicly (the old portal had no sign-in): the banner, winning aspiration (including its targets, e.g. "30% NPV"), solution cards, collaborators, press release and sections added in the editor. On the landing page each JDA shows only its title, press release text and date, its press picture, project **names**, how many there are and how many are finished (a count, from Overall progress). What the report says underneath values written in edit mode (`report`, `derived`) goes only to edit mode, signed in (R2 review).
 
 ## Left for you
 
 What the code cannot do on its own, in the order it is needed:
 
-1. **Put the database key in place**: `jda/server/service-account.json` (and `service-account-jda3.json` for JDA 3's project). Unblocks steps 2, 3, 6 and a full backup.
-2. **Remove JDA 4 from the database**: `cd jda/server && node scripts/remove-jdas.mjs` (dry run), then `--apply`. Ticks Phase 1's last item.
+1. **Put the database key in place**: `server/service-account.json` (and `service-account-jda3.json` for JDA 3's project). Unblocks steps 2, 3, 6 and a full backup.
+2. **Remove JDA 4 from the database**: `cd server && node scripts/remove-jdas.mjs` (dry run), then `--apply`. Ticks Phase 1's last item.
 3. **Optionally write the new task fields into stored reports**: `node scripts/migrate-tasks.mjs`, then `--apply`.
-4. **Give people access**: create their Firebase accounts and list their emails in `ALLOWED_EMAILS` (`jda/server/.env`); set `SESSION_SECRET` (32+ characters). Nobody can sign in until then; real sign-in has not been tried here.
-5. **For a real server**: `NODE_ENV=production`, `FINANCE_STORE=firestore`, HTTPS in front (jda/README.md, "Running in production").
-6. **Publish the database rules** after steps 1 and 4 (start the server once so it copies the access list): `cd jda && npx firebase-tools deploy --only firestore`. Until then the report documents stay publicly readable (the one outstanding High finding, Phase 2). Close JDA 3's own project rules the same way (`portal/firestore-rules-addition.txt`).
+4. **Give people access**: create their Firebase accounts and list their emails in `ALLOWED_EMAILS` (`server/.env`); set `SESSION_SECRET` (32+ characters). Nobody can sign in until then; real sign-in has not been tried here.
+5. **For a real server**: `NODE_ENV=production`, `FINANCE_STORE=firestore`, HTTPS in front (docs/server-and-invoices.md, "Running in production").
+6. **Publish the database rules** after steps 1 and 4 (start the server once so it copies the access list): `cd firebase && npx firebase-tools deploy --only firestore`. Until then the report documents stay publicly readable (the one outstanding High finding, Phase 2). Close JDA 3's own project rules the same way (`portal/firestore-rules-addition.txt`).
 7. **Fill in the public page with Edit page**: the Roles picture, Program Lead and Business Champion names and job titles, contacts, and rewrite the draft copy (A21). On the Control Tower: each JDA's Agreement and BRD links, and key insights.
 8. **Confirm A20**: that the Master Page content shown on the public Info pages (aspiration targets, collaborators' terms, extra sections) may be public.
 9. **Data to correct**: JDA 1's press release image field holds "kai"; JDA 3's feed lists "Project 2b" twice.
@@ -198,11 +205,11 @@ What the code cannot do on its own, in the order it is needed:
 ## Known issues
 
 - JDA 1's saved report has `"kai"` in its press release image field, which is not an image address. The page now skips such a field; correct it in the JDA 1 editor.
-- Real Firebase sign-in not tried in this Codespace: `ALLOWED_EMAILS` in `jda/server/.env` is empty. Tested with the Google check stubbed (`app.test.mjs`).
+- Real Firebase sign-in not tried in this Codespace: `ALLOWED_EMAILS` in `server/.env` is empty. Tested with the Google check stubbed (`app.test.mjs`).
 - JDA 3's report document lives in another Firebase project (`jda3-9c0c5`) whose rules this
   repository does not control. Until its rules require sign-in, that document stays readable by
   anyone who knows the project, whatever this server does.
-- New Firestore rules (`jda/firestore.rules`) only take effect once published, and must be published in this order, or every report page breaks: (1) put `service-account.json` in `jda/server`, (2) restart and check the log says the access list was "copied to Firestore for the database rules", (3) `cd jda && npx firebase-tools deploy --only firestore`. Until then JDA 1 and 2's report documents stay readable by anyone with the public Firebase settings.
+- New Firestore rules (`firebase/firestore.rules`) only take effect once published, and must be published in this order, or every report page breaks: (1) put `service-account.json` in `jda/server`, (2) restart and check the log says the access list was "copied to Firestore for the database rules", (3) `cd firebase && npx firebase-tools deploy --only firestore`. Until then JDA 1 and 2's report documents stay readable by anyone with the public Firebase settings.
 - Sign out clears the cookie in the browser only; a copied cookie keeps working until it runs out (8 hours). A server-side revocation list is not built.
 - `REQUIRE_AUTH=false` is only refused when `NODE_ENV=production` is set; a server deployed without it and with `false` would be open (the start-up log says so loudly).
 - The tracker's top bar (seven items) wraps to three rows on a phone and its buttons are under 44px; not changed in this overhaul yet.
@@ -432,5 +439,62 @@ Assumption: Microsoft Calendar's sign-in now returns to one fixed address, `/con
 
 ## R2 Phase 6: review
 
-- [ ] Four review agents run with the Round 2 checks; High findings fixed; others logged.
-- [ ] Tests and syntax checks pass; no console errors; signed out, every private route redirects to /login.
+- [x] Four review agents run with the Round 2 checks; High findings fixed; others logged (tables below).
+- [x] Tests and syntax checks pass (145 of 145; `node --check` on every changed file); no console errors on any page in a headless browser (Firestore's streaming channel errors in this sandbox aside); signed out, every private route redirects to /login (developer reviewer, all 66 private files and every new address, plus app tests).
+
+### R2 review: fixed
+
+| From | Severity | Finding | Fix |
+|---|---|---|---|
+| member | High | Edit tasks on Weekly progress did nothing (only added `#edit`). | It switches into edit mode; the address keeps `#edit`. |
+| lead, designer | High | "Continue to weekly progress" left over; Housekeeping said to use "the icon on the Master Page" (gone). | Button removed; text says Edit page, and Edit Master Page on the Info page. |
+| designer | High | Sign out invisible (white on white) in the user menu. | Dark button and focus ring inside the white menu. |
+| developer | High | `jda9` back in two new tests. | `jdaz`. |
+| member, lead, developer | Medium | After saving the Master Page the Info page showed the old one for up to a minute. | The server forgets that JDA's cached report on every save (tested). |
+| lead | Medium | The public API sent the report's wording under values written over it. | `report`/`derived` only go to edit mode, signed in (tested). |
+| lead, developer | Medium | A removed Roles picture stayed public as `roles-previous.*`. | Kept in `server/.roles-previous/`, not served; backup copies it (tested). |
+| lead, designer | Medium | "Projects under way" counted finished projects. | Projects less finished (A35). |
+| lead | Medium | Status colours drifted from the tokens. | Control Tower styles use `--amber`, `--green`, `--red` and tints. |
+| lead, developer | Medium | Setup steps, scripts, messages and docs pointed to `jda/…`, `portal/…`. | Paths fixed (`server/`, `firebase/`, `docs/`); restore examples `../backups/…`. |
+| member | Medium | Switching Overall/Weekly while editing left edit mode. | Handled in the page; the draft and `#edit` stay. |
+| member | Medium | Sign-in ending mid-edit sent the person to /login, losing the edit. | The editors keep the page and say to sign in in a new tab. |
+| member, designer | Medium | Overall progress hard to find on the landing page; sidebar JDA only switched tabs. | Visible "Overall progress →"; sidebar JDA opens its Overall progress. |
+| member | Medium | Editing the Master Page not findable from the Control Tower. | "Master Page (public) ↗" on each JDA (landing and its pages), saying edits happen there. |
+| member | Medium | Drawer stayed open after a link on the same page. | Any link closes it on a phone. |
+| member, lead | Medium | Out-of-date edit intro; "Edit report" name. | Intro rewritten; "Edit report" is "Housekeeping". |
+| designer | Medium | Top bar text contrast. | Bar in the sidebar's deep teal; inactive tabs white. |
+| designer | Medium | Tap targets and edit controls shrunk by the scale. | 40px small buttons; edit controls 24px, 40px on touch. |
+| designer | Medium | Ring labels 10px. | 12px. |
+| designer | Medium | Top bar three rows on a phone; Edit page with no icon. | Bar scrolls away under 640px; every action has an icon and label. |
+| designer | Medium | iOS zoom on edit and sign-in fields. | 16px fields on phones. |
+| designer | Medium | Hero tabs off-screen and text over bare photo on phones. | Tabs share the width and follow the slide; even dark veil. |
+| designer | Medium | No skip link; progress pages had no `<main>`. | Skip links on every private page; `<main id="main">`. |
+| designer | Medium | Focus lost opening Master Page edit mode. | Focus goes to the editor's heading. |
+| designer | Medium | Phone drawer could not scroll. | It scrolls. |
+| designer | Medium | Tab focus ring invisible on the tracker's light JDA tabs. | Teal ring there. |
+| developer | Medium | Two name-matching rules (cost ring vs Invoices & payments). | One `jdaNameKey` used by both. |
+| several | Low | Broken reset button markup; `aria-current=""`; both crumbs to one address; menu stays open on Tab-out; storage not wrapped; Back after opening the editor threw; unclear error when the session ended before edit mode; old `#/jda1/edit` and `?jda=` bookmarks; same-site PDF previews; two auto previews on phones; JDA nav missing on the tracker's CJI3/Payment pages; duplicate page title; dead CSS (13 classes, 20 selectors); hover lift on cards that are not links; slide labels; Housekeeping and banner wording. | All fixed. |
+
+### R2 review: logged, not fixed
+
+| From | Severity | Finding | Why not now |
+|---|---|---|---|
+| developer, lead | Medium | `web/shared` holds code only private pages use (progress, portal-api, firebase, account), and `overview.js` imports the private `jda-content.js`. | No data is exposed (verified signed out); moving five modules touches the server's imports and tests. Next restructure. |
+| lead | Medium | The tracker keeps its own top bar; progress pages have no Sync in the bar. | Logged as A37. |
+| lead | Medium | About 70 more hard-coded colours (shadows, gradients, chart colours) in report.css, edit.css, finance.css. | The status colours are fixed; the rest need a design pass with new tokens. |
+| member | Low | "Latest" ignores undated documents; replacing a link keeps no history (a hint now says to use + Add). | Needs a "new version" action. |
+| member | Low | "Invoices pending" opens the full register, not filtered to Pending. | Needs a filter in the tracker's address. |
+| designer, lead | Low | Project highlights use stock pictures in turn (A32); Info page has no sidebar (A38). | Need pictures / a design decision. |
+| designer | Low | Public edit bar starts at 244px when the rail is collapsed; collapsed sidebar animates on load; some sizes outside the tokens; headings floor at 14px. | Cosmetic. |
+| developer | Low | `architecture` still in the built-in content and section lists (hidden; moving sections skips it now). | Data clean-up with the next content change. |
+
+## R2 summary
+
+- **New structure**: `web/public` (public pages, `/public`), `web/control-tower` (private, `/control-tower`, with the Invoice Tracker in `invoices/`), `web/shared` (code, styles and pictures every page uses, `/shared`), `server/`, `firebase/`, `docs/`. The README's tree has the detail. New in Round 2: `web/shared/styles/sidebar.css` and `components/sidebar.js`; `web/control-tower/components/ct-sidebar.js`, `ct-topbar.js`, `master-edit.js`, `documents.js`; `master-page.html`, `documents.html`; `lib/old-addresses.js`, `lib/documents.js`; `styles/ct-frame.css`.
+- **Files moved and deleted**: listed under R2 Phase 1 (175 files moved, the deletion list there); Round 2 also deleted the private Master Page screens, the architecture diagram, the Agreement & BRD dialog and their styles (R2 Phases 3–5).
+- **Old link → new home**: the tables under R2 Phase 4 (the private Master Page) and R2 Phase 5 (the per-card link bar). Old `jda-report.html#/…` and `?jda=` bookmarks are forwarded.
+- **Things to supply**:
+  - **Everything under "Left for you"**: the database key, removing JDA 4, `ALLOWED_EMAILS` and `SESSION_SECRET`, publishing the rules, confirming A20, writing the content.
+  - **For each JDA**: the Agreement and BRD links (with version, date and source) on its Agreement & BRD page, and a press release date.
+  - **Contacts**: the LinkedIn and website addresses, if wanted.
+  - **Pictures**: a picture per project, if the stock pictures (A32) should go.

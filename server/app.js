@@ -56,7 +56,10 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
 
   // Addresses from before: they lead to the same pages, which need a sign-in.
   app.get('/index.html', (req, res) => res.redirect(301, '/control-tower/'));
-  app.get('/jda-report.html', (req, res) => res.redirect(301, `/control-tower${req.url}`)); // keeps ?jda= of older links
+  // ?jda=<id> alone was the Master Page, which is public now: straight there. Otherwise the private
+  // page, whose script forwards the rest by the hash (which never reaches the server).
+  app.get('/jda-report.html', (req, res) => JDAS.some(j => j.id === req.query.jda)
+    ? res.redirect(301, `/jda/${req.query.jda}/info`) : res.redirect(301, `/control-tower${req.url}`));
   app.use(['/tracker', '/control-tower/tracker'], (req, res) => res.redirect(301, `/control-tower/invoices${req.url}`));
 
   // ---- Private ----

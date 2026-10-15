@@ -13,7 +13,7 @@ export const DEFAULT_JDA_ICON = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 
 
 
 // Microsoft Calendar sync (Edit report). The card stays hidden until a real client ID is set here.
-// portal/README.md, "Microsoft Calendar", has the Azure AD app registration that produces one.
+// docs/control-tower.md, "Microsoft Calendar", has the Azure AD app registration that produces one.
 // Needs the page served over http(s).
 export const MS_CLIENT_ID = 'YOUR_AZURE_AD_CLIENT_ID';
 export const MS_AUTHORITY = 'https://login.microsoftonline.com/organizations';

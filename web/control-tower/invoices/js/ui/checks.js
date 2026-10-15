@@ -1,5 +1,5 @@
 // What a JDA or a project must satisfy before it is saved. Nothing here touches the page or the
-// network, so it is tested on its own (jda/server/analytics.test.mjs).
+// network, so it is tested on its own (server/analytics.test.mjs).
 import { toMinor } from '../finance/money.js';
 
 export function checkDates({ startDate, endDate }) {

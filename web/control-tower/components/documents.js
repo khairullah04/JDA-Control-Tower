@@ -70,8 +70,10 @@ function render() {
       ${list.length ? list.map((d, i) => card(d, i, k.key, i === newest)).join('') : `<p class="ct-empty">${k.none} Add it with Edit page.</p>`}
     </section>`;
   }).join('');
-  // The first document of each kind is previewed straight away; the others when asked.
-  document.querySelectorAll('.doc-sec').forEach(sec => sec.querySelector('[data-preview]')?.click());
+  // On a wide screen the first document of each kind is previewed straight away (on a phone only the
+  // first one on the page); the others when asked.
+  const secs = [...document.querySelectorAll('.doc-sec')];
+  (matchMedia('(min-width:900px)').matches ? secs : secs.slice(0, 1)).forEach(sec => sec.querySelector('[data-preview]')?.click());
 }
 
 // A preview is loaded only once it is opened, so the page does not fetch every file at once.
@@ -118,7 +120,7 @@ function edit() {
     const h = Object.assign(document.createElement('h3'), { textContent: k.title });
     box.append(h, listEditor({ items: w[k.key] ||= [], fields, addLabel: `+ Add ${k.key === 'brd' ? 'a BRD' : 'an agreement'} document`, blank: DOC, onChange: () => bar.changed(), label: `${jda.name} ${k.title}`, say: bar.say }));
   }
-  box.append(Object.assign(document.createElement('p'), { className: 'edit-hint', textContent: 'Links to the files in Google Drive or SharePoint can be previewed here; any other https:// link is opened in a new tab. A link that does not start with https:// is not kept.' }));
+  box.append(Object.assign(document.createElement('p'), { className: 'edit-hint', textContent: 'Links to the files in Google Drive or SharePoint can be previewed here; any other https:// link is opened in a new tab. A link that does not start with https:// is not kept. To keep the previous version of a document, add the new one with + Add instead of pasting over its link.' }));
   $('docs').replaceChildren(box);
   document.body.append(bar.el);
   box.querySelector('input')?.focus();

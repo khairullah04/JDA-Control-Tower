@@ -94,7 +94,6 @@ body.editing .reveal{opacity:1;transform:none}
 /* project highlights: a picture and a name */
 .highlights{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(200px * var(--space-scale)),1fr));gap:calc(14px * var(--space-scale))}
 .highlight{position:relative;display:flex;flex-direction:column;border-radius:calc(12px * var(--space-scale));overflow:hidden;background:var(--surface);border:1px solid var(--border);transition:box-shadow .2s,transform .2s}
-.highlight:hover{box-shadow:var(--elev-1);transform:translateY(-2px)}
 .highlight img{display:block;width:100%;aspect-ratio:3/2;height:auto;object-fit:cover;background:var(--teal-050)}
 .highlight span{padding:calc(10px * var(--space-scale)) calc(12px * var(--space-scale)) calc(12px * var(--space-scale));font-weight:600;font-size:max(min(.9rem, 14px), calc(.9rem * var(--type-scale)));line-height:1.35;color:#24363b;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .highlight.more{display:grid;place-items:center;min-height:calc(120px * var(--space-scale));background:var(--teal-050);border-style:dashed;border-color:var(--teal-100)}
@@ -128,7 +127,6 @@ body.editing .reveal{opacity:1;transform:none}
 /* ---------- JDA status: pillar cards ---------- */
 .status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(250px * var(--space-scale)),1fr));gap:calc(16px * var(--space-scale))}
 .status-card{position:relative;display:flex;flex-direction:column;padding:calc(22px * var(--space-scale)) calc(22px * var(--space-scale)) calc(20px * var(--space-scale)) calc(26px * var(--space-scale));border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);box-shadow:var(--elev-1);overflow:hidden;transition:transform .2s,box-shadow .2s}
-.status-card:hover{transform:translateY(-2px);box-shadow:var(--elev-2)}
 .status-card::before{content:'';position:absolute;inset:0 auto 0 0;width:calc(5px * var(--space-scale));background:var(--amber)}
 .status-card.in-progress::before{background:linear-gradient(180deg,var(--teal-400),var(--teal-700))}
 .status-card.finished::before{background:var(--green)}
@@ -162,3 +160,11 @@ body.editing .contact-card.optional{display:flex}
 .site-foot a:hover{text-decoration:underline;text-underline-offset:3px}
 .site-foot a:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .foot-social{display:flex;gap:calc(16px * var(--space-scale))}
+
+/* phones: an even, darker veil over the hero photo (the text runs the full width there), and slide
+   tabs that share the width instead of running off the edge */
+@media (max-width:700px){
+  .slide{background-image:none!important;position:relative;isolation:isolate}
+  .slide::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(1,39,36,.84),rgba(1,39,36,.74)),var(--slide-img) center/cover no-repeat}
+  .slide-tabs [role="tab"]{flex:1 1 0;min-width:72px;margin-right:10px}
+}

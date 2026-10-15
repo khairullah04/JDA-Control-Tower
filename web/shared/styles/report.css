@@ -96,7 +96,6 @@
   .status-pill.amber{background:#f6ecd9;color:var(--amber);}
   .status-pill.red{background:#f6e0de;color:var(--red);}
 
-  .partners-row{display:flex;gap:0;flex:1;min-width:calc(260px * var(--space-scale));}
   .partner{flex:1;display:flex;gap:calc(10px * var(--space-scale));align-items:flex-start;padding:0 calc(14px * var(--space-scale));position:relative;}
   .partner:not(:first-child){border-left:1px solid rgba(0,133,124,.15);}
   .partner .n{width:calc(22px * var(--space-scale));height:calc(22px * var(--space-scale));border-radius:50%;background:linear-gradient(150deg,var(--teal-500),var(--teal-700));color:#fff;font-weight:800;font-size:max(min(11px, 14px), calc(11px * var(--type-scale)));display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;}
@@ -112,7 +111,7 @@
   .journey-stat:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(2,62,58,.12);border-color:rgba(0,161,156,.45);}
   .journey-stat .num{font-family:'IBM Plex Mono',monospace;font-size:max(min(21px, 14px), calc(21px * var(--type-scale)));font-weight:800;color:var(--teal-800);line-height:1.1;}
   .journey-stat .lbl{font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:calc(3px * var(--space-scale));}
-  @media (max-width:680px){.journey-card{flex-direction:column;align-items:flex-start;}.partners-row{flex-direction:column;gap:calc(14px * var(--space-scale));}.partner{border-left:none !important;padding:0;}.journey-divider{display:none;}.journey-stats{width:100%;}}
+  @media (max-width:680px){.journey-card{flex-direction:column;align-items:flex-start;}.partner{border-left:none !important;padding:0;}.journey-divider{display:none;}.journey-stats{width:100%;}}
 
   /* ---------- reveal-on-scroll ---------- */
   .reveal{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s ease;}
@@ -246,9 +245,6 @@
   .sol-tag .dot{width:calc(5px * var(--space-scale));height:calc(5px * var(--space-scale));border-radius:50%;background:var(--teal-500);flex:none;display:inline-block;}
   @media (max-width:980px){.sol-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:600px){.sol-grid{grid-template-columns:1fr;}}
-  .sol-detail-list{margin:0;padding-left:calc(20px * var(--space-scale));max-width:78ch;}
-  .sol-detail-list li{font-size:max(min(13.3px, 14px), calc(13.3px * var(--type-scale)));color:var(--text);margin-bottom:calc(8px * var(--space-scale));line-height:1.55;}
-  .sol-detail-list li:last-child{margin-bottom:0;}
 
   .press-card{background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:calc(14px * var(--space-scale));box-shadow:var(--elev-1);padding:calc(20px * var(--space-scale)) calc(22px * var(--space-scale));display:flex;gap:calc(22px * var(--space-scale));align-items:center;}
   .press-visual{flex:0 0 220px;aspect-ratio:3/2;overflow:hidden;border-radius:calc(10px * var(--space-scale));background:var(--teal-050);}
@@ -267,8 +263,7 @@
   .foot-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:calc(16px * var(--space-scale));max-width:1240px;margin:0 auto;}
   .foot-brand{display:flex;align-items:center;gap:calc(10px * var(--space-scale));color:#fff;font-weight:700;font-size:max(min(15.5px, 14px), calc(15.5px * var(--type-scale)));}
   .foot-brand img{height:calc(24px * var(--space-scale));width:auto;display:block;background:#fff;border-radius:calc(6px * var(--space-scale));padding:calc(3px * var(--space-scale));}
-  .foot-logos{display:flex;align-items:center;gap:calc(10px * var(--space-scale));}
-  .foot-logos img{height:calc(22px * var(--space-scale));width:auto;display:block;background:#fff;border-radius:calc(5px * var(--space-scale));padding:calc(3px * var(--space-scale)) calc(6px * var(--space-scale));}
+
   .foot-note{font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));opacity:.85;max-width:46ch;}
   @media (max-width:780px){.site-footer{padding:26px 24px;}}
 
@@ -282,10 +277,7 @@
     color:#fff;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 6px 16px rgba(0,133,124,.32);}
   .sol-detail-headtext .sol-tier{margin-bottom:calc(8px * var(--space-scale));}
   .sol-detail-headtext h2{margin:0;font-size:max(min(23px, 14px), calc(23px * var(--type-scale)));font-weight:800;letter-spacing:-.3px;line-height:1.25;}
-  .sol-detail-vision{font-size:max(min(15px, 14px), calc(15px * var(--type-scale)));color:var(--text);line-height:1.65;margin:0 0 calc(4px * var(--space-scale));max-width:78ch;}
-  .sol-targets-row{display:flex;flex-wrap:wrap;gap:calc(10px * var(--space-scale));}
-  .sol-target-tile{background:var(--teal-050);border:1px solid var(--teal-100);border-radius:calc(12px * var(--space-scale));padding:calc(12px * var(--space-scale)) calc(16px * var(--space-scale));
-    font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));font-weight:700;color:var(--teal-800);flex:1;min-width:calc(220px * var(--space-scale));}
+
   @media (max-width:600px){.sol-detail-head{flex-direction:column;align-items:flex-start;}}
   .detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:calc(16px * var(--space-scale));flex-wrap:wrap;}
   .detail-head h3{margin:0 0 calc(4px * var(--space-scale));font-size:max(min(22px, 14px), calc(22px * var(--type-scale)));font-weight:800;}
@@ -344,7 +336,7 @@
     font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));background:#fff;color:var(--text);transition:border-color .15s ease,box-shadow .15s ease;}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal-500);box-shadow:0 0 0 3px rgba(0,161,156,.16);}
   textarea{resize:vertical;min-height:calc(58px * var(--space-scale));}
-  .row-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 calc(12px * var(--space-scale));}
+  
   button.save{margin-top:calc(18px * var(--space-scale));background:linear-gradient(150deg,var(--teal-500),var(--teal-700));color:#fff;border:none;
     padding:calc(11px * var(--space-scale)) calc(22px * var(--space-scale));border-radius:calc(10px * var(--space-scale));font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,133,124,.3);
     transition:transform .15s ease,box-shadow .15s ease,opacity .15s ease;}
@@ -365,12 +357,7 @@
   .entry-main{flex:1;min-width:0;}
   .entry-title{font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));font-weight:700;color:var(--text);overflow-wrap:break-word;}
   .entry-meta{font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));color:var(--muted);margin-top:calc(3px * var(--space-scale));line-height:1.4;}
-  .entry-actions{display:flex;gap:calc(6px * var(--space-scale));flex-shrink:0;}
-  .entry-btn{width:calc(30px * var(--space-scale));height:calc(30px * var(--space-scale));border-radius:calc(8px * var(--space-scale));border:1px solid var(--glass-brd);background:#fff;
-    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);transition:all .15s ease;flex-shrink:0;}
-  .entry-btn:hover{border-color:var(--teal-500);color:var(--teal-700);background:var(--teal-050);}
-  .entry-btn.danger:hover{border-color:#e4b6b2;color:var(--red);background:#fbecea;}
-  .entry-empty{font-size:max(min(13px, 14px), calc(13px * var(--type-scale)));color:var(--muted);font-style:italic;margin:calc(14px * var(--space-scale)) 0 0;}
+
   .cal-status{font-size:max(min(12.5px, 14px), calc(12.5px * var(--type-scale)));color:var(--muted);margin:calc(10px * var(--space-scale)) 0;font-weight:600;}
 
 /* ---- Portal additions: only what the reference has no markup for (links in the nav, the portal's JDA grid and admin card). ---- */
@@ -595,3 +582,9 @@ table.tasks .task-detail td{background:var(--teal-050);padding:calc(4px * var(--
   table.tasks .task-row td[data-cell]:not([data-cell="task"])::before{content:attr(data-label);font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
   table.tasks .task-detail td{padding:calc(4px * var(--space-scale)) calc(8px * var(--space-scale)) calc(16px * var(--space-scale));}
 }
+
+/* Edit controls keep a usable size whatever the scale: at least 24px, and 40px on touch screens */
+.ed-btn.ed-dot{width:24px;height:24px}
+.blk-btn,.blk-add .blk-btn,.blk-box .box-x,.task-toggle,.ed-pill{min-height:24px;min-width:24px}
+.blk-handle{width:24px;height:32px}
+@media (pointer:coarse){.blk-btn,.blk-add .blk-btn,.blk-box .box-x,.task-toggle,.ed-pill,.ed-btn,.blk-handle{min-height:40px;min-width:40px}.ed-btn.ed-dot{width:40px;height:40px}}
