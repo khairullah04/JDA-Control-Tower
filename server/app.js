@@ -40,7 +40,7 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
   app.use(cors({ origin: origins.includes('*') ? '*' : origins }));
   // Small bodies everywhere, except where a whole register, report or picture is sent (signed in only, see below).
   const big = express.json({ limit: '25mb' });
-  app.use(['/api/finance', '/api/portal', '/api/drive', '/api/site/roles-image'], (req, res, next) => req.headers.cookie || req.headers.authorization ? big(req, res, next) : next());
+  app.use(['/api/finance', '/api/portal', '/api/drive', '/api/site/roles-image', '/api/site/image'], (req, res, next) => req.headers.cookie || req.headers.authorization ? big(req, res, next) : next());
   app.use(express.json({ limit: '1mb' }));
   app.use((req, res, next) => { res.setHeader('X-Content-Type-Options', 'nosniff'); next(); });
 
@@ -80,6 +80,8 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
   // Its invoices and payments: the Invoice Tracker's page for the JDA of the same name.
   app.get('/control-tower/:jda/invoices', (req, res, next) => known(req.params.jda)
     ? res.redirect(302, `/control-tower/invoices/#/named/${encodeURIComponent(JDAS.find(j => j.id === req.params.jda).name)}`) : next());
+  // Edit public site: the TriCipta AI page and each JDA's Master Page, edited in one place.
+  app.get('/control-tower/site', (req, res) => res.sendFile('site.html', { root: CONTROL_TOWER }));
   app.get('/control-tower/:jda', (req, res, next) => known(req.params.jda) ? res.redirect(302, `/control-tower/${req.params.jda}/overall-progress`) : next());
   app.use('/control-tower', express.static(CONTROL_TOWER));
   return app;

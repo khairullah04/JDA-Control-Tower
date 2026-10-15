@@ -498,3 +498,11 @@ Assumption: Microsoft Calendar's sign-in now returns to one fixed address, `/con
   - **For each JDA**: the Agreement and BRD links (with version, date and source) on its Agreement & BRD page, and a press release date.
   - **Contacts**: the LinkedIn and website addresses, if wanted.
   - **Pictures**: a picture per project, if the stock pictures (A32) should go.
+
+## After Round 2: requested changes
+
+- [x] Agreement & BRD first in a JDA's pages; its button at the bottom right of Latest key update.
+- [x] S-curve charts no longer shrink (fixed-height box, measured again when shown); the % centred in the Overall progress ring.
+- [x] Picture placeholders beside Overview and What is a JDA.
+- [x] **Edit public site** (`/control-tower/site`): the public site is edited in one place in the Control Tower, in tabs Main page, JDA 1, JDA 2, JDA 3, each the live page in edit mode. The public pages' own edit buttons are replaced by "Edit in Control Tower". New on the main page: five uploadable pictures (two hero slides, Overview, What is a JDA, Roles; server `PICTURES`, `/api/site/image/<key>`, tested: unknown names refused, nothing public before Save, removed ones kept out of public reach) and editable figure labels. Old `#/<jda>/edit` bookmarks lead to the JDA's tab here.
+  - Not yet uploadable (still links typed in edit mode): a Master Page's press release picture and collaborator logos; solution pictures are chosen from the built-in set. The landing page's menu labels and footer links are fixed wording.

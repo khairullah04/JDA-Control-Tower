@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { JDAS } from '../../web/shared/config/jdas.js';
-import { publicSite, infoPage, controlTowerContent, savePage, editablePublic, saveRolesImage, discardRolesImage } from '../site-content.js';
+import { publicSite, infoPage, controlTowerContent, savePage, editablePublic, saveRolesImage, discardRolesImage, savePicture, discardPicture } from '../site-content.js';
 
 // /api/public: what the public pages show, and nothing else (site-content.js decides what that is).
 // Anyone may call these, so they are rate-limited (app.js) and their report reads are cached.
@@ -31,5 +31,8 @@ export function siteRoutes(store) {
     .put('/:page(public|controlTower)', run(req => savePage(store, req.params.page, req.body || {}, req.user?.name).then(saved => ({ updatedAt: saved.updatedAt, updatedBy: saved.updatedBy }))))
     // the picture waits until the page is saved; Cancel throws it away
     .post('/roles-image', run(req => saveRolesImage(req.body?.image)))
-    .delete('/roles-image', run(() => { discardRolesImage(); return { discarded: true }; }));
+    .delete('/roles-image', run(() => { discardRolesImage(); return { discarded: true }; }))
+    // any of the landing page's pictures (site-content.js, PICTURES), the same way
+    .post('/image/:key', run(req => savePicture(req.params.key, req.body?.image)))
+    .delete('/image/:key', run(req => { discardPicture(req.params.key); return { discarded: true }; }));
 }

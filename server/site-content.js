@@ -31,7 +31,7 @@ export const PUBLIC_DEFAULTS = {
   // Empty until written in edit mode: the page then shows "To be announced", never a made-up address.
   contacts: { title: 'Contacts', subtitle: 'Get in touch with the TriCipta AI team', email: '', phone: '', address: '', linkedin: '', website: '' },
   news: { title: 'Latest press releases', subtitle: 'News from each Joint Development Agreement' },
-  figures: { title: 'TriCipta AI in numbers' },
+  figures: { title: 'TriCipta AI in numbers', jdas: 'Joint Development Agreements', underWay: 'Projects under way', finished: 'Projects finished' },
   footer: { text: 'TriCipta AI · Petronas Carigali' },
   jdas: {}
 };
@@ -55,14 +55,20 @@ export function withDefaults(saved, defaults) {
   return out;
 }
 
-// The roles picture: web/public/assets/roles.jpg (or .jpeg, .png, .webp), whichever is there. None yet: null, and the page shows a placeholder.
+// The landing page's pictures, uploaded in edit mode: web/public/assets/<key>.jpg (or .jpeg, .png,
+// .webp), whichever is there. None yet: null, and the page shows its built-in picture or a placeholder.
+//   roles      the Roles chart                      hero     the first hero slide (TriCipta AI)
+//   heroJda    the "What is a JDA" hero slide       overview / whatIsJda   beside those sections' text
+export const PICTURES = ['roles', 'hero', 'heroJda', 'overview', 'whatIsJda'];
 const PUBLIC_DIR = fileURLToPath(new URL('../web/public/assets/', import.meta.url));
-export function rolesImage(dir = PUBLIC_DIR) {
+export function pictureUrl(key, dir = PUBLIC_DIR) {
   for (const ext of ['jpg', 'jpeg', 'png', 'webp']) {
-    try { const at = fs.statSync(`${dir}roles.${ext}`); return `/public/assets/roles.${ext}?v=${Math.round(at.mtimeMs)}`; } catch { /* not this one */ }
+    try { const at = fs.statSync(`${dir}${key}.${ext}`); return `/public/assets/${key}.${ext}?v=${Math.round(at.mtimeMs)}`; } catch { /* not this one */ }
   }
   return null;
 }
+export const rolesImage = (dir = PUBLIC_DIR) => pictureUrl('roles', dir);
+const pictures = (dir = PUBLIC_DIR) => Object.fromEntries(PICTURES.map(k => [k, pictureUrl(k, dir)]));
 
 const text = v => typeof v === 'string' ? v : '';
 const list = v => Array.isArray(v) ? v : [];
@@ -106,7 +112,7 @@ export async function publicSite(store) {
   const { jdas: _, ...sections } = content;
   // What the report says and which values are derived only go to edit mode (editablePublic), signed in:
   // a title, press text or project name written over in edit mode never reaches the public this way.
-  return { ...sections, roles: { ...sections.roles, image: rolesImage() }, jdas: jdas.map(({ report, derived, ...j }) => j) };
+  return { ...sections, roles: { ...sections.roles, image: rolesImage() }, pictures: pictures(), jdas: jdas.map(({ report, derived, ...j }) => j) };
 }
 
 /* ---------- The Info page: a JDA's Master Page, read-only, with only what may be public ---------- */
@@ -277,8 +283,9 @@ export function cleanControlTower(input) {
 // A save: the page sends what it edited and the `updatedAt` it started from. If someone else saved in
 // between, it is refused (409) unless `force`, so nobody overwrites another person's edit unknowingly.
 // The version before each save is kept beside it (`previous`), so one mistaken save can be put back.
-// `roles`: 'publish' makes the picture uploaded in this edit the Roles picture, 'remove' takes it away.
-export async function savePage(store, page, { content, base = '', force = false, roles = '' } = {}, by = 'unknown', now = new Date().toISOString(), dir = PUBLIC_DIR) {
+// `pictures`: { <key>: 'publish' } makes the picture uploaded in this edit that picture, 'remove' takes
+// it away (`roles`, the same for the Roles picture, from before there were several).
+export async function savePage(store, page, { content, base = '', force = false, roles = '', pictures: changes = {} } = {}, by = 'unknown', now = new Date().toISOString(), dir = PUBLIC_DIR) {
   const clean = { public: cleanPublic, controlTower: cleanControlTower }[page];
   if (!clean) throw Object.assign(new Error('There is no such page.'), { status: 404 });
   const current = await store.get(page);
@@ -287,8 +294,14 @@ export async function savePage(store, page, { content, base = '', force = false,
   }
   const { previous, ...before } = current || {};
   const saved = await store.put(page, { ...clean(content), updatedAt: now, updatedBy: by, ...(current && { previous: before }) });
-  if (page === 'public' && roles === 'publish') publishRolesImage(dir);
-  if (page === 'public' && roles === 'remove') removeRolesImage(dir);
+  if (page === 'public') {
+    const todo = { ...(roles && { roles }), ...(isObj(changes) ? changes : {}) };
+    for (const [key, act] of Object.entries(todo)) {
+      if (!PICTURES.includes(key)) continue;
+      if (act === 'publish') publishPicture(key, dir);
+      if (act === 'remove') removePicture(key, dir);
+    }
+  }
   return saved;
 }
 
@@ -303,51 +316,60 @@ export async function editablePublic(store) {
   return { content: { ...content, jdas: cleanPublic({ jdas }).jdas }, reports, updatedAt: text(saved.updatedAt), updatedBy: text(saved.updatedBy) };
 }
 
-// The Roles picture, uploaded in edit mode: a JPEG, PNG or WebP of up to 8 MB, recognised by its
-// first bytes (not by what the browser says it is). It waits, out of public reach, until the page is
-// saved (publishRolesImage); Cancel throws it away (discardRolesImage). The picture before is kept as
-// roles-previous.*, and every file is written to a temporary name first, then renamed into place.
+// A picture uploaded in edit mode: a JPEG, PNG or WebP of up to 8 MB, recognised by its first bytes
+// (not by what the browser says it is). It waits, out of public reach, until the page is saved
+// (publishPicture); Cancel throws it away (discardPicture). The picture before is kept in
+// server/.roles-previous/, never served, and every file is written to a temporary name first.
 const KINDS = [['jpg', b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff], ['png', b => b.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))],
   ['webp', b => b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP']];
 export const MAX_IMAGE = 8 * 1024 * 1024;
 const EXTS = ['jpg', 'jpeg', 'png', 'webp'];
 export const PENDING_DIR = fileURLToPath(new URL('./.roles-pending/', import.meta.url));
-// The picture before the current one (or the one removed): kept beside the server, never served.
 export const PREVIOUS_DIR = fileURLToPath(new URL('./.roles-previous/', import.meta.url));
-function keepPrevious(dir, prevDir) {
-  const old = findIn(dir, 'roles');
+const known = key => { if (!PICTURES.includes(key)) throw Object.assign(new Error('There is no such picture.'), { status: 404 }); return key; };
+function keepPrevious(key, dir, prevDir) {
+  const old = findIn(dir, key);
   if (!old) return;
   fs.mkdirSync(prevDir, { recursive: true });
-  for (const e of EXTS) fs.rmSync(`${prevDir}roles.${e}`, { force: true });
-  fs.renameSync(old, `${prevDir}roles.${old.split('.').pop()}`);
+  for (const e of EXTS) fs.rmSync(`${prevDir}${key}.${e}`, { force: true });
+  fs.renameSync(old, `${prevDir}${key}.${old.split('.').pop()}`);
 }
 const findIn = (dir, stem) => EXTS.map(e => `${dir}${stem}.${e}`).find(f => fs.existsSync(f));
 const writeAtomic = (file, bytes) => { fs.writeFileSync(`${file}.tmp`, bytes); fs.renameSync(`${file}.tmp`, file); };
 
-export function saveRolesImage(base64, pendingDir = PENDING_DIR) {
+export function savePicture(key, base64, pendingDir = PENDING_DIR) {
+  known(key);
   const bytes = Buffer.from(text(base64), 'base64');
   if (!bytes.length) throw Object.assign(new Error('No picture was sent.'), { status: 400 });
   if (bytes.length > MAX_IMAGE) throw Object.assign(new Error('The picture is larger than 8 MB.'), { status: 413 });
   const kind = KINDS.find(([, is]) => is(bytes))?.[0];
   if (!kind) throw Object.assign(new Error('Use a JPEG, PNG or WebP picture.'), { status: 415 });
   fs.mkdirSync(pendingDir, { recursive: true });
-  discardRolesImage(pendingDir);
-  writeAtomic(`${pendingDir}roles.${kind}`, bytes);
+  discardPicture(key, pendingDir);
+  writeAtomic(`${pendingDir}${key}.${kind}`, bytes);
   return { pending: true, kind };
 }
-export function discardRolesImage(pendingDir = PENDING_DIR) {
-  for (const e of EXTS) fs.rmSync(`${pendingDir}roles.${e}`, { force: true });
+export function discardPicture(key, pendingDir = PENDING_DIR) {
+  known(key);
+  for (const e of EXTS) fs.rmSync(`${pendingDir}${key}.${e}`, { force: true });
 }
-export function publishRolesImage(dir = PUBLIC_DIR, pendingDir = PENDING_DIR, prevDir = PREVIOUS_DIR) {
-  const pending = findIn(pendingDir, 'roles');
-  if (!pending) return rolesImage(dir);
+export function publishPicture(key, dir = PUBLIC_DIR, pendingDir = PENDING_DIR, prevDir = PREVIOUS_DIR) {
+  known(key);
+  const pending = findIn(pendingDir, key);
+  if (!pending) return pictureUrl(key, dir);
   fs.mkdirSync(dir, { recursive: true });
   const ext = pending.split('.').pop(), bytes = fs.readFileSync(pending);
-  keepPrevious(dir, prevDir);
-  writeAtomic(`${dir}roles.${ext}`, bytes);
-  discardRolesImage(pendingDir);
-  return rolesImage(dir);
+  keepPrevious(key, dir, prevDir);
+  writeAtomic(`${dir}${key}.${ext}`, bytes);
+  discardPicture(key, pendingDir);
+  return pictureUrl(key, dir);
 }
-export function removeRolesImage(dir = PUBLIC_DIR, prevDir = PREVIOUS_DIR) {
-  keepPrevious(dir, prevDir);
+export function removePicture(key, dir = PUBLIC_DIR, prevDir = PREVIOUS_DIR) {
+  known(key);
+  keepPrevious(key, dir, prevDir);
 }
+// The Roles picture, by its old names.
+export const saveRolesImage = (base64, pendingDir) => savePicture('roles', base64, pendingDir);
+export const discardRolesImage = pendingDir => discardPicture('roles', pendingDir);
+export const publishRolesImage = (dir, pendingDir, prevDir) => publishPicture('roles', dir, pendingDir, prevDir);
+export const removeRolesImage = (dir, prevDir) => removePicture('roles', dir, prevDir);

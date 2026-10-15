@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Edit public site · JDA Control Tower</title>
+<link rel="icon" href="/shared/assets/brand/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/styles/tokens.css">
+<link rel="stylesheet" href="/shared/styles/report.css">
+<link rel="stylesheet" href="/shared/styles/sidebar.css">
+<link rel="stylesheet" href="/control-tower/styles/ct-frame.css">
+<link rel="stylesheet" href="/control-tower/styles/control-tower.css">
+</head>
+<body>
+<!-- Edit public site (/control-tower/site): the TriCipta AI page and each JDA's Master Page, each shown
+     live in edit mode (components/site-editor.js). What is saved here is what the public sees. -->
+<a class="skip" href="#main">Skip to content</a>
+<div class="aurora"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>
+
+<div class="app">
+<div class="topbar">
+ <div class="topbar-inner">
+  <div class="brand">
+    <a href="/control-tower/" aria-label="JDA Control Tower, home"><img class="brand-logo" src="/shared/assets/brand/carigali-logo.png" alt="Petronas Carigali"></a>
+    <div><div class="mark">TriCipta AI</div><h1>JDA Control Tower</h1></div>
+  </div>
+  <div class="topbar-account"><span class="whoami" id="whoami"></span><button type="button" class="signout-btn" id="signOutBtn">Sign out</button></div>
+ </div>
+</div>
+
+<main class="page-wrap ct site-editor" id="main" tabindex="-1">
+  <header class="ct-head">
+    <div>
+      <div class="ct-eyebrow">The public site</div>
+      <h2>Edit public site</h2>
+      <p class="ct-lead">The TriCipta AI page and each JDA's Master Page, as the public sees them. Click any dashed text to change it; pictures, people, projects and sections have their own controls. Nothing is public until you press Save changes.</p>
+    </div>
+  </header>
+  <div class="site-tabs" role="tablist" aria-label="Page to edit" id="siteTabs"></div>
+  <div class="site-frame-bar"><span id="siteFrameNote" role="status"></span><a id="siteOpen" href="/" target="_blank" rel="noopener">Open the live page<span aria-hidden="true"> ↗</span><span class="visually-hidden"> (opens in a new tab)</span></a></div>
+  <iframe class="site-frame" id="siteFrame" title="The page being edited"></iframe>
+</main>
+</div>
+
+<script type="module" src="/control-tower/components/site-editor.js"></script>
+</body>
+</html>

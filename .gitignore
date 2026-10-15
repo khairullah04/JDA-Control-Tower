@@ -2,3 +2,7 @@ backups/
 .claude/worktrees/
 web/public/assets/roles.*
 web/public/assets/roles-previous.*
+web/public/assets/hero.*
+web/public/assets/heroJda.*
+web/public/assets/overview.*
+web/public/assets/whatIsJda.*

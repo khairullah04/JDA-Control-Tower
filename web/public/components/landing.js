@@ -6,6 +6,8 @@ import { me, endSession } from '/shared/lib/session.js';
 import { mountSidebar } from '/shared/components/sidebar.js';
 
 const $ = id => document.getElementById(id);
+const EDITOR = new URLSearchParams(location.search).has('edit') && window.parent !== window; // shown inside the Control Tower's editor
+if (EDITOR) document.body.classList.add('in-editor');
 export const STATUS = {
   'in-the-works': { label: 'In the works', icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>' },
   'in-progress': { label: 'In progress', icon: '<path d="M3 12h4l3-8 4 16 3-8h4"/>' },
@@ -42,8 +44,8 @@ const person = (p, list, i) => `
 function hero(c) {
   const slides = [
     { tab: 'Overview', eyebrow: `<span data-field="header.eyebrow">${esc(c.header.eyebrow)}</span>`, title: `<h1 id="heroTitle" data-field="header.title">${esc(c.header.title)}</h1>`,
-      text: `<p class="slide-text" data-field="header.tagline">${esc(c.header.tagline)}</p>`, href: '#overview', image: HERO[0] },
-    { tab: 'What is a JDA', eyebrow: esc(c.whatIsJda.subtitle), title: `<h2>${esc(c.whatIsJda.title)}</h2>`, text: `<p class="slide-text">${esc(shorten(c.whatIsJda.body, 150))}</p>`, href: '#what-is-jda', image: HERO[1] },
+      text: `<p class="slide-text" data-field="header.tagline">${esc(c.header.tagline)}</p>`, href: '#overview', image: c.pictures?.hero || HERO[0] },
+    { tab: 'What is a JDA', eyebrow: esc(c.whatIsJda.subtitle), title: `<h2>${esc(c.whatIsJda.title)}</h2>`, text: `<p class="slide-text">${esc(shorten(c.whatIsJda.body, 150))}</p>`, href: '#what-is-jda', image: c.pictures?.heroJda || HERO[1] },
     ...c.jdas.map((j, i) => ({ tab: j.name, eyebrow: esc(j.name), title: `<h2>${esc(j.title || 'Title TBC')}</h2>`, text: `<p class="slide-text">${esc(shorten(j.pressRelease, 150))}</p>`,
       href: `/jda/${encodeURIComponent(j.id)}/info`, image: j.image || HERO[i % 2], pos: i % 2 ? 'center 30%' : 'center 70%' }))
   ];
@@ -74,9 +76,9 @@ const figures = c => {
   <section class="figures" aria-labelledby="figuresTitle">
     <h2 class="figures-title" id="figuresTitle" data-field="figures.title">${esc(c.figures.title)}</h2>
     <dl class="figure-strip">
-      <div><dt>Joint Development Agreements</dt><dd>${c.jdas.length}</dd></div>
-      <div><dt>Projects under way</dt><dd>${projects}</dd></div>
-      <div><dt>Projects finished</dt><dd>${finished}</dd></div>
+      <div><dt data-field="figures.jdas">${esc(c.figures.jdas)}</dt><dd>${c.jdas.length}</dd></div>
+      <div><dt data-field="figures.underWay">${esc(c.figures.underWay)}</dt><dd>${projects}</dd></div>
+      <div><dt data-field="figures.finished">${esc(c.figures.finished)}</dt><dd>${finished}</dd></div>
     </dl>
   </section>`;
 };
@@ -144,8 +146,10 @@ const contact = (label, field, value, href, paths, optional = false) => {
 };
 const webAddress = v => /^https?:\/\//i.test(String(v || '').trim()) ? String(v).trim() : '';
 
-// Where a section's picture will go, until one is supplied.
-const picturePlaceholder = name => `<figure class="pic-placeholder" aria-label="${esc(name)}: picture to come">
+// A section's picture (uploaded in edit mode), or where it will go until one is supplied.
+const sectionPicture = (key, name, url) => url
+  ? `<figure class="sec-pic" data-picture="${key}"><img src="${esc(url)}" alt="${esc(name)}" loading="lazy"></figure>`
+  : `<figure class="pic-placeholder" data-picture="${key}" aria-label="${esc(name)}: picture to come">
     ${icon('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>')}
     <figcaption><b>Picture coming soon</b><span>It will appear here once it is added.</span></figcaption>
   </figure>`;
@@ -156,17 +160,17 @@ export function render(site) {
   ${hero(c)}
   ${figures(c)}
 
-  <section class="sec" id="overview"><div class="soft-box with-pic"><div>${sectionHead(c.overview, 'overview')}${paras(c.overview.body, 'overview.body')}</div>${picturePlaceholder('Overview')}</div></section>
+  <section class="sec" id="overview"><div class="soft-box with-pic"><div>${sectionHead(c.overview, 'overview')}${paras(c.overview.body, 'overview.body')}</div>${sectionPicture('overview', 'Overview', c.pictures?.overview)}</div></section>
 
   <section class="sec" id="roles">
     ${sectionHead(c.roles, 'roles')}
-    <figure class="roles-figure">
+    <figure class="roles-figure" data-picture="roles">
       ${c.roles.image ? `<img src="${esc(c.roles.image)}" alt="${esc(c.roles.alt)}" loading="lazy">`
         : `<div class="roles-placeholder">${icon('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>')}<p><b>Roles chart coming soon</b><span>It will appear here once it is added.</span></p></div>`}
     </figure>
   </section>
 
-  <section class="sec" id="what-is-jda"><div class="soft-box with-pic"><div>${sectionHead(c.whatIsJda, 'whatIsJda')}${paras(c.whatIsJda.body, 'whatIsJda.body')}</div>${picturePlaceholder('What is a JDA')}</div></section>
+  <section class="sec" id="what-is-jda"><div class="soft-box with-pic"><div>${sectionHead(c.whatIsJda, 'whatIsJda')}${paras(c.whatIsJda.body, 'whatIsJda.body')}</div>${sectionPicture('whatIsJda', 'What is a JDA', c.pictures?.whatIsJda)}</div></section>
 
   <section class="sec" id="jdas">
     ${sectionHead(c.existing, 'existing')}
@@ -302,19 +306,14 @@ async function account() {
   $('signInBtn').dataset.tip = 'Open Control Tower';
   if ($('footSignIn')) $('footSignIn').textContent = 'Open Control Tower';
   document.querySelector('.side-note').textContent = who.signInOff ? 'Sign-in is off (local)' : `Signed in as ${String(who.email).split('@')[0]}`;
-  // Edit mode: everything on this page that is written rather than worked out (edit.js).
-  const editBtn = Object.assign(document.createElement('button'), { type: 'button', id: 'editPageBtn', className: 'btn ghost small side-edit' });
-  editBtn.innerHTML = `${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}<span>Edit page</span>`;
-  editBtn.dataset.tip = 'Edit page';
-  editBtn.onclick = async () => {
-    if (!current) return toast('The page has not loaded, so it cannot be edited. Reload and try again.');
-    editBtn.disabled = true;
-    sidebar.close();
-    try { await (await import('/public/components/edit.js')).start({ site: current, show, reload, done: text => { toast(text); editBtn.focus(); } }); }
-    catch (e) { toast(`Edit mode could not open: ${e.message}`); }
-    finally { editBtn.disabled = false; }
-  };
-  $('sideFoot').append(editBtn);
+  // Inside the Control Tower's "Edit public site" (?edit): straight into edit mode, and back into it
+  // after each save or cancel (edit.js).
+  if (EDITOR) return openEditor();
+  // Otherwise the page is edited there, not here.
+  const editLink = Object.assign(document.createElement('a'), { id: 'editPageBtn', className: 'btn ghost small side-edit', href: '/control-tower/site#main' });
+  editLink.innerHTML = `${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}<span>Edit in Control Tower</span>`;
+  editLink.dataset.tip = 'Edit in Control Tower';
+  $('sideFoot').append(editLink);
   if (!who.signInOff) {
     const out = Object.assign(document.createElement('button'), { type: 'button', className: 'btn ghost small side-signout' });
     out.innerHTML = `${icon('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>')}<span>Sign out</span>`;
@@ -322,6 +321,11 @@ async function account() {
     out.onclick = () => { if (!window.hasUnsavedChanges?.() || confirm('You have unsaved changes. Sign out anyway and lose them?')) endSession(); };
     $('sideFoot').append(out);
   }
+}
+async function openEditor() {
+  if (!current) return toast('The page has not loaded, so it cannot be edited. Reload and try again.');
+  try { await (await import('/public/components/edit.js')).start({ site: current, show, reload, done: () => location.reload() }); }
+  catch (e) { toast(`Edit mode could not open: ${e.message}`); }
 }
 // A short message after edit mode (saved, cancelled, or why it could not open), read out by screen readers.
 function toast(text) {

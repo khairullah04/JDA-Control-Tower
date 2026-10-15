@@ -67,7 +67,7 @@ test('every private API answers 401 without a session', async () => {
   const calls = [['GET', '/api/finance/data'], ['GET', '/api/finance/audit'], ['POST', '/api/finance/entries'], ['POST', '/api/finance/sanctioned/batch'],
     ['PUT', '/api/finance/settings'], ['POST', '/api/finance/workbook'], ['GET', '/api/finance/forex?currency=USD'],
     ['POST', '/api/portal/save'], ['POST', '/api/portal/sync'], ['POST', '/api/portal/master-folder'], ['POST', '/api/chat'],
-    ['GET', '/api/drive/files'], ['GET', '/api/site/controlTower'], ['GET', '/api/site/public'], ['PUT', '/api/site/public'], ['PUT', '/api/site/controlTower'], ['POST', '/api/site/roles-image'], ['DELETE', '/api/site/roles-image'], ['POST', '/api/drive/analyze'], ['GET', '/api/anything-else'], ['DELETE', '/api/finance/entries']];
+    ['GET', '/api/drive/files'], ['GET', '/api/site/controlTower'], ['GET', '/api/site/public'], ['PUT', '/api/site/public'], ['PUT', '/api/site/controlTower'], ['POST', '/api/site/roles-image'], ['DELETE', '/api/site/roles-image'], ['POST', '/api/site/image/hero'], ['DELETE', '/api/site/image/overview'], ['POST', '/api/drive/analyze'], ['GET', '/api/anything-else'], ['DELETE', '/api/finance/entries']];
   for (const [method, p] of calls) {
     const res = await fetch(base + p, { method, headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : '{}' });
     assert.equal(res.status, 401, `${method} ${p}`);
@@ -95,6 +95,7 @@ test('signed in and on the access list: the private pages and API open', async (
   assert.equal((await get('/control-tower/', as('aina@jda.app'))).status, 200);
   assert.equal((await get('/control-tower/invoices/', as('aina@jda.app'))).status, 200);
   assert.equal((await get('/control-tower/jda-report.html', as('aina@jda.app'))).status, 200);
+  assert.equal((await get('/control-tower/site', as('aina@jda.app'))).status, 200);     // Edit public site
   for (const page of ['overall-progress', 'weekly-progress', 'documents']) assert.equal((await get(`/control-tower/jda1/${page}`, as('aina@jda.app'))).status, 200, page);
   assert.equal((await get('/control-tower/master-page.html', as('aina@jda.app'))).status, 200); // the Master Page editor, drawn on the Info page
   const data = await get('/api/finance/data', as('aina@jda.app'));
@@ -145,7 +146,7 @@ test('edit mode: a signed-in save is stored under that person, and the public pa
 });
 
 test("a JDA's private pages have addresses of their own; signed out they lead to sign-in, an unknown JDA nowhere", async () => {
-  for (const path of ['/control-tower/jda1/overall-progress', '/control-tower/jda3/weekly-progress', '/control-tower/jda2/documents', '/control-tower/jda1', '/control-tower/master-page.html', '/control-tower/components/master-edit.js']) {
+  for (const path of ['/control-tower/site', '/control-tower/jda1/overall-progress', '/control-tower/jda3/weekly-progress', '/control-tower/jda2/documents', '/control-tower/jda1', '/control-tower/master-page.html', '/control-tower/components/master-edit.js']) {
     const res = await get(path);
     assert.equal(res.status, 302, path);
     assert.match(res.headers.get('location'), /^\/login\?next=/, path);

@@ -177,3 +177,9 @@ body.editing .contact-card.optional{display:flex}
 .pic-placeholder figcaption{display:grid;gap:2px;font-size:14px}
 .pic-placeholder b{color:var(--teal-800)}
 @media (max-width:760px){.soft-box.with-pic{grid-template-columns:1fr}.pic-placeholder{min-height:160px}}
+
+.sec-pic{margin:0;border-radius:var(--radius);overflow:hidden;box-shadow:var(--elev-1)}
+.sec-pic img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover}
+/* inside the Control Tower's editor the page is shown on its own, without its menu */
+body.in-editor .sidebar,body.in-editor .mobilebar,body.in-editor .scrim{display:none}
+body.in-editor .with-side{margin-left:0}

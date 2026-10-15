@@ -13,7 +13,7 @@ export function newAddress(hash, search = '') {
   if (a === 'project' && b) return page('overall', `#project/${encodeURIComponent(b)}`);
   if (a === 'edit' && b === 'progress') return page('overall', '#edit');
   if (a === 'edit' && b === 'weekly') return page('weekly', '#edit');
-  if (a === 'edit') return `/jda/${id}/info#edit`;  // the Editor Page: the Master Page in edit mode
+  if (a === 'edit') return `/control-tower/site#${id}`;  // the Editor Page: the Master Page in the Control Tower's editor
   if (a === 'solution' && b) return `/jda/${id}/info#solution/${encodeURIComponent(b)}`;
   return `/jda/${id}/info`; // the Master Page, read or edited
 }

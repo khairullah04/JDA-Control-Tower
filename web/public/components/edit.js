@@ -10,13 +10,14 @@ const $ = id => document.getElementById(id);
 const PERSON = () => ({ name: '', title: '' });
 // What each in-place field is called, for screen readers.
 const SECTION = { header: 'Top of the page', overview: 'Overview', roles: 'Roles', whatIsJda: 'What is a JDA', existing: 'Existing JDAs', news: 'Latest press releases', figures: 'Figures', status: 'JDA status', contacts: 'Contacts', footer: 'Footer' };
-const FIELD = { title: 'heading', subtitle: 'subheading', body: 'text', eyebrow: 'small heading above the title', tagline: 'tagline', email: 'email', phone: 'phone', address: 'address', linkedin: 'LinkedIn address', website: 'website address', text: 'text', alt: 'picture description' };
+const FIELD = { title: 'heading', subtitle: 'subheading', body: 'text', eyebrow: 'small heading above the title', tagline: 'tagline', email: 'email', phone: 'phone', address: 'address', jdas: 'first figure\'s label', underWay: 'second figure\'s label', finished: 'third figure\'s label', linkedin: 'LinkedIn address', website: 'website address', text: 'text', alt: 'picture description' };
 const nameOf = path => { const [s, f] = path.split('.'); return `${SECTION[s] || s}: ${FIELD[f] || f}`; };
 
 export async function start({ site, show, reload, done }) {
   const { content, reports, updatedAt } = await api('GET', '/api/site/public');
   const draft = structuredClone(content);
-  let base = updatedAt, roles = ''; // roles: 'publish' once a picture is uploaded, 'remove' to take it away
+  let base = updatedAt;
+  const pictures = {}; // <key>: 'publish' once a picture is uploaded, 'remove' to take it away (sent with Save)
   await show(site);
   document.body.classList.add('editing');
 
@@ -24,16 +25,18 @@ export async function start({ site, show, reload, done }) {
     title: 'Editing the public page',
     intro: "Click or tap any text with a dashed outline to change it. Each JDA's details are in its tab under Existing JDAs.",
     save: async force => {
-      const out = await api('PUT', '/api/site/public', { content: draft, base, force, roles });
+      const out = await api('PUT', '/api/site/public', { content: draft, base, force, pictures });
       base = out.updatedAt;
       finish(); await reload(); done('Saved. The public page now shows your changes.');
     },
-    cancel: async () => { if (roles === 'publish') await api('DELETE', '/api/site/roles-image').catch(() => {}); finish(); await show(site); done('Edit cancelled. Nothing was changed.'); }
+    cancel: async () => {
+      for (const [key, act] of Object.entries(pictures)) if (act === 'publish') await api('DELETE', `/api/site/image/${key}`).catch(() => {});
+      finish(); await show(site); done('Edit cancelled. Nothing was changed.');
+    }
   });
   const changed = () => bar.changed();
-  const finish = () => { bar.el.remove(); document.body.classList.remove('editing'); $('editPageBtn').hidden = false; };
+  const finish = () => { bar.el.remove(); document.body.classList.remove('editing'); };
   document.body.append(bar.el);
-  $('editPageBtn').hidden = true;
 
   // Text in the page's sections, where it stands.
   for (const el of document.querySelectorAll('#page [data-field]')) {
@@ -50,9 +53,27 @@ export async function start({ site, show, reload, done }) {
   });
   document.querySelectorAll('.status-card .status-title').forEach(p => p.insertAdjacentHTML('afterend', '<p class="edit-hint">Set the status, title and number of projects in the JDA\'s tab under Existing JDAs.</p>'));
 
-  // The Roles picture and its description.
-  const figure = document.querySelector('.roles-figure');
-  if (figure) figure.after(rolesForm(draft, changed, v => { roles = v; changed(); }, site.roles.image));
+  // Every picture: the Roles chart (with its description), the Overview and What is a JDA pictures
+  // where they stand, and the two hero pictures under the hero.
+  const setPicture = key => act => { pictures[key] = act; changed(); };
+  const pics = site.pictures || {};
+  const roles = document.querySelector('[data-picture="roles"]');
+  if (roles) roles.after(pictureForm({ key: 'roles', label: 'the Roles picture', current: pics.roles, set: setPicture('roles'), preview: url => figurePreview(roles, url, 'Roles chart'),
+    extra: field('What the picture shows (for people who cannot see it)', input(draft.roles.alt, v => { draft.roles.alt = v; changed(); })) }));
+  for (const [key, name] of [['overview', 'Overview'], ['whatIsJda', 'What is a JDA']]) {
+    const fig = document.querySelector(`[data-picture="${key}"]`);
+    if (fig) fig.append(pictureForm({ key, label: `the ${name} picture`, current: pics[key], set: setPicture(key), preview: url => figurePreview(fig, url, name) }));
+  }
+  const hero = document.querySelector('.hero');
+  if (hero) {
+    const box = document.createElement('div');
+    box.className = 'hero-edit';
+    box.append(Object.assign(document.createElement('h3'), { className: 'mini-head', textContent: 'Hero pictures' }), hint('Each JDA\'s slide uses the picture of its press release, set on its Master Page.'));
+    for (const [key, name, slide] of [['hero', 'the first slide (TriCipta AI)', 0], ['heroJda', 'the "What is a JDA" slide', 1]]) {
+      box.append(pictureForm({ key, label: `the picture of ${name}`, current: pics[key], set: setPicture(key), preview: url => slidePreview(hero, slide, url) }));
+    }
+    hero.after(box);
+  }
 
   $('page').querySelector('.ed-inline')?.focus();
 }
@@ -107,13 +128,15 @@ function jdaForm(j, r, w, changed, say) {
   return form;
 }
 
-function rolesForm(draft, changed, setRoles, current) {
+// A picture's form: Replace (uploaded now, public on Save, thrown away on Cancel) and Remove (on Save;
+// the one before is kept on the server). `preview(url | null)` shows the change on the page at once.
+function pictureForm({ key, label, current, set, preview, extra }) {
   const box = document.createElement('div');
-  box.className = 'roles-edit';
+  box.className = 'roles-edit picture-edit';
   const file = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/jpeg,image/png,image/webp' });
-  const msg = Object.assign(document.createElement('p'), { className: 'edit-hint', textContent: 'JPEG, PNG or WebP, up to 8 MB. The new picture is shown here now and goes public when you press Save changes; Cancel throws it away.' });
+  const msg = Object.assign(document.createElement('p'), { className: 'edit-hint', textContent: 'JPEG, PNG or WebP, up to 8 MB. The new picture shows here now and goes public when you press Save changes; Cancel throws it away.' });
   msg.setAttribute('role', 'status');
-  const fig = document.querySelector('.roles-figure');
+  const remove = Object.assign(document.createElement('button'), { type: 'button', className: 'le-btn', textContent: 'Remove the picture', hidden: !current });
   file.onchange = async () => {
     const f = file.files[0];
     if (!f) return;
@@ -121,19 +144,30 @@ function rolesForm(draft, changed, setRoles, current) {
     msg.textContent = 'Uploading…';
     try {
       const url = await new Promise((ok, fail) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = fail; r.readAsDataURL(f); });
-      await api('POST', '/api/site/roles-image', { image: url.split(',')[1] });
-      fig.innerHTML = `<img src="${esc(url)}" alt="${esc(draft.roles.alt)}">`;
-      setRoles('publish');
+      await api('POST', `/api/site/image/${key}`, { image: url.split(',')[1] });
+      preview(url); set('publish'); remove.hidden = false;
       msg.textContent = 'New picture ready. It goes public when you press Save changes.';
     } catch (e) { msg.textContent = `Not uploaded: ${e.message}`; }
   };
-  const remove = Object.assign(document.createElement('button'), { type: 'button', className: 'le-btn', textContent: 'Remove the picture', hidden: !current });
   remove.onclick = () => {
-    setRoles('remove');
-    fig.innerHTML = '<div class="roles-placeholder"><p><b>Roles chart coming soon</b><span>The picture is removed when you press Save changes.</span></p></div>';
+    set('remove'); preview(null); remove.hidden = true;
     msg.textContent = 'The picture will be removed when you press Save changes. The one before is kept on the server.';
   };
-  box.append(field('Replace the Roles picture', file), remove, msg,
-    field('What the picture shows (for people who cannot see it)', input(draft.roles.alt, v => { draft.roles.alt = v; changed(); })));
+  box.append(field(`Replace ${label}`, file), remove, msg);
+  if (extra) box.append(extra);
   return box;
+}
+// What a picture slot shows while editing: the new picture, or the placeholder once removed.
+function figurePreview(fig, url, name) {
+  const form = fig.querySelector('.picture-edit');
+  fig.className = url ? (fig.classList.contains('roles-figure') ? 'roles-figure' : 'sec-pic') : (fig.classList.contains('roles-figure') ? 'roles-figure' : 'pic-placeholder');
+  fig.innerHTML = url ? `<img src="${esc(url)}" alt="${esc(name)}">` : `<div class="roles-placeholder"><p><b>${esc(name)}: no picture</b><span>The placeholder shows once you press Save changes.</span></p></div>`;
+  if (form) fig.append(form);
+}
+// A hero slide shows the new picture (or its built-in one once removed, after Save).
+function slidePreview(hero, i, url) {
+  const slide = hero.querySelector(`#slide-${i}`);
+  if (!slide || !url) return;
+  slide.style.backgroundImage = `linear-gradient(100deg,rgba(1,39,36,.88) 0%,rgba(1,61,57,.7) 45%,rgba(1,61,57,.2) 100%),url('${url}')`;
+  slide.style.setProperty('--slide-img', `url('${url}')`);
 }

@@ -98,3 +98,18 @@ test('a save keeps the version before it, and only force === true overwrites', a
   const now = await store.get('controlTower');
   assert.deepEqual([now.previous.updatedBy, now.previous.jdas.jda1.keyInsights[0].title, 'previous' in now.previous], ['aina', 'One', false]);
 });
+
+test('every landing page picture: uploaded, published on Save, removed out of public reach; an unknown one refused', async () => {
+  const { savePicture, publishPicture, removePicture, discardPicture, pictureUrl } = await import('./site-content.js');
+  const [dir, pending, prev] = ['pics-', 'pending-', 'previous-'].map(n => fs.mkdtempSync(path.join(os.tmpdir(), n)) + path.sep);
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(20)]).toString('base64');
+  for (const key of ['hero', 'heroJda', 'overview', 'whatIsJda']) {
+    savePicture(key, png, pending);
+    assert.equal(pictureUrl(key, dir), null);                                            // nothing public until saved
+    assert.match(publishPicture(key, dir, pending, prev), new RegExp(`^/public/assets/${key}\\.png\\?v=`));
+    removePicture(key, dir, prev);
+    assert.deepEqual([pictureUrl(key, dir), fs.existsSync(`${prev}${key}.png`)], [null, true]);
+  }
+  for (const bad of ['secret', '../roles', 'index']) assert.throws(() => savePicture(bad, png, pending), e => e.status === 404, bad);
+  assert.throws(() => discardPicture('../x', pending), e => e.status === 404);
+});

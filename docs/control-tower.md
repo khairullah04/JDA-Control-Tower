@@ -26,7 +26,10 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
 - A JDA's pages (Agreement & BRD, Overall progress, Weekly progress, Invoices & payments at
   `/control-tower/<jda>/invoices`): a breadcrumb and links to the others under the top bar, and the JDA
   tabs there keep the page (JDA 1's Weekly progress → JDA 2's).
-- **Edit page** (top right): per JDA, its key insights, challenges, and the progress and cost figures when they must be set by hand (shown as "Set by hand"). The public TriCipta AI page has the same button in its sidebar for anyone signed in. Both save on the server (`/api/site/...`), and a save made after someone else's is refused until confirmed.
+- **Edit page** (top right): per JDA, its key insights, challenges, and the progress and cost figures when they must be set by hand (shown as "Set by hand"). It saves on the server (`/api/site/...`), and a save made after someone else's is refused until confirmed.
+- **Edit public site** (top bar and sidebar, `/control-tower/site`): the one place the public site is edited. Tabs **Main page · JDA 1 · JDA 2 · JDA 3**; the chosen page is shown live, in edit mode (`?edit`), as the public sees it. Moving to another tab with unsaved changes asks first. `#main`, `#jda1`… in the address open a tab. The public pages have no edit buttons; signed in, they show **Edit in Control Tower**, which leads here.
+  - **Main page**: every heading and text (click the dashed outline), the figure labels, each JDA's tab (title, status, press release and its date, projects, number of projects, Program Lead, Business Champions), contacts (with LinkedIn and website), the footer, and five pictures: the first hero slide, the "What is a JDA" hero slide, the Overview and What is a JDA pictures (a placeholder until one is added) and the Roles chart (with its description). Pictures are JPEG, PNG or WebP up to 8 MB; they go public on Save, Cancel throws them away, and the one before is kept in `server/.roles-previous/`. A JDA's own hero slide uses the picture of its press release, set on its Master Page.
+  - **JDA 1–3**: the Master Page editor, below.
 - A JDA -> Control Tower: the breadcrumb, the logo or the sidebar. Invoice Tracker -> Control Tower:
   the sidebar, its logo, or on a JDA's page the breadcrumb. The tracker's old front page (a card per JDA) is gone: its address
   leads to the Control Tower.
@@ -70,8 +73,8 @@ Document shape (all fields optional):
 
 A JDA's **Master Page** (hero text, winning aspiration, AI solutions and their detail pages,
 collaborators, press release) is its public Info page, `/jda/<jda>/info`. There is no private copy.
-Signed in, the Info page shows **Edit Master Page** in its top bar; it opens the same page in edit mode,
-in place (`web/control-tower/components/master-edit.js` and `master-page.html`, served only to people
+It is edited in the Control Tower's **Edit public site** (its JDA's tab), which shows the Info page in
+edit mode (`web/control-tower/components/master-edit.js` and `master-page.html`, served only to people
 signed in). In edit mode:
 
 - every piece of text is editable in place (dashed outline);
@@ -169,7 +172,7 @@ One-time setup:
 It gets the same page with every section in place and the values blank: no zeros, no sample
 numbers, and never another JDA's content. To fill it in:
 
-- Master Page: Edit Master Page on its Info page, typing it in or updating from its Master File
+- Master Page: Edit public site in the Control Tower (its JDA's tab), typing it in or updating from its Master File
   folder. Or as an entry in `web/control-tower/config/jda-content.js`, next to `jda3`.
 - Progress: Edit page on its Overall or Weekly progress page, by hand or from Drive; or Sync
   from Drive on Edit report.

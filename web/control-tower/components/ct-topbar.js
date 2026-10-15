@@ -37,8 +37,12 @@ export function mountCtTopbar({ bar, tabs = null, actions = [] }) {
 
   const right = document.createElement('div');
   right.className = 'ct-top-right';
-  const site = Object.assign(document.createElement('a'), { className: 'ct-top-link', href: '/', target: '_blank', rel: 'noopener' });
-  site.innerHTML = `${svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>')}<span>View public site</span><span class="visually-hidden"> (opens in a new tab)</span>`;
+  // Edit public site: the TriCipta AI page and the JDAs' Master Pages are edited there, in one place.
+  const editSite = Object.assign(document.createElement('a'), { className: 'ct-top-link ct-top-edit', href: '/control-tower/site' });
+  editSite.innerHTML = `${svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}<span>Edit public site</span>`;
+  if (location.pathname === '/control-tower/site') editSite.setAttribute('aria-current', 'page');
+  const site = Object.assign(document.createElement('a'), { className: 'ct-top-link icon-only', href: '/', target: '_blank', rel: 'noopener', title: 'View public site' });
+  site.innerHTML = `${svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>')}<span class="visually-hidden">View public site (opens in a new tab)</span>`;
   // The user menu: a button that opens a small panel with who is signed in and Sign out.
   const menu = document.createElement('div');
   menu.className = 'ct-user';
@@ -54,7 +58,7 @@ export function mountCtTopbar({ bar, tabs = null, actions = [] }) {
   menu.addEventListener('focusout', e => { if (!menu.contains(e.relatedTarget)) open(false); }); // tabbing away closes it
   // every action reads the same way: an icon and its name (the name hidden on a phone)
   for (const a of actions) if (!a.querySelector('svg')) { const name = a.textContent.trim(); a.innerHTML = `${svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}<span>${esc(name)}</span>`; }
-  right.append(...actions, site, menu);
+  right.append(...actions, editSite, site, menu);
 
   bar.append(left, right);
   return { left, right };

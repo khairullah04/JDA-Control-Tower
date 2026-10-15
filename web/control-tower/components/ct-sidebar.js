@@ -31,6 +31,8 @@ export function mountCtSidebar({ wrap, bar, current = '' }) {
       ${link('/control-tower/', 'home', 'Control Tower', ICON.home)}
       <p class="side-label">JDAs</p>
       ${JDAS.map(j => link(`/control-tower/${j.id}/overall-progress`, j.id, j.name, j.icon || DEFAULT_JDA_ICON)).join('')}
+      <p class="side-label">Public site</p>
+      ${link('/control-tower/site', 'site', 'Edit public site', '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}
       <p class="side-label">Invoice Tracker</p>
       ${link('/control-tower/invoices/#/cji3', 'cji3', 'CJI3 register', ICON.cji3)}
       ${link('/control-tower/invoices/#/payments', 'payments', 'Payment tables', ICON.pay)}

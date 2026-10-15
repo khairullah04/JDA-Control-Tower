@@ -6,6 +6,8 @@ import { blocksHtml } from '/shared/components/blocks.js';
 import { me } from '/shared/lib/session.js';
 
 const $ = id => document.getElementById(id);
+const EDITOR = new URLSearchParams(location.search).has('edit') && window.parent !== window; // shown inside the Control Tower's editor
+if (EDITOR) document.body.classList.add('in-editor');
 const id = location.pathname.split('/')[2] || '';                    // /jda/<id>/info: the server only serves known ids
 const decode = v => { try { return decodeURIComponent(v); } catch { return ''; } };
 const svg = (paths, size = 19) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
@@ -123,24 +125,23 @@ me().then(who => {
   $('fullReport').textContent = who.signedIn ? 'Open in Control Tower' : 'Employee sign-in';
   $('fullReport').href = who.signedIn ? report : `/login?next=${encodeURIComponent(location.pathname)}`;
   if (!who.signedIn || !info) return;
-  const edit = Object.assign(document.createElement('button'), { type: 'button', className: 'info-link', id: 'editMasterBtn', textContent: 'Edit Master Page' });
-  edit.onclick = async () => {
-    edit.disabled = true; edit.textContent = 'Opening…';
-    history.replaceState(null, '', location.pathname);
-    try {
-      if (!(await me()).signedIn) throw Object.assign(new Error('Your sign-in has ended.'), { signIn: true });
-      window.removeEventListener('popstate', route); // the read-only screens are replaced by the editor
-      const { start } = await import('/control-tower/components/master-edit.js');
-      await start({ id, main: $('info-main'), leave: () => location.reload() });
-      $('infoStrip').hidden = true;
-      edit.remove();
-    } catch (e) {
-      edit.disabled = false; edit.textContent = 'Edit Master Page';
-      window.addEventListener('popstate', route);
-      $('infoStrip').innerHTML = e.signIn ? `Your sign-in has ended. <a href="/login?next=${encodeURIComponent(location.pathname)}">Sign in again</a> to edit this page.` : `Edit mode could not open: ${esc(e.message)}`;
-      $('infoStrip').hidden = false;
-    }
-  };
-  $('fullReport').before(edit);
-  if (location.hash === '#edit') edit.click(); // /jda/<id>/info#edit: straight into edit mode (old Editor Page bookmarks)
+  // Inside the Control Tower's "Edit public site" (?edit): straight into edit mode, and back into it
+  // after Save or Leave. Elsewhere the page is edited there, not here.
+  if (EDITOR) return openEditor();
+  const link = Object.assign(document.createElement('a'), { className: 'info-link', id: 'editMasterBtn', textContent: 'Edit in Control Tower', href: `/control-tower/site#${encodeURIComponent(id)}` });
+  $('fullReport').before(link);
 });
+
+// The Master Page's editor (private: loaded only for people signed in), in place of the read-only page.
+async function openEditor() {
+  try {
+    window.removeEventListener('popstate', route); // the read-only screens are replaced by the editor
+    const { start } = await import('/control-tower/components/master-edit.js');
+    await start({ id, main: $('info-main'), leave: () => location.reload() });
+    $('infoStrip').hidden = true;
+  } catch (e) {
+    window.addEventListener('popstate', route);
+    $('infoStrip').textContent = `Edit mode could not open: ${e.message}`;
+    $('infoStrip').hidden = false;
+  }
+}

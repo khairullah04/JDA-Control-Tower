@@ -93,3 +93,20 @@
 @media (max-width:640px){.topbar{position:static}}
 .ct-master-link{display:inline-block;margin-top:4px;font-size:14px;font-weight:600;color:var(--teal-700)}
 @media (max-width:640px){.ct-top-right .ct-btn[aria-busy] span{position:static;width:auto;height:auto;overflow:visible;clip:auto}} /* "Syncing: …" stays readable */
+
+/* Edit public site in the bar; View public site as an icon beside it */
+.ct-top-edit{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1)}
+.ct-top-edit[aria-current]{background:#fff;color:var(--teal-900)}
+.ct-top-link.icon-only{width:40px;justify-content:center;padding:0}
+
+/* Edit public site (site.html): the page chosen, shown live below its tabs */
+.site-tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--border);margin-bottom:10px}
+.site-tabs [role="tab"]{position:relative;flex:none;min-height:44px;padding:0 16px;border:0;background:none;font:700 15px/1 var(--font);color:var(--muted);cursor:pointer}
+.site-tabs [role="tab"]:hover{color:var(--teal-800)}
+.site-tabs [role="tab"][aria-selected="true"]{color:var(--teal-900)}
+.site-tabs [role="tab"][aria-selected="true"]::after{content:'';position:absolute;inset:auto 10px 0;height:3px;border-radius:3px 3px 0 0;background:var(--teal-600)}
+.site-tabs [role="tab"]:focus-visible{outline:3px solid var(--teal-500);outline-offset:-3px}
+.site-frame-bar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;margin:0 0 10px;font-size:14px;color:var(--muted)}
+.site-frame-bar a{color:var(--teal-700);font-weight:600}
+.site-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:480px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;box-shadow:var(--elev-1)}
+.site-editor{max-width:none}
