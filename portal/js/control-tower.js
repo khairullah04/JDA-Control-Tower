@@ -8,7 +8,7 @@ import { esc } from '../../shared/esc.js';
 import { toLogin } from '../../shared/session.js';
 import { JDAS } from './config/app-config.js';
 import { contentFor } from './config/jda-content.js';
-import { isConfigured, reportRefFor } from './config/firebase.js';
+import { isConfigured, reportRefFor, auth } from './config/firebase.js';
 import './account.js';
 
 const $ = id => document.getElementById(id);
@@ -82,11 +82,13 @@ function figures(j, report, written, costs) {
   const cost = written.costOverride
     ? { spent: written.costOverride.spent, sanctioned: written.costOverride.sanctioned, override: true }
     : tracked && { spent: tracked.spentMinor / 100, sanctioned: tracked.sanctionedMinor / 100 };
+  const reportChallenges = Array.isArray(r?.challenges) ? r.challenges.map(c => ({ title: c.title, text: c.description, severity: c.severity })) : [];
   return {
+    dataProgress: avg, dataCost: tracked ? { spent: tracked.spentMinor / 100, sanctioned: tracked.sanctionedMinor / 100 } : null, reportChallenges, // what the data says, for edit mode
     failed, projects: projects.length, status: STATUS[r?.overallStatus] ? r.overallStatus : null,
     progress: written.progressOverride ?? avg, progressOverride: written.progressOverride !== null && written.progressOverride !== undefined,
     latest: updates[0] || null, updates: updates.length,
-    challenges: written.challenges ?? (Array.isArray(r?.challenges) ? r.challenges.map(c => ({ title: c.title, text: c.description, severity: c.severity })) : []),
+    challenges: written.challenges ?? reportChallenges,
     challengesOverride: Array.isArray(written.challenges),
     cost, trackerId: tracked?.trackerId, pending: tracked?.pending ?? null, twice: !!tracked?.twice,
     tagline: r?.overview?.tagline || contentFor(j).tagline || ''
@@ -226,7 +228,8 @@ function wire() {
     $('editPageBtn').disabled = true;
     const open = () => $('ctTabs').querySelector('[aria-selected="true"]')?.id.slice(4);
     try {
-      (await import('./control-tower-edit.js')).start({
+      await (await import('./control-tower-edit.js')).start({
+        token: () => auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(''),
         jdas: state.jdas,
         figures: j => figures(j, state.reports[state.jdas.indexOf(j)], state.written[j.id] || {}, state.costs),
         redraw: () => safeDraw(open()),

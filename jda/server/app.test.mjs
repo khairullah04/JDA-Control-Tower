@@ -72,7 +72,7 @@ test('every private API answers 401 without a session', async () => {
   const calls = [['GET', '/api/finance/data'], ['GET', '/api/finance/audit'], ['POST', '/api/finance/entries'], ['POST', '/api/finance/sanctioned/batch'],
     ['PUT', '/api/finance/settings'], ['POST', '/api/finance/workbook'], ['GET', '/api/finance/forex?currency=USD'],
     ['POST', '/api/portal/save'], ['POST', '/api/portal/sync'], ['POST', '/api/portal/master-folder'], ['POST', '/api/chat'],
-    ['GET', '/api/drive/files'], ['GET', '/api/site/controlTower'], ['PUT', '/api/site/public'], ['POST', '/api/drive/analyze'], ['GET', '/api/anything-else'], ['DELETE', '/api/finance/entries']];
+    ['GET', '/api/drive/files'], ['GET', '/api/site/controlTower'], ['GET', '/api/site/public'], ['PUT', '/api/site/public'], ['PUT', '/api/site/controlTower'], ['POST', '/api/site/roles-image'], ['DELETE', '/api/site/roles-image'], ['POST', '/api/drive/analyze'], ['GET', '/api/anything-else'], ['DELETE', '/api/finance/entries']];
   for (const [method, p] of calls) {
     const res = await fetch(base + p, { method, headers: { 'Content-Type': 'application/json' }, body: method === 'GET' ? undefined : '{}' });
     assert.equal(res.status, 401, `${method} ${p}`);

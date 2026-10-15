@@ -7,3 +7,4 @@ node_modules
 portal-passkeys.json
 .site-content.json
 .site-content.json.tmp
+.roles-pending/

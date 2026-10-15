@@ -1,2 +1,4 @@
 backups/
 .claude/worktrees/
+site/public/roles.*
+site/public/roles-previous.*

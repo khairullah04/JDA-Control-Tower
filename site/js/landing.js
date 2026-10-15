@@ -157,6 +157,7 @@ export function wireClamps(root) {
   });
 }
 
+let closeMenu = () => {};
 function wireNav() {
   const links = [...document.querySelectorAll('.side-nav a')];
   const current = id => links.forEach(a => a.getAttribute('href') === `#${id}` ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current'));
@@ -177,6 +178,7 @@ function wireNav() {
     if (on) $('sidebar').querySelector('a').focus(); else if (refocus) $('menuBtn').focus();
   };
   open(false);
+  closeMenu = () => open(false);
   phone.addEventListener('change', () => open(false));
   $('menuBtn').onclick = () => open(!document.body.classList.contains('menu-open'));
   $('scrim').onclick = () => open(false, true);
@@ -196,9 +198,11 @@ async function account() {
   // Edit mode: everything on this page that is written rather than worked out (edit.js).
   const editBtn = Object.assign(document.createElement('button'), { type: 'button', id: 'editPageBtn', className: 'btn ghost small side-edit', textContent: 'Edit page' });
   editBtn.onclick = async () => {
+    if (!current) return toast('The page has not loaded, so it cannot be edited. Reload and try again.');
     editBtn.disabled = true;
-    try { (await import('/site/js/edit.js')).start({ site: current, show, reload }); }
-    catch (e) { alert(`Edit mode could not open: ${e.message}`); }
+    closeMenu();
+    try { await (await import('/site/js/edit.js')).start({ site: current, show, reload, done: text => { toast(text); editBtn.focus(); } }); }
+    catch (e) { toast(`Edit mode could not open: ${e.message}`); }
     finally { editBtn.disabled = false; }
   };
   $('sideFoot').append(editBtn);
@@ -207,6 +211,13 @@ async function account() {
     out.onclick = () => { if (!window.hasUnsavedChanges?.() || confirm('You have unsaved changes. Sign out anyway and lose them?')) endSession(); };
     $('sideFoot').append(out);
   }
+}
+// A short message after edit mode (saved, cancelled, or why it could not open), read out by screen readers.
+function toast(text) {
+  let t = $('editToast');
+  if (!t) { t = Object.assign(document.createElement('div'), { id: 'editToast', className: 'edit-toast' }); t.setAttribute('role', 'status'); document.body.append(t); }
+  t.textContent = text; t.hidden = false;
+  clearTimeout(t._timer); t._timer = setTimeout(() => { t.hidden = true; }, 6000);
 }
 // After a save: the page as the public now sees it.
 async function reload() {

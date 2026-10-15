@@ -68,6 +68,16 @@ const financeFile = path.resolve(here, '../.finance-data.json');
 if (fs.existsSync(financeFile)) { fs.copyFileSync(financeFile, path.join(out, 'finance-data.json')); manifest.saved.push('finance-data.json (the local finance file)'); }
 else manifest.saved.push('finance-data.json: no local finance file exists');
 
+// 4. The landing pages' content when kept in a file (no key), and the Roles picture.
+const siteFile = path.resolve(here, '../.site-content.json');
+if (fs.existsSync(siteFile)) { fs.copyFileSync(siteFile, path.join(out, 'site-content.json')); manifest.saved.push('site-content.json (the landing pages, local file)'); }
+const publicDir = path.resolve(here, '../../../site/public');
+for (const f of fs.existsSync(publicDir) ? fs.readdirSync(publicDir).filter(n => /^roles(-previous)?\./.test(n)) : []) {
+  fs.mkdirSync(path.join(out, 'site-public'), { recursive: true });
+  fs.copyFileSync(path.join(publicDir, f), path.join(out, 'site-public', f));
+  manifest.saved.push(`site-public/${f} (the Roles picture)`);
+}
+
 save('MANIFEST.json', manifest);
 console.log(`Backup written to ${out}\n\nSaved:\n  ${manifest.saved.join('\n  ')}`);
 if (manifest.missing.length) { console.log(`\nNOT backed up:\n  ${manifest.missing.join('\n  ')}`); process.exitCode = 1; }

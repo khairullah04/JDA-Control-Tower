@@ -71,7 +71,7 @@ written beside it. Review findings are logged under each phase.
 
 - [x] JDA 4+ removed from code: portal JDA list (`portal/js/config/app-config.js`), tracker default JDAs (`jda/web/js/config/app-config.json`), demo data and its JDA 4 projects DA/DB/DC (`jda/web/js/services/demo/data.js`), passkey example and the local `portal-passkeys.json`, READMEs, rule and code comments. *Checked: grep below; `npm test` 102/102.*
 - [x] Test fixtures no longer name JDA numbers above 3 (jda7/jda9 became `jdaz` / "JDA Z"). *Checked: grep below.*
-- [x] Repo search for `JDA 4`, `JDA4`, `jda-4`, `jda_4`, `jda4` and 5+ finds nothing outside this checklist, the review agent's instructions, and the removal script and its test. *Checked: `grep -rniE "jda[ _-]?([4-9]|[1-9][0-9])\b"` and a search for "1, 2 and 4" / "1-4" (excluding node_modules, backups, vendor, drive-test-files).*
+- [x] Repo search for `JDA 4`, `JDA4`, `jda-4`, `jda_4`, `jda4` and 5+ finds nothing outside this checklist, the review agent's instructions, and the removal script, its module (`jda-removal.js`), its test and the README line describing it, which name JDA 4 on purpose. *Checked: `grep -rniE "jda[ _-]?([4-9]|[1-9][0-9])\b"` and a search for "1, 2 and 4" / "1-4" (excluding node_modules, backups, vendor, drive-test-files).*
 - [x] Database cleanup script `jda/server/scripts/remove-jdas.mjs` (logic in `jda/server/jda-removal.js`) removes JDA 4+ tracker records and every dependent row: projects, invoices, sanctioned amounts, audit lines (by JDA, project or record), activity log lines, report documents and their versions. Dry run by default; `--apply` runs `scripts/backup.mjs` first and deletes nothing unless the main project was saved. `processedFiles` is left: it names no JDA, and deleting a line would make the next Drive sync import that file again. *Checked: `jda-removal.test.mjs` (3 tests) on a stand-in database, including an invoice filed under Unsorted against a JDA 4 project.*
 - [ ] Script run against the real database, and a second dry run finds nothing left. *Needs the service-account key.*
 - [x] JDA list still comes from data/config, so adding a JDA later needs no code change. *Checked: the portal reads `JDAS` in `portal/js/config/app-config.js`; the tracker reads its `jdas` collection; nothing counts to 3.*
@@ -119,7 +119,7 @@ written beside it. Review findings are logged under each phase.
 ## Phase 6 (Priority 6): edit mode
 
 - [x] Edit page button on both landing pages, only for signed-in people (public page: in the sidebar once signed in; Control Tower: top right). Saves are refused signed out (401) and must be JSON (415). *Checked: `app.test.mjs` (signed-out PUT 401, signed-in save, 409); browser on both pages.*
-- [x] Every displayed piece of content editable: on the public page every header, subheader and body text, the eyebrow, tagline, contacts and footer in place; the Roles picture (upload, JPEG/PNG/WebP up to 8 MB, checked by its bytes) and its description; per JDA its title, status, press release overview, projects, number of projects, Program Leads and Business Champions (add, remove, reorder). On the Control Tower per JDA: Agreement and BRD links, key insights, challenges, progress and cost figures. Not editable here: JDA names (the JDA list, A23) and the Info pages, which copy each JDA's Master Page and are edited in its report editor. *Checked: browser, both pages saved and redrawn; `site-edit.test.mjs`.*
+- [x] Every displayed piece of content editable: on the public page every header, subheader and body text, the eyebrow, tagline, contacts and footer in place; the Roles picture (upload, JPEG/PNG/WebP up to 8 MB, checked by its bytes) and its description; per JDA its title, status, press release overview, projects, number of projects, Program Leads and Business Champions (add, remove, reorder). On the Control Tower per JDA: Agreement and BRD links, key insights, challenges, progress and cost figures. Not editable here, by design: JDA names (the JDA list, A23); the Info pages, which copy each JDA's Master Page and are edited in its report editor; on the Control Tower each JDA's tagline, status, projects and latest key update, which come from its report and are edited there (the edit form says so); and fixed wording such as the mini-headings ("Press release overview", "Program Lead"), button labels and the sidebar links (the edit form says so). *Checked: browser, both pages saved and redrawn; `site-edit.test.mjs`.*
 - [x] Saved on the server (Firestore `site/public` and `site/controlTower`, or `jda/server/.site-content.json` without a key), shown at once and after reload; who saved and when is kept but never published; a save made after someone else's is refused unless confirmed ("Save anyway"). *Checked: `site-edit.test.mjs`, `app.test.mjs`; browser.*
 - [x] Derived values shown as derived (the public form shows the worked-out value as the field's placeholder with "Leave empty to use …"; status "Automatic: …"); overrides labelled ("Set by hand", "Written by hand" on the Control Tower; a written public value simply replaces the derived one). *Checked: browser (progress override shown "Set by hand").*
 
@@ -140,7 +140,7 @@ written beside it. Review findings are logged under each phase.
 | A3 | Sign-in is the existing Firebase accounts on `ALLOWED_EMAILS`; it replaces the tracker passkey and the per-JDA editor passkeys. | Decided by the user on 2026-10-15. |
 | A4 | Agreement and BRD are links (Drive or SharePoint), edited in edit mode. | Open question 3 default; nothing in the code stores them. |
 | A5 | JDA status (In the works / In progress / Finished) is set by hand in edit mode. | Open question 4 default. |
-| A6 | Every signed-in person can use edit mode; there is no role system. | Open question 5 default; the code has none besides the passkeys being removed. |
+| A6 | Every signed-in person can use edit mode (both landing pages, report editor); there is no role system. | Open question 5 default; the code has none besides the passkeys being removed. |
 | A7 | Info pages show project names only, no figures. | Open question 6 default. |
 | A8 | Tracker JDAs and portal JDAs are matched by name ("JDA 1"). | That is how the two lists are joined today. |
 | A13 | A session lasts 8 hours. The pages also send the Firebase token, which renews it, so a save made after it ran out still goes through. | Avoids losing an editor's unsaved work; Firebase keeps its own sign-in until Sign out. |
@@ -159,8 +159,8 @@ written beside it. Review findings are logged under each phase.
 | A26 | A completed date is only set when a task is marked Done in an edit; tasks that were Done before keep a blank date. Leaving Done clears it. | A made-up date is worse than none. |
 | A27 | A weekly report from Drive still decides which tasks are on the list, but each matching task keeps its id and every detail the report does not state. | Before the overhaul the sync replaced the list; typed details must not be lost. |
 | A28 | The JDA 3 Excel → Power Automate feed writes tasks in the old shape; its tasks get ids worked out from their titles, and details typed in the editor for JDA 3 are overwritten by the feed's next run. | The feed is outside this repository (Known issues). |
-| A29 | Every signed-in person may use edit mode on both landing pages (open question 5). | No roles exist besides the access list. |
-| A30 | The roles picture is stored as a file on the server (`site/public/`), not in the database. | A picture is large; one server serves the site (see "One process only"). A second server would need the file copied. |
+| A30 | The roles picture is stored as a file on the server (`site/public/`, not in git), not in the database. An upload waits outside public reach until Save; Cancel throws it away; the picture before is kept as `roles-previous.*`; the backup copies both. | A picture is large; one server serves the site (see "One process only"). A second server would need the file copied. |
+| A31 | Each landing-page save keeps the version before it (`previous`); a save made after someone else's is refused until confirmed, and the check and the write are not one transaction. | Two saves in the same instant are very unlikely for two pages edited by a small team. |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
 | A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
 | A11 | An invoice or sanctioned amount filed under another JDA (e.g. Unsorted) but against a JDA 4+ project is deleted with that project. | It would otherwise point at a project that no longer exists. |
@@ -180,6 +180,20 @@ Not sent by the server at all (`infoPage`, `publicJda` in `jda/server/site-conte
 - **Invoices, payments, costs**: never on a Master Page in the first place (decided 2026-10-12), and not read by these endpoints.
 
 Kept, because the Master Page has always shown them publicly (the old portal had no sign-in): the banner, winning aspiration (including its targets, e.g. "30% NPV"), solution cards, collaborators, press release and sections added in the editor. On the landing page each JDA shows only its title, press release text, project **names** and how many there are.
+
+## Left for you
+
+What the code cannot do on its own, in the order it is needed:
+
+1. **Put the database key in place**: `jda/server/service-account.json` (and `service-account-jda3.json` for JDA 3's project). Unblocks steps 2, 3, 6 and a full backup.
+2. **Remove JDA 4 from the database**: `cd jda/server && node scripts/remove-jdas.mjs` (dry run), then `--apply`. Ticks Phase 1's last item.
+3. **Optionally write the new task fields into stored reports**: `node scripts/migrate-tasks.mjs`, then `--apply`.
+4. **Give people access**: create their Firebase accounts and list their emails in `ALLOWED_EMAILS` (`jda/server/.env`); set `SESSION_SECRET` (32+ characters). Nobody can sign in until then; real sign-in has not been tried here.
+5. **For a real server**: `NODE_ENV=production`, `FINANCE_STORE=firestore`, HTTPS in front (jda/README.md, "Running in production").
+6. **Publish the database rules** after steps 1 and 4 (start the server once so it copies the access list): `cd jda && npx firebase-tools deploy --only firestore`. Until then the report documents stay publicly readable (the one outstanding High finding, Phase 2). Close JDA 3's own project rules the same way (`portal/firestore-rules-addition.txt`).
+7. **Fill in the public page with Edit page**: the Roles picture, Program Lead and Business Champion names and job titles, contacts, and rewrite the draft copy (A21). On the Control Tower: each JDA's Agreement and BRD links, and key insights.
+8. **Confirm A20**: that the Master Page content shown on the public Info pages (aspiration targets, collaborators' terms, extra sections) may be public.
+9. **Data to correct**: JDA 1's press release image field holds "kai"; JDA 3's feed lists "Project 2b" twice.
 
 ## Known issues
 
@@ -309,3 +323,25 @@ No High findings.
 | dev, lead, member | Low | Nothing-sanctioned case; duplicate tracker names; dead catch; pending link wording; unused export and function; status list repeated; tracker back links; Edit report button name; prompt cache; sort direction; Clear filters; empty detail sections; open rows by position; owner in mono. | Fixed. |
 | dev | Low | Calendar events keyed by title. | Logged (Known issues). |
 | member | Low | Last updated does not say who; no undo for Delete task; "Live report, backed by Firestore" wording. | Logged for the final pass. |
+
+### Phase 6 and final review (all four)
+
+| Who | Sev. | Finding | Done |
+|---|---|---|---|
+| lead, dev | High | A new test named `jda9`. | Fixed: `jdaz`; the search is clean apart from the removal files. |
+| lead, member, dev | High/Med | Edit-mode saves sent only the cookie: a save after it ran out was lost. | Fixed: the Control Tower sends the Firebase token; on the public page an ended sign-in keeps the edit on screen and offers sign-in in a new tab. |
+| member, designer, dev | High/Med | The Roles picture went public on choosing it; Cancel could not undo it; the old one was deleted. | Fixed: it waits until Save, Cancel discards it, the one before is kept, Remove picture added; tested. |
+| dev | High | Document links accepted http:// and had no length limit. | Fixed: https only, label 300 and link 2000 characters; tested. |
+| designer | High | Focus lost after Move up/down or Remove in the list editor. | Fixed: focus stays on the item's button or the next field; each change is announced. Checked in a browser. |
+| designer, lead, member, dev | Med | Control Tower forms vanished after a sync or Add JDA during editing. | Fixed: both held while editing. |
+| designer, lead, member, dev | Med/Low | Cancel left "unsaved changes" behind; listeners piled up; "Save anyway" stuck. | Fixed. |
+| designer | Med | In-place fields all named "Type here"; no focus or message on open, save or cancel; menu stayed open on phones; save bar over Sign out and the page bottom. | Fixed: fields named by section; focus moved and a message shown; menu closes; bar beside the sidebar; phone padding and safe area. |
+| member | Med | Values from the reports not shown once overridden; wrong project count in the note; derived progress and cost not shown beside their overrides. | Fixed: the report's values are always sent and shown; progress and cost notes give the current figures. |
+| member | Med | Typed challenges lost by unticking; bad links and numbers dropped silently. | Fixed: kept while unticked; warnings beside link and number fields. |
+| dev, member | Med | Saves not undoable; backup missed the landing content and picture. | Fixed: previous version kept; backup copies both (A30, A31). |
+| dev | Med | Edit mode errors not shown; double-click opened it twice. | Fixed: awaited, button held until open. |
+| lead | Med | No single list of what is left for the user. | Fixed: "Left for you" above. |
+| dev, lead | Low | `force` accepted any truthy value; read errors said "could not be saved"; 25 MB bodies parsed for anyone. | Fixed: `force === true`; messages per route; 1 MB except signed-in routes that need more. |
+| lead | Low | 401 test missed the new routes. | Fixed. |
+| designer | Low | Invalid font shorthands; placeholder contrast; small touch targets and iOS zoom; status wording; "Title" for people. | Fixed. |
+| designer, member | Low | Groups not collapsible on the Control Tower form; check-and-write not one transaction; no undo for a single removal. | Logged (A31; Cancel undoes everything unsaved). |

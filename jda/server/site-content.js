@@ -84,6 +84,8 @@ export async function publicJda(jda, written = {}) {
     title: text(e.title) || derived.title, pressRelease: text(e.pressRelease) || derived.pressRelease, projects, status,
     projectCount: Number.isInteger(e.projectCount) && e.projectCount >= 0 ? e.projectCount : projects.length,
     programLeads: people(e.programLeads), businessChampions: people(e.businessChampions),
+    // what the report says, whether or not something is written over it (edit mode shows it beside each field)
+    report: { title: derived.title, pressRelease: derived.pressRelease, projects: derived.projects, status: derived.projects.length ? 'in-progress' : 'in-the-works' },
     // which values came from the report rather than edit mode, so edit mode can say so
     derived: { title: !text(e.title) && !!derived.title, pressRelease: !text(e.pressRelease) && !!derived.pressRelease,
       projects: !(Array.isArray(e.projects) && e.projects.length), status: !STATUSES.includes(e.status), projectCount: !Number.isInteger(e.projectCount) }
@@ -196,7 +198,9 @@ export const CT_JDA_DEFAULTS = () => ({
   progressOverride: null,             // a percentage, instead of the average of the report's projects
   costOverride: null                  // { spent, sanctioned } in MYR, instead of the Invoice Tracker's figures
 });
-const links = list => (Array.isArray(list) ? list : []).filter(isObj).map(l => ({ label: text(l.label), url: webLink(l.url) })).filter(l => l.label || l.url);
+// A document link: https only, and of a sensible length.
+const httpsLink = v => /^https:\/\/[^\s"'<>]+$/i.test(text(v).trim()) ? text(v).trim().slice(0, 2000) : '';
+const links = list => (Array.isArray(list) ? list : []).filter(isObj).map(l => ({ label: text(l.label).slice(0, 300), url: httpsLink(l.url) })).filter(l => l.label || l.url);
 const boxes = list => (Array.isArray(list) ? list : []).filter(isObj).map(b => ({ title: text(b.title), text: text(b.text), ...(b.severity && { severity: ['low', 'medium', 'high'].includes(b.severity) ? b.severity : 'medium' }) }));
 const pct = v => Number.isFinite(v) && v >= 0 && v <= 100 ? Math.round(v) : null;
 const myr = v => Number.isFinite(v) && v >= 0 ? v : null;
@@ -258,14 +262,20 @@ export function cleanControlTower(input) {
 
 // A save: the page sends what it edited and the `updatedAt` it started from. If someone else saved in
 // between, it is refused (409) unless `force`, so nobody overwrites another person's edit unknowingly.
-export async function savePage(store, page, { content, base = '', force = false } = {}, by = 'unknown', now = new Date().toISOString()) {
+// The version before each save is kept beside it (`previous`), so one mistaken save can be put back.
+// `roles`: 'publish' makes the picture uploaded in this edit the Roles picture, 'remove' takes it away.
+export async function savePage(store, page, { content, base = '', force = false, roles = '' } = {}, by = 'unknown', now = new Date().toISOString(), dir = PUBLIC_DIR) {
   const clean = { public: cleanPublic, controlTower: cleanControlTower }[page];
   if (!clean) throw Object.assign(new Error('There is no such page.'), { status: 404 });
   const current = await store.get(page);
-  if (!force && text(current?.updatedAt) !== text(base)) {
-    throw Object.assign(new Error(`${text(current?.updatedBy) || 'Someone'} saved this page after you opened it. Reload to see their changes, or save again to overwrite them.`), { status: 409 });
+  if (force !== true && text(current?.updatedAt) !== text(base)) {
+    throw Object.assign(new Error(`${text(current?.updatedBy) || 'Someone'} saved this page after you opened it. Save anyway replaces everything they saved; to keep their changes, copy yours aside, reload and make them again.`), { status: 409 });
   }
-  return store.put(page, { ...clean(content), updatedAt: now, updatedBy: by });
+  const { previous, ...before } = current || {};
+  const saved = await store.put(page, { ...clean(content), updatedAt: now, updatedBy: by, ...(current && { previous: before }) });
+  if (page === 'public' && roles === 'publish') publishRolesImage(dir);
+  if (page === 'public' && roles === 'remove') removeRolesImage(dir);
+  return saved;
 }
 
 // What edit mode starts from: what is written (over the defaults), with the stamp a save must quote.
@@ -278,18 +288,43 @@ export async function editablePublic(store) {
 }
 
 // The Roles picture, uploaded in edit mode: a JPEG, PNG or WebP of up to 8 MB, recognised by its
-// first bytes (not by what the browser says it is). It replaces whichever roles picture was there.
+// first bytes (not by what the browser says it is). It waits, out of public reach, until the page is
+// saved (publishRolesImage); Cancel throws it away (discardRolesImage). The picture before is kept as
+// roles-previous.*, and every file is written to a temporary name first, then renamed into place.
 const KINDS = [['jpg', b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff], ['png', b => b.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))],
   ['webp', b => b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP']];
 export const MAX_IMAGE = 8 * 1024 * 1024;
-export function saveRolesImage(base64, dir = PUBLIC_DIR) {
+const EXTS = ['jpg', 'jpeg', 'png', 'webp'];
+export const PENDING_DIR = fileURLToPath(new URL('./.roles-pending/', import.meta.url));
+const findIn = (dir, stem) => EXTS.map(e => `${dir}${stem}.${e}`).find(f => fs.existsSync(f));
+const writeAtomic = (file, bytes) => { fs.writeFileSync(`${file}.tmp`, bytes); fs.renameSync(`${file}.tmp`, file); };
+
+export function saveRolesImage(base64, pendingDir = PENDING_DIR) {
   const bytes = Buffer.from(text(base64), 'base64');
   if (!bytes.length) throw Object.assign(new Error('No picture was sent.'), { status: 400 });
   if (bytes.length > MAX_IMAGE) throw Object.assign(new Error('The picture is larger than 8 MB.'), { status: 413 });
   const kind = KINDS.find(([, is]) => is(bytes))?.[0];
   if (!kind) throw Object.assign(new Error('Use a JPEG, PNG or WebP picture.'), { status: 415 });
+  fs.mkdirSync(pendingDir, { recursive: true });
+  discardRolesImage(pendingDir);
+  writeAtomic(`${pendingDir}roles.${kind}`, bytes);
+  return { pending: true, kind };
+}
+export function discardRolesImage(pendingDir = PENDING_DIR) {
+  for (const e of EXTS) fs.rmSync(`${pendingDir}roles.${e}`, { force: true });
+}
+export function publishRolesImage(dir = PUBLIC_DIR, pendingDir = PENDING_DIR) {
+  const pending = findIn(pendingDir, 'roles');
+  if (!pending) return rolesImage(dir);
   fs.mkdirSync(dir, { recursive: true });
-  for (const ext of ['jpg', 'jpeg', 'png', 'webp']) fs.rmSync(`${dir}roles.${ext}`, { force: true });
-  fs.writeFileSync(`${dir}roles.${kind}`, bytes);
+  const ext = pending.split('.').pop(), bytes = fs.readFileSync(pending);
+  const old = findIn(dir, 'roles');
+  if (old) { for (const e of EXTS) fs.rmSync(`${dir}roles-previous.${e}`, { force: true }); fs.renameSync(old, `${dir}roles-previous.${old.split('.').pop()}`); }
+  writeAtomic(`${dir}roles.${ext}`, bytes);
+  discardRolesImage(pendingDir);
   return rolesImage(dir);
+}
+export function removeRolesImage(dir = PUBLIC_DIR) {
+  const old = findIn(dir, 'roles');
+  if (old) { for (const e of EXTS) fs.rmSync(`${dir}roles-previous.${e}`, { force: true }); fs.renameSync(old, `${dir}roles-previous.${old.split('.').pop()}`); }
 }

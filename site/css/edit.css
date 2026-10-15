@@ -6,7 +6,7 @@ body.editing{padding-bottom:96px}
 .edit-bar-text b{color:#3b2a83;font-size:15px}
 .edit-status{font-size:13.5px;color:#4a5b60}
 .edit-bar-actions{display:flex;gap:10px}
-.eb-btn{min-height:44px;padding:0 20px;border-radius:12px;border:1px solid transparent;font:700 14px/1 inherit;font-family:inherit;cursor:pointer}
+.eb-btn{min-height:44px;padding:0 20px;border-radius:12px;border:1px solid transparent;cursor:pointer}
 .eb-btn.primary{background:linear-gradient(135deg,#00857c,#015149);color:#fff}
 .eb-btn.primary:disabled{opacity:.55;cursor:default}
 .eb-btn.ghost{background:#fff;border-color:#d7dfe1;color:#015149}
@@ -35,10 +35,10 @@ body.editing{padding-bottom:96px}
 .le-field.wide{flex-basis:100%}
 .le-field textarea{min-height:64px}
 .le-tools{display:flex;gap:6px}
-.le-btn{min-height:36px;min-width:36px;padding:0 10px;border-radius:9px;border:1px solid #d7dfe1;background:#fff;font:600 13px inherit;font-family:inherit;color:#015149;cursor:pointer}
+.le-btn{min-height:36px;min-width:36px;padding:0 10px;border-radius:9px;border:1px solid #d7dfe1;background:#fff;color:#015149;cursor:pointer}
 .le-btn:disabled{opacity:.4;cursor:default}
 .le-btn:last-child{color:#a33a30}
-.le-add{justify-self:start;min-height:40px;padding:0 14px;border-radius:10px;border:1.5px dashed #8a74d6;background:#fff;font:700 13.5px inherit;font-family:inherit;color:#3b2a83;cursor:pointer}
+.le-add{justify-self:start;min-height:40px;padding:0 14px;border-radius:10px;border:1.5px dashed #8a74d6;background:#fff;color:#3b2a83;cursor:pointer}
 .side-edit{border-color:rgba(255,255,255,.4)!important}
 @media (prefers-reduced-motion:reduce){.edit-bar{transition:none}}
 .ct-override{display:grid;gap:8px}
@@ -50,3 +50,23 @@ body.editing{padding-bottom:96px}
 .ct-edit > h4:first-child{font-size:15px;letter-spacing:0;text-transform:none}
 .ef-check,.ef,.le-field{text-transform:none;letter-spacing:0}
 .ct-override > input[type=number]{max-width:180px;font:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #d7dfe1;border-radius:10px}
+/* review fixes */
+.eb-btn,.le-btn,.le-add{font-family:inherit;line-height:1}
+.eb-btn{font-weight:700;font-size:14px}
+.le-btn{font-weight:600;font-size:13px}
+.le-add{font-weight:700;font-size:13.5px}
+.edit-bar{font-family:var(--font,"Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif);padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+.ed-inline:empty::before{color:#5f6f73}
+.le-warn{font-size:12px;font-weight:600;color:#a33a30}
+.le-field input[aria-invalid="true"]{border-color:#a33a30}
+.edit-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:95;max-width:min(560px,92vw);padding:12px 18px;border-radius:12px;background:#16242a;color:#fff;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+@media (min-width:901px){body.landing.editing .edit-bar{left:var(--side,244px)}}
+@media (max-width:640px){
+  body.editing{padding-bottom:190px}
+  .edit-bar-actions{width:100%}
+  .edit-bar-actions .eb-btn{flex:1}
+  .ef input,.ef textarea,.ef select,.le-field input,.le-field textarea,.le-field select{font-size:16px}
+  .le-btn{min-height:44px;min-width:44px}
+}
+.ct-num{display:grid;gap:4px;max-width:220px}
+.ct-num input{font:inherit;font-size:14.5px;padding:9px 11px;border:1px solid #d7dfe1;border-radius:10px}

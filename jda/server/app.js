@@ -38,7 +38,10 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
   // ALLOWED_ORIGIN only matters if a site is served from somewhere else; it may list several origins, comma-separated.
   const origins = (process.env.ALLOWED_ORIGIN || '*').split(',').map(s => s.trim());
   app.use(cors({ origin: origins.includes('*') ? '*' : origins }));
-  app.use(express.json({ limit: '25mb' }));
+  // Small bodies everywhere, except where a whole register, report or picture is sent (signed in only, see below).
+  const big = express.json({ limit: '25mb' });
+  app.use(['/api/finance', '/api/portal', '/api/drive', '/api/site/roles-image'], (req, res, next) => req.headers.cookie || req.headers.authorization ? big(req, res, next) : next());
+  app.use(express.json({ limit: '1mb' }));
   app.use((req, res, next) => { res.setHeader('X-Content-Type-Options', 'nosniff'); next(); });
 
   // ---- Public ----
