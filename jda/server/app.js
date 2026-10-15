@@ -5,7 +5,7 @@ import chat from './routes/chat.js';
 import drive from './routes/drive.js';
 import portal from './routes/portal.js';
 import financeRoutes from './routes/finance.js';
-import { publicRoutes } from './routes/site.js';
+import { publicRoutes, siteRoutes } from './routes/site.js';
 import { siteStore } from './site-store.js';
 import { requireUser, requirePage, authRoutes } from './auth.js';
 import { rateLimit } from './rate-limit.js';
@@ -67,6 +67,7 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
   app.use('/api/chat', rateLimit({ windowMs: 60_000, max: 20, what: 'questions' }), chat);
   app.use('/api/drive', rateLimit({ windowMs: 10 * 60_000, max: 300, what: 'Drive requests' }), drive); // a sync reads one file per request
   app.use('/api/finance', financeRoutes(createFinance(finance), storage));
+  app.use('/api/site', siteRoutes(site));
   app.use('/api', apiErrors, apiNotFound);
 
   app.use('/control-tower', requirePage);

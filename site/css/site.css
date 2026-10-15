@@ -29,7 +29,7 @@ h1,h2,h3,h4{line-height:1.2;margin:0}
 /* ---------- buttons ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;min-height:42px;padding:.55rem 1.15rem;border-radius:999px;border:1px solid transparent;
   font:600 .9rem/1.2 var(--font);text-decoration:none;cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s,box-shadow .15s,transform .15s}
-.btn.primary{background:linear-gradient(135deg,var(--teal-500),var(--teal-700));color:#fff;box-shadow:0 2px 8px rgba(0,133,124,.25)}
+.btn.primary{background:linear-gradient(135deg,var(--teal-600),var(--teal-800));color:#fff;box-shadow:0 2px 8px rgba(0,133,124,.25)}
 .btn.primary:hover{box-shadow:0 6px 18px rgba(0,133,124,.38);transform:translateY(-1px)}
 .btn.ghost{background:#fff;border-color:var(--border);color:var(--text)}
 .btn.ghost:hover{background:var(--teal-050);border-color:var(--teal-100);color:var(--teal-800)}

@@ -3,20 +3,27 @@
 // Solution detail pages are drawn by the same code as in the Control Tower (portal/js/blocks.js).
 import { esc } from '/shared/esc.js';
 import { blocksHtml } from '/lib/blocks.js';
+import { me } from '/shared/session.js';
 
 const $ = id => document.getElementById(id);
-const id = decodeURIComponent(location.pathname.split('/')[2] || '');
+const id = location.pathname.split('/')[2] || '';                    // /jda/<id>/info: the server only serves known ids
+const decode = v => { try { return decodeURIComponent(v); } catch { return ''; } };
 const svg = (paths, size = 19) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 const more = (key, text) => text ? `<button type="button" class="collab-more-toggle" data-target="${key}" aria-expanded="false" aria-controls="${key}"><span>Read more</span><span class="chev">&#8250;</span></button>
   <div class="collab-more" id="${key}"><p>${esc(text)}</p></div>` : '';
 const block = (key, title, intro, body) => `<div class="block" id="ov-${key}"><h3>${esc(title)}</h3>${intro ? `<p class="block-intro">${esc(intro)}</p>` : ''}${body}</div>`;
-let info, cards = {};
+let info, cards = {}, openedFrom = null;
+// Tier names are the programme's own: a line says what they mean when the page uses them.
+const tierLegend = c => {
+  const tiers = new Set(c.solutionGroups.flatMap(g => g.cards.map(s => s.tier)));
+  return tiers.size > 1 ? '<p class="info-legend"><b>Tier 1</b>: the foundation every other solution builds on · <b>Competitive Edge</b>: solutions that set the programme apart</p>' : '';
+};
 
 const SECTIONS = {
   aspiration: c => c.aspiration.length ? block('aspiration', 'Winning aspiration', c.aspirationIntro, `
     <div class="aspiration-strip">${c.aspiration.map(a => `<div class="aspiration-chip${a.highlight ? ' highlight' : ''}"><strong>${esc(a.value)}</strong><span>${esc(a.label)}</span></div>`).join('')}</div>
     <div class="aspiration-bar"></div>`) : '',
-  project: c => c.solutionGroups.length ? block('project', 'AI technology solutions', c.solutionsIntro, c.solutionGroups.map(g => `
+  project: c => c.solutionGroups.length ? block('project', 'AI technology solutions', c.solutionsIntro, tierLegend(c) + c.solutionGroups.map(g => `
     <div class="sol-group-label">${esc(g.label)}</div>
     <div class="sol-grid">${g.cards.map(s => `
       <div class="sol-card${s.tier === 'Tier 1' ? '' : ' edge'}" data-sol="${esc(s.key)}" role="button" tabindex="0" aria-label="${esc(s.title)}: open its page">
@@ -29,7 +36,7 @@ const SECTIONS = {
   collaborators: c => c.collaborators.length ? block('collaborators', 'Collaborators', c.collabIntro, `
     <div class="collab-grid">${c.collaborators.map((p, i) => `
       <div class="collab-card">
-        ${p.logo ? `<div class="logo-holder"><img src="${esc(p.logo)}" alt="${esc(p.name)}"></div>` : ''}
+        ${p.logo ? `<div class="logo-holder"><img src="${esc(p.logo)}" alt=""></div>` : ''}
         <h4>${esc(p.name)}</h4><div class="collab-role">${esc(p.role)}</div><p>${esc(p.text)}</p>${more(`collabMore${i}`, p.more)}
       </div>`).join('')}</div>`) : '',
   press: c => c.press ? block('press', 'Press release', c.pressIntro, `
@@ -50,6 +57,9 @@ function render(c) {
   $('heroSub').textContent = c.sub; $('heroSub').hidden = !c.sub;
   $('heroMoreText').textContent = c.more; $('heroMoreBtn').hidden = !c.more;
   $('footNote').textContent = c.footNote;
+  $('allJdas').href = `/?jda=${encodeURIComponent(c.id)}#jdas`;
+  $('infoStrip').textContent = `This is the public summary of ${c.name}. Progress, tasks and costs are for employees, in the JDA Control Tower.`;
+  $('infoStrip').hidden = false;
   const extras = Object.fromEntries(c.extraSections.map(s => [`x:${s.id}`, s]));
   $('sections').innerHTML = c.sectionOrder.map(k => SECTIONS[k] ? SECTIONS[k](c) : extras[k] ? extra(extras[k]) : '').join('')
     || '<div class="block"><p class="block-intro">More about this JDA is coming soon.</p></div>';
@@ -61,17 +71,24 @@ function screen(which) {
   window.scrollTo({ top: 0 });
 }
 function openSolution(key, push = true) {
-  const s = cards[key];
+  const s = Object.hasOwn(cards, key) ? cards[key] : null;
   if (!s) return screen('screen-overview');
+  openedFrom = key;
   $('solDetailIcon').innerHTML = svg(s.icon, 26);
   $('solDetailTier').textContent = s.tier; $('solDetailTier').className = `sol-tier ${s.tier === 'Tier 1' ? 'tier1' : 'edge'}`;
   $('solDetailTitle').textContent = s.title;
   $('solDetailBlocks').innerHTML = s.blocks.length ? blocksHtml(s.blocks) : '<p class="block-intro">More about this solution is coming soon.</p>';
-  if (push) history.pushState(null, '', `#solution/${encodeURIComponent(key)}`);
+  if (push) history.pushState({ fromOverview: true }, '', `#solution/${encodeURIComponent(key)}`);
   screen('screen-solution');
   $('solDetailTitle').setAttribute('tabindex', '-1'); $('solDetailTitle').focus();
 }
-const route = () => { const m = /^#solution\/(.+)$/.exec(location.hash); m ? openSolution(decodeURIComponent(m[1]), false) : screen('screen-overview'); };
+// Back on the overview, focus returns to the card that was opened, so a keyboard user keeps their place.
+function toOverview() {
+  screen('screen-overview');
+  const card = openedFrom && [...document.querySelectorAll('.sol-card')].find(c => c.dataset.sol === openedFrom);
+  if (card) { card.scrollIntoView({ block: 'center' }); card.focus(); }
+}
+const route = () => { const m = /^#solution\/(.+)$/.exec(location.hash); m ? openSolution(decode(m[1]), false) : toOverview(); };
 
 function wire() {
   $('sections').addEventListener('click', e => {
@@ -85,7 +102,8 @@ function wire() {
     if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openSolution(card.dataset.sol); }
   });
   $('heroMoreBtn').onclick = () => { const open = $('heroMore').classList.toggle('open'); $('heroMoreBtn').setAttribute('aria-expanded', open); $('heroMoreBtn').querySelector('span').textContent = open ? 'Read less' : 'Read more'; };
-  $('backBtn').onclick = () => { history.pushState(null, '', location.pathname); screen('screen-overview'); };
+  // Back goes back in history when the solution was opened from this page, so the browser's Back button agrees.
+  $('backBtn').onclick = () => { if (history.state?.fromOverview) history.back(); else { history.replaceState(null, '', location.pathname); toOverview(); } };
   window.addEventListener('popstate', route);
 }
 
@@ -96,5 +114,11 @@ try {
   render(info); wire(); route();
   $('loadNote').hidden = true;
 } catch (e) {
-  $('loadNote').textContent = `This page could not be loaded. ${e.message}`;
+  $('loadNote').innerHTML = `This page could not be loaded just now (${esc(e.message)}). <a href="">Try again</a> · <a href="/">Back to TriCipta AI</a>`;
 }
+// Employees go on to the full, private report of this JDA: straight there when signed in, through sign-in otherwise.
+const report = `/control-tower/jda-report.html#/${encodeURIComponent(id)}`;
+me().then(who => {
+  $('fullReport').textContent = 'Open full report';
+  $('fullReport').href = who.signedIn ? report : `/login?next=${encodeURIComponent(report)}`;
+});

@@ -30,15 +30,20 @@ async function fetchReport(jda) {
   }
   const cfg = FIREBASE_PROJECTS[s.project];
   const res = await fetch(`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/${s.collection}/${s.doc}?key=${cfg.apiKey}`, { signal: AbortSignal.timeout(10_000) });
-  if (!res.ok) return null; // 404: no report yet; 403: the rules keep it private and there is no key
+  if (res.status === 404) return null; // no report yet
+  if (res.status === 403) throw new Error(`the database rules keep it private and the server has no key for ${s.project} (see jda/README.md, "Setup")`);
+  if (!res.ok) throw new Error(`the database answered ${res.status}`);
   return fromRest({ mapValue: { fields: (await res.json()).fields || {} } });
 }
 
+// Requests that arrive together share one read. A read that fails keeps the last report that was read
+// (or none), and says why in the server log once per minute.
 export async function readReport(jda, now = Date.now()) {
   const hit = kept.get(jda.id);
-  if (hit && hit.until > now) return hit.report;
-  let report = null;
-  try { report = await fetchReport(jda); } catch (e) { console.warn(`Could not read ${jda.name}'s report: ${e.message}`); }
-  kept.set(jda.id, { report, until: now + KEEP_MS });
-  return report;
+  if (hit && hit.until > now) return hit.pending ?? hit.report;
+  const pending = fetchReport(jda).then(
+    report => { kept.set(jda.id, { report, until: now + KEEP_MS }); return report; },
+    e => { console.warn(`Could not read ${jda.name}'s report: ${e.message}`); const report = hit?.report ?? null; kept.set(jda.id, { report, until: now + KEEP_MS }); return report; });
+  kept.set(jda.id, { report: hit?.report ?? null, pending, until: now + KEEP_MS });
+  return pending;
 }

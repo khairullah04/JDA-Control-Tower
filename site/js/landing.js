@@ -2,7 +2,7 @@
 // which sends only what may be shown; this file draws it. Each piece of text carries data-field, the
 // place it is saved under, which edit mode (edit.js) uses.
 import { esc } from '/shared/esc.js';
-import { me } from '/shared/session.js';
+import { me, endSession } from '/shared/session.js';
 
 const $ = id => document.getElementById(id);
 export const STATUS = {
@@ -40,14 +40,14 @@ export function jdaPanel(j) {
           <p class="clamp" id="press-${j.id}" data-field="${base}.pressRelease" data-multiline>${esc(j.pressRelease || 'No press release yet.')}</p>
           <button type="button" class="link-btn clamp-toggle" aria-expanded="false" aria-controls="press-${j.id}" hidden>Read more</button>
         </div>
-        <h3 class="mini-head">Projects under ${esc(j.name)} <span class="count">${j.projects.length}</span></h3>
-        ${j.projects.length ? `<ul class="chips" data-field="${base}.projects" data-list-of="text">${shown.map(p => `<li>${esc(p)}</li>`).join('')}${more > 0 ? `<li class="chip-more">+${more} more</li>` : ''}</ul>`
+        <h3 class="mini-head">Projects under ${esc(j.name)} <span class="count">${j.projectCount}</span></h3>
+        ${j.projects.length ? `<ul class="chips" data-field="${base}.projects" data-list-of="text">${shown.map(p => `<li title="${esc(p)}">${esc(p)}</li>`).join('')}${more > 0 ? `<li class="chip-more"><a href="/jda/${encodeURIComponent(j.id)}/info">+${more} more</a></li>` : ''}</ul>`
           : '<p class="muted" data-field="' + base + '.projects" data-list-of="text">No projects listed yet.</p>'}
       </div>
       <div class="jda-people">
         <h3 class="mini-head">Program Lead</h3>
         <ul class="people" data-people="${base}.programLeads">${j.programLeads.map((p, i) => person(p, `${base}.programLeads`, i)).join('')}</ul>
-        <h4 class="mini-head sub">Business Champions</h4>
+        <h3 class="mini-head sub">Business Champions</h3>
         <ul class="people" data-people="${base}.businessChampions">${j.businessChampions.map((p, i) => person(p, `${base}.businessChampions`, i)).join('')}</ul>
       </div>
     </div>
@@ -59,12 +59,18 @@ export const statusBadge = (status, field = '') => {
   return `<span class="status-badge ${esc(status)}"${field ? ` data-field="${field}" data-choice="status"` : ''}>${icon(s.icon)}${esc(s.label)}</span>`;
 };
 
+// A contact card: a link when written, "To be announced" (and no link) until then.
+const contact = (label, field, value, href, paths) => {
+  const body = `${icon(paths)}<span><small>${label}</small><b data-field="${field}"${field.endsWith('address') ? ' data-multiline' : ''}>${esc(value || 'To be announced')}</b></span>`;
+  return value && href ? `<a class="contact-card" href="${esc(href)}">${body}</a>` : `<div class="contact-card${value ? '' : ' tba'}">${body}</div>`;
+};
+
 export function render(site) {
-  const c = site;
+  const c = site, at = Math.max(0, c.jdas.findIndex(j => j.id === new URLSearchParams(location.search).get('jda'))); // ?jda=jda3 opens JDA 3's tab
   return `
   <section class="hero" id="home" aria-labelledby="heroTitle">
     <div class="hero-inner">
-      <span class="eyebrow">Petronas Carigali</span>
+      <span class="eyebrow" data-field="header.eyebrow">${esc(c.header.eyebrow)}</span>
       <h1 id="heroTitle" data-field="header.title">${esc(c.header.title)}</h1>
       <p class="hero-tagline" data-field="header.tagline">${esc(c.header.tagline)}</p>
       <div class="hero-actions">
@@ -90,9 +96,9 @@ export function render(site) {
     ${sectionHead(c.existing, 'existing')}
     <div class="jda-tabs">
       <div class="tablist" role="tablist" aria-label="JDAs">
-        ${c.jdas.map((j, i) => `<button type="button" role="tab" id="tab-${j.id}" aria-controls="panel-${j.id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">${esc(j.name)}</button>`).join('')}
+        ${c.jdas.map((j, i) => `<button type="button" role="tab" id="tab-${j.id}" aria-controls="panel-${j.id}" aria-selected="${i === at}" tabindex="${i === at ? 0 : -1}">${esc(j.name)}</button>`).join('')}
       </div>
-      ${c.jdas.map((j, i) => `<div class="tab-panel" role="tabpanel" id="panel-${j.id}" aria-labelledby="tab-${j.id}" tabindex="0"${i === 0 ? '' : ' hidden'}>${jdaPanel(j)}</div>`).join('')}
+      ${c.jdas.map((j, i) => `<div class="tab-panel" role="tabpanel" id="panel-${j.id}" aria-labelledby="tab-${j.id}" tabindex="0"${i === at ? '' : ' hidden'}>${jdaPanel(j)}</div>`).join('')}
     </div>
   </section>
 
@@ -111,13 +117,13 @@ export function render(site) {
   <section class="sec" id="contacts">
     ${sectionHead(c.contacts, 'contacts')}
     <div class="contact-grid">
-      <a class="contact-card" href="mailto:${esc(c.contacts.email)}">${icon('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>')}<span><small>Email</small><b data-field="contacts.email">${esc(c.contacts.email)}</b></span></a>
-      <a class="contact-card" href="tel:${esc(String(c.contacts.phone).replace(/[^\d+]/g, ''))}">${icon('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>')}<span><small>Phone</small><b data-field="contacts.phone">${esc(c.contacts.phone)}</b></span></a>
-      <div class="contact-card">${icon('<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>')}<span><small>Address</small><b data-field="contacts.address" data-multiline>${esc(c.contacts.address)}</b></span></div>
+      ${contact('Email', 'contacts.email', c.contacts.email, c.contacts.email && `mailto:${c.contacts.email}`, '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>')}
+      ${contact('Phone', 'contacts.phone', c.contacts.phone, c.contacts.phone && `tel:${String(c.contacts.phone).replace(/[^\d+]/g, '')}`, '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>')}
+      ${contact('Address', 'contacts.address', c.contacts.address, '', '<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/>')}
     </div>
   </section>
 
-  <footer class="site-foot"><span>© ${new Date().getFullYear()} TriCipta AI · Petronas Carigali</span><a href="/login">Employee sign-in</a></footer>`;
+  <footer class="site-foot"><span>© ${new Date().getFullYear()} <span data-field="footer.text">${esc(c.footer.text)}</span></span><a href="/login" id="footSignIn">Employee sign-in</a></footer>`;
 }
 
 /* ---------- Behaviour ---------- */
@@ -153,31 +159,45 @@ export function wireClamps(root) {
 
 function wireNav() {
   const links = [...document.querySelectorAll('.side-nav a')];
-  const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const current = id => links.forEach(a => a.getAttribute('href') === `#${id}` ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current'));
   const spy = new IntersectionObserver(entries => {
     const seen = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-    if (!seen) return;
-    links.forEach(a => a.toggleAttribute('aria-current', a.getAttribute('href') === `#${seen.target.id}`));
+    if (seen) current(seen.target.id);
   }, { rootMargin: '-35% 0px -55% 0px' });
-  sections.forEach(s => spy.observe(s));
-  // On a phone the sidebar is a drawer
-  const open = on => {
+  const watch = () => links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean).forEach(s => spy.observe(s));
+  // the last section is short: at the very bottom of the page it is the current one
+  addEventListener('scroll', () => { if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) current(links.at(-1).getAttribute('href').slice(1)); }, { passive: true });
+
+  // On a phone the sidebar is a drawer: closed, nothing in it can be reached; open, nothing behind it can.
+  const phone = matchMedia('(max-width:900px)');
+  const open = (on, refocus = false) => {
     document.body.classList.toggle('menu-open', on); $('menuBtn').setAttribute('aria-expanded', on); $('scrim').hidden = !on;
-    if (on) $('sidebar').querySelector('a').focus();
+    $('sidebar').inert = phone.matches && !on;
+    $('main').inert = on; document.querySelector('.mobilebar').inert = false;
+    if (on) $('sidebar').querySelector('a').focus(); else if (refocus) $('menuBtn').focus();
   };
+  open(false);
+  phone.addEventListener('change', () => open(false));
   $('menuBtn').onclick = () => open(!document.body.classList.contains('menu-open'));
-  $('scrim').onclick = () => open(false);
-  $('sidebar').addEventListener('click', e => { if (e.target.closest('a[href^="#"]')) open(false); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) { open(false); $('menuBtn').focus(); } });
+  $('scrim').onclick = () => open(false, true);
+  $('sidebar').addEventListener('click', e => { if (e.target.closest('a[href^="#"]') && phone.matches) open(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) open(false, true); });
+  return watch;
 }
 
-// Signed in: the sidebar leads to the Control Tower instead.
+// Signed in: the sidebar and footer lead to the Control Tower, with Sign out.
 async function account() {
   const who = await me();
   if (!who.signedIn) return;
-  $('signInBtn').href = '/control-tower/';
+  for (const a of [$('signInBtn'), $('footSignIn')].filter(Boolean)) a.href = '/control-tower/';
   $('signInBtn').lastChild.textContent = ' Open Control Tower';
+  if ($('footSignIn')) $('footSignIn').textContent = 'Open Control Tower';
   document.querySelector('.side-note').textContent = who.signInOff ? 'Sign-in is off (local)' : `Signed in as ${String(who.email).split('@')[0]}`;
+  if (!who.signInOff) {
+    const out = Object.assign(document.createElement('button'), { type: 'button', className: 'btn ghost small side-signout', textContent: 'Sign out' });
+    out.onclick = () => endSession();
+    $('sideFoot').append(out);
+  }
 }
 
 let current;
@@ -190,15 +210,19 @@ export async function show(site) {
 }
 
 async function start() {
+  const watch = wireNav(); // the menu works even if the page's content cannot be loaded
   try {
     const res = await fetch('/api/public/site');
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Error ${res.status}`);
     await show(await res.json());
-    wireNav();
-    if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
-    account();
+    watch();
+    new ResizeObserver(() => wireClamps($('page'))).observe($('page'));
+    let target = null;
+    try { target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch { /* a malformed address: stay at the top */ }
+    target?.scrollIntoView();
   } catch (e) {
-    $('loadNote').textContent = `This page could not be loaded. ${e.message}`;
+    $('loadNote').innerHTML = `This page could not be loaded just now (${esc(e.message)}). <a href="">Try again</a> · <a href="/login">Employee sign-in</a>`;
   }
+  account();
 }
 start();

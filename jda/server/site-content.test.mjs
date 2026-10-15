@@ -28,7 +28,7 @@ const reports = {
     }
   },
   jda2: null,
-  jda3: { projects: [{ name: 'Project 2a', pct: 15, owner: 'Hj Azrul' }] }
+  jda3: { projects: [{ name: 'Project 2a', pct: 15, owner: 'Hj Azrul' }, { name: 'Project 2b - Vision' }, { name: 'Project 2b — Vision' }] }
 };
 mockModule('./report-reader.js', { readReport: async jda => structuredClone(reports[jda.id] ?? null) });
 const { publicSite, infoPage, PUBLIC_DEFAULTS, withDefaults } = await import('./site-content.js');
@@ -46,6 +46,7 @@ test('the landing page: defaults, every JDA from the config, derived values mark
   assert.deepEqual(j1.derived, { title: true, pressRelease: true, projects: true, status: true, projectCount: true });
   assert.deepEqual([j2.projects, j2.projectCount, j2.status], [[], 0, 'in-the-works']);   // no report yet
   assert.equal(j3.title, 'Surface Equipment Optimisation with AI');                       // JDA 3's built-in tagline
+  assert.deepEqual(j3.projects, ['Project 2a', 'Project 2b - Vision']);                  // the same name with another dash counts once
   assert.deepEqual(j1.programLeads, [{ name: 'Name TBC', title: 'Title TBC' }]);
   assert.equal(j1.businessChampions.length, 2);
   assert.equal(site.roles.image, null);                                                   // no picture supplied yet
@@ -66,9 +67,23 @@ test('what is written in edit mode wins over what is derived', async () => {
   assert.deepEqual(j1.programLeads, [{ name: 'Aina', title: 'Lead' }]);
 });
 
-test('withDefaults keeps a written section whole and fills what is missing', () => {
-  assert.deepEqual(withDefaults({ a: { x: 2 }, b: [1] }, { a: { x: 1, y: 1 }, b: [], c: 3 }), { a: { x: 2, y: 1 }, b: [1], c: 3 });
-  assert.deepEqual(withDefaults('nonsense', { a: 1 }), { a: 1 });
+test('withDefaults keeps only the text fields the defaults have', () => {
+  const defaults = { a: { x: '1', y: '1' }, c: { z: '' }, jdas: {} };
+  assert.deepEqual(withDefaults({ a: { x: '2', y: 5, extra: 'x' }, secret: { finance: 123 }, jdas: { jda1: { title: 't' } } }, defaults),
+    { a: { x: '2', y: '1' }, c: { z: '' }, jdas: { jda1: { title: 't' } } });
+  assert.deepEqual(withDefaults('nonsense', defaults), defaults);
+});
+
+test('nothing else stored with the public page is published', async () => {
+  const store = siteStore('memory');
+  await store.put('public', { secretSection: { finance: 123 }, overview: { body: 'b', updatedBy: 'someone@jda.app' }, updatedAt: 'x' });
+  const text = JSON.stringify(await publicSite(store));
+  assert.doesNotMatch(text, /secretSection|finance|someone@jda\.app|updatedAt|updatedBy/);
+});
+
+test('contacts not written yet are empty, never made up', async () => {
+  const { contacts } = await publicSite(siteStore('memory'));
+  assert.deepEqual([contacts.email, contacts.phone, contacts.address], ['', '', '']);
 });
 
 test('the Info page: the Master Page only, with pictures and links checked', async () => {
@@ -97,4 +112,31 @@ test('a JDA with no report gets its built-in Master Page, without targets or del
   assert.ok(info.collaborators.every(c => c.logo.startsWith('/site/portal/assets/')));
   assert.equal(info.press.img, '/site/portal/assets/press.jpg');
   assert.match(info.press.href, /^https:\/\/www\.petronas\.com\//);
+});
+
+test('a detail page saved by the editor publishes no targets or delivery leads', async () => {
+  const { contentFor } = await import('../../portal/js/config/jda-content.js');
+  const { overviewFromContent, contentFromOverview } = await import('../../portal/js/overview.js');
+  globalThis.document ??= { createElement: () => ({ set innerHTML(v) { this.textContent = String(v).replace(/<[^>]*>/g, ''); } }) }; // plainText, without a browser
+  const saved = overviewFromContent(contentFromOverview(null, contentFor(JDAS[2])));       // what the first save of JDA 3's Master Page stores
+  reports.jda3 = { overview: saved };
+  try {
+    const text = JSON.stringify(await infoPage(JDAS[2]));
+    assert.doesNotMatch(text, /Targets|Delivery lead|≥50% improvement|IBM Malaysia leads BPW/);
+    assert.match(text, /Vision/);
+  } finally { delete reports.jda3.overview; }
+});
+
+test('a report of the wrong shape still gives an Info page', async () => {
+  reports.jda2 = { overview: { press: 'oops', collaborators: ['x', null, { name: 'Ok' }], aspiration: 'no', solutionGroups: [{ solutions: [{ title: 'S', art: 'nope', blocks: [{ type: 'boxes', items: 'zz', col: { owner: 'Secret Owner' } }] }] }, 'bad'],
+    extraSections: 'no', sectionOrder: 5, intros: 'x', tagline: 7 } };
+  try {
+    const info = await infoPage(JDAS[1]);
+    assert.deepEqual(info.collaborators.map(c => c.name), ['Ok']);
+    const card = info.solutionGroups[0].cards[0];
+    assert.equal(card.img, '');                                                           // "nope" is not a stock picture
+    assert.deepEqual(card.blocks, [{ type: 'boxes', items: [], col: 0 }]);
+    assert.doesNotMatch(JSON.stringify(info), /Secret Owner/);
+    assert.equal(info.footNote, 'A Joint Development Agreement of TriCipta AI, Petronas Carigali.');
+  } finally { reports.jda2 = null; }
 });

@@ -6,6 +6,8 @@
 <meta name="color-scheme" content="light">
 <title>JDA · TriCipta AI</title>
 <link rel="icon" href="/site/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/site/portal/css/styles.css">
 <link rel="stylesheet" href="/site/css/info.css">
 </head>
@@ -21,12 +23,13 @@
     <div><div class="mark">TriCipta AI</div><h1 id="brandTitle">JDA</h1></div>
   </a>
   <nav class="info-nav" aria-label="Site">
-    <a class="info-link" href="/#jdas">← All JDAs</a>
-    <a class="info-link solid" href="/login">Sign in</a>
+    <a class="info-link" id="allJdas" href="/#jdas"><span aria-hidden="true">←</span> All JDAs</a>
+    <a class="info-link solid" id="fullReport" href="/login">Employee sign-in</a>
   </nav>
  </div>
 </div>
 
+<p class="info-strip" id="infoStrip" hidden></p>
 <main class="page-wrap" id="info-main" tabindex="-1">
   <p class="info-load" id="loadNote" role="status">Loading…</p>
 

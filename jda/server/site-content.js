@@ -15,7 +15,7 @@ const PERSON = { name: 'Name TBC', title: 'Title TBC' };
 
 // The landing page before anything is written in edit mode. The people and contacts are placeholders.
 export const PUBLIC_DEFAULTS = {
-  header: { title: 'TRICIPTA AI', tagline: "Petronas Carigali's AI delivery arm for Upstream" },
+  header: { eyebrow: 'Petronas Carigali', title: 'TRICIPTA AI', tagline: "Petronas Carigali's AI delivery arm for Upstream" },
   overview: {
     title: 'Overview', subtitle: 'AI for Upstream, built with partners',
     body: 'TriCipta AI brings artificial intelligence into Upstream operations at Petronas Carigali. It works through Joint Development Agreements with technology partners, each one focused on a part of the business where AI can make a measurable difference: exploration, production, asset integrity and the way work gets done.'
@@ -27,7 +27,9 @@ export const PUBLIC_DEFAULTS = {
   },
   existing: { title: 'Existing JDAs', subtitle: 'Each agreement and the work under it' },
   status: { title: 'JDA status', subtitle: 'Where each agreement stands today' },
-  contacts: { title: 'Contacts', subtitle: 'Get in touch with the TriCipta AI team', email: 'tricipta-ai@example.com', phone: '+60 3-0000 0000', address: 'Kuala Lumpur, Malaysia (full address TBC)' },
+  // Empty until written in edit mode: the page then shows "To be announced", never a made-up address.
+  contacts: { title: 'Contacts', subtitle: 'Get in touch with the TriCipta AI team', email: '', phone: '', address: '' },
+  footer: { text: 'TriCipta AI · Petronas Carigali' },
   jdas: {}
 };
 export const JDA_DEFAULTS = () => ({
@@ -36,11 +38,17 @@ export const JDA_DEFAULTS = () => ({
 });
 
 const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
-// The saved page over the defaults: a saved section replaces the default's fields one by one.
+// The saved page over the defaults, field by field. Only sections and fields the defaults have are
+// kept, and only as text: whatever else the stored document holds (who saved it, notes) is never sent.
+// `jdas` is kept as it is; publicJda reads only what it knows from it.
 export function withDefaults(saved, defaults) {
   const out = structuredClone(defaults);
   if (!isObj(saved)) return out;
-  for (const [k, v] of Object.entries(saved)) out[k] = isObj(v) && isObj(out[k]) ? { ...out[k], ...v } : v;
+  for (const [k, def] of Object.entries(defaults)) {
+    const v = saved[k];
+    if (k === 'jdas') out.jdas = isObj(v) ? v : {};
+    else if (isObj(def) && isObj(v)) for (const f of Object.keys(def)) { if (typeof v[f] === 'string') out[k][f] = v[f]; }
+  }
   return out;
 }
 
@@ -54,18 +62,20 @@ export function rolesImage(dir = PUBLIC_DIR) {
 }
 
 const text = v => typeof v === 'string' ? v : '';
+const list = v => Array.isArray(v) ? v : [];
 const people = list => (Array.isArray(list) ? list : []).filter(isObj).map(p => ({ name: text(p.name), title: text(p.title) }));
 
 // One JDA on the landing page. Written values win; otherwise the title is the Master Page tagline,
 // the press release overview is the Master Page press release, and the projects are the names on
 // Overall progress (names only, never figures or owners).
 export async function publicJda(jda, written = {}) {
-  const report = await readReport(jda), base = contentFor(jda), ov = isObj(report?.overview) ? report.overview : {};
+  const report = await readReport(jda), c = masterPage(jda, report);
   const e = { ...JDA_DEFAULTS(), ...(isObj(written) ? written : {}) };
+  const seen = new Set(), same = n => n.toLowerCase().replace(/[\s\u2010-\u2015-]+/g, ' ').trim(); // "Project 2b - X" and "Project 2b — X" are one
   const derived = {
-    title: text(ov.tagline) || text(base.tagline),
-    pressRelease: text(ov.press?.text) || text(base.press?.text),
-    projects: (Array.isArray(report?.projects) ? report.projects : []).map(p => text(p?.name).trim()).filter(Boolean)
+    title: text(c.tagline),
+    pressRelease: text(c.press?.text),
+    projects: list(report?.projects).map(p => text(p?.name).trim()).filter(n => n && !seen.has(same(n)) && seen.add(same(n)))
   };
   const projects = Array.isArray(e.projects) && e.projects.length ? e.projects.map(text).filter(Boolean) : derived.projects;
   const status = STATUSES.includes(e.status) ? e.status : (derived.projects.length ? 'in-progress' : 'in-the-works');
@@ -101,43 +111,105 @@ const webLink = v => /^https?:\/\/[^\s"'<>]+$/i.test(text(v).trim()) ? text(v).t
 const plain = html => text(html).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const ICONS = new Set(Object.values(SOLUTION_ICONS));
 
+// A report's saved Master Page, shaped so that contentFromOverview cannot trip over it: the document is
+// also written from outside (a feed, older versions), so a part of the wrong type counts as missing.
+function safeOverview(raw) {
+  if (!isObj(raw)) return null;
+  const ov = structuredClone(raw);
+  for (const k of ['aspiration', 'solutionGroups', 'collaborators', 'extraSections', 'sectionOrder']) if (k in ov && !Array.isArray(ov[k])) delete ov[k];
+  for (const k of ['eyebrow', 'tagline', 'summary', 'more']) if (k in ov && typeof ov[k] !== 'string') delete ov[k];
+  if ('press' in ov && ov.press !== null && !isObj(ov.press)) delete ov.press;
+  if (!isObj(ov.intros)) delete ov.intros;
+  if (ov.aspiration) ov.aspiration = ov.aspiration.filter(isObj);
+  if (ov.collaborators) ov.collaborators = ov.collaborators.filter(isObj);
+  if (ov.extraSections) ov.extraSections = ov.extraSections.filter(isObj);
+  if (ov.solutionGroups) ov.solutionGroups = ov.solutionGroups.filter(isObj).map(g => ({ ...g, solutions: list(g.solutions).filter(isObj) }));
+  delete ov.intros?.solutions; // the one part read through a browser's HTML parser: sent separately, as text
+  return ov;
+}
+const masterPage = (jda, report) => contentFromOverview(safeOverview(report?.overview), contentFor(jda));
+
+// Parts of a detail page that are never published: a "Targets" or "Delivery lead" heading (the built-in
+// detail pages have both, and the editor keeps them when it saves) and everything under it, up to the next heading.
+const PRIVATE_HEADINGS = /^(targets?|delivery leads?|business targets?)$/i;
+const HEADING = ['h1', 'h2', 'h3'];
+function publicBlocks(blocks) {
+  let skipping = false;
+  return blocks.filter(b => {
+    if (HEADING.includes(b.type)) skipping = PRIVATE_HEADINGS.test(plain(b.html));
+    return !skipping;
+  });
+}
+const COL = v => [1, 2, 3].includes(v) ? v : 0;
+
 export async function infoPage(jda) {
   const report = await readReport(jda), base = contentFor(jda);
-  const ov = isObj(report?.overview) ? structuredClone(report.overview) : null;
-  // The solutions intro is the one part read through the browser's own HTML parser; here it is plain text.
+  const ov = isObj(report?.overview) ? report.overview : null;
   const solutionsIntro = text(ov?.intros?.solutions) || plain(base.solutionsIntroHtml);
-  if (ov?.intros) delete ov.intros.solutions;
-  const c = contentFromOverview(ov, base);
+  const c = masterPage(jda, report);
   return {
     id: jda.id, name: jda.name, short: text(c.short), eyebrow: text(c.eyebrow), tagline: text(c.tagline), sub: text(c.sub), more: text(c.more),
     aspirationIntro: text(c.aspirationIntro),
-    aspiration: (c.aspiration || []).filter(isObj).map(a => ({ value: text(a.value), label: text(a.label), highlight: !!a.highlight })),
+    aspiration: list(c.aspiration).filter(isObj).map(a => ({ value: text(a.value), label: text(a.label), highlight: !!a.highlight })),
     solutionsIntro,
-    solutionGroups: (c.solutionGroups || []).map(g => ({
+    solutionGroups: list(c.solutionGroups).map(g => ({
       label: text(g.label),
-      cards: (g.cards || []).map(({ key, tags }) => {
+      cards: list(g.cards).map(({ key, tags }) => {
         const s = c.solutions[key] || {};
-        const blocks = Array.isArray(s.blocks) ? s.blocks : null;
+        const art = /^assets\/sol-([\w-]+)\.jpg$/.exec(text(s.img))?.[1];
+        const blocks = Array.isArray(s.blocks) ? s.blocks.filter(isObj) : null;
         return {
           key, title: text(s.title), tier: s.tier === 'Tier 1' ? 'Tier 1' : 'Competitive Edge',
           icon: ICONS.has(s.icon) ? s.icon : SOLUTION_ICONS.agentic,
-          img: s.img === null ? '' : (asset(s.img) || (SOLUTION_ICONS[key] ? `/site/portal/assets/sol-${key}.jpg` : '')),
-          tags: (tags || []).map(([t, accent]) => [text(t), !!accent]),
-          // the detail page: its blocks, or the built-in vision and scope (targets and delivery leads are not published)
-          blocks: blocks ? blocks.filter(isObj).map(b => b.type === 'boxes'
-            ? { type: 'boxes', items: (b.items || []).filter(isObj).map(x => ({ title: text(x.title), text: text(x.text) })), col: b.col }
-            : { type: ['h1', 'h2', 'h3', 'body'].includes(b.type) ? b.type : 'body', html: text(b.html), col: b.col })
+          // a stock picture only when it exists; built-in solutions are named by their key
+          img: s.img === null ? '' : art ? (SOLUTION_ICONS[art] ? `/site/portal/assets/sol-${art}.jpg` : '') : (asset(s.img) || (SOLUTION_ICONS[key] ? `/site/portal/assets/sol-${key}.jpg` : '')),
+          tags: list(tags).map(t => [text(t?.[0]), !!t?.[1]]),
+          // the detail page: its blocks (less the private parts), or the built-in vision and scope
+          blocks: blocks ? publicBlocks(blocks.map(b => b.type === 'boxes'
+            ? { type: 'boxes', items: list(b.items).filter(isObj).map(x => ({ title: text(x.title), text: text(x.text) })), col: COL(b.col) }
+            : { type: HEADING.includes(b.type) || b.type === 'body' ? b.type : 'body', html: text(b.html), col: COL(b.col) }))
             : [s.vision && { type: 'h3', html: 'Vision' }, s.vision && { type: 'body', html: plain(s.vision) },
-              s.scope?.length && { type: 'h3', html: 'Scope' }, s.scope?.length && { type: 'boxes', items: s.scope.map(x => ({ title: '', text: text(x) })) }].filter(Boolean)
+              list(s.scope).length && { type: 'h3', html: 'Scope' }, list(s.scope).length && { type: 'boxes', items: list(s.scope).map(x => ({ title: '', text: text(x) })) }].filter(Boolean)
         };
       })
     })),
     collabIntro: text(c.collabIntro),
-    collaborators: (c.collaborators || []).filter(isObj).map(p => ({ name: text(p.name), role: text(p.role), text: text(p.text), more: text(p.more), logo: asset(p.logo) })),
+    // the logo's alt text is empty: the name is written right under it
+    collaborators: list(c.collaborators).filter(isObj).map(p => ({ name: text(p.name), role: text(p.role), text: text(p.text), more: text(p.more), logo: asset(p.logo) })),
     pressIntro: text(c.pressIntro),
     press: isObj(c.press) ? { img: asset(c.press.img), alt: text(c.press.alt), text: text(c.press.text), more: text(c.press.more), href: webLink(c.press.href), linkText: text(c.press.linkText) || 'Read the full release →' } : null,
-    extraSections: (c.extraSections || []).map(s => ({ id: text(s.id), title: text(s.title), intro: text(s.intro), cards: (s.cards || []).filter(isObj).map(k => ({ title: text(k.title), sub: text(k.sub), text: text(k.text) })) })),
-    sectionOrder: (c.sectionOrder || []).filter(k => k !== 'architecture'),
-    footNote: text(c.footNote)
+    extraSections: list(c.extraSections).map(s => ({ id: text(s.id), title: text(s.title), intro: text(s.intro), cards: list(s.cards).filter(isObj).map(k => ({ title: text(k.title), sub: text(k.sub), text: text(k.text) })) })),
+    sectionOrder: list(c.sectionOrder).filter(k => k !== 'architecture'),
+    // the built-in note names the private Control Tower; the public page says who runs the programme instead
+    footNote: text(c.footNote) && c.footNote !== contentFor({ id: '', name: jda.name }).footNote ? text(c.footNote) : 'A Joint Development Agreement of TriCipta AI, Petronas Carigali.'
+  };
+}
+
+/* ---------- The JDA Control Tower landing page (private) ---------- */
+// What edit mode writes for each JDA there. Progress, the latest key update, challenges and cost are
+// worked out on the page from the JDA's report and the Invoice Tracker; a value written here overrides
+// one of them and is shown as an override.
+export const CT_JDA_DEFAULTS = () => ({
+  agreement: [], brd: [],            // links: { label, url }
+  keyInsights: [],                    // boxes: { title, text }
+  challenges: null,                   // null: the report's challenges; a list: { title, text, severity } written here
+  progressOverride: null,             // a percentage, instead of the average of the report's projects
+  costOverride: null                  // { spent, sanctioned } in MYR, instead of the Invoice Tracker's figures
+});
+const links = list => (Array.isArray(list) ? list : []).filter(isObj).map(l => ({ label: text(l.label), url: webLink(l.url) })).filter(l => l.label || l.url);
+const boxes = list => (Array.isArray(list) ? list : []).filter(isObj).map(b => ({ title: text(b.title), text: text(b.text), ...(b.severity && { severity: ['low', 'medium', 'high'].includes(b.severity) ? b.severity : 'medium' }) }));
+const pct = v => Number.isFinite(v) && v >= 0 && v <= 100 ? Math.round(v) : null;
+const myr = v => Number.isFinite(v) && v >= 0 ? v : null;
+
+export async function controlTowerContent(store) {
+  const saved = await store.get('controlTower') || {};
+  return {
+    jdas: Object.fromEntries(JDAS.map(j => {
+      const w = { ...CT_JDA_DEFAULTS(), ...(isObj(saved.jdas?.[j.id]) ? saved.jdas[j.id] : {}) };
+      const cost = isObj(w.costOverride) && myr(w.costOverride.spent) !== null && myr(w.costOverride.sanctioned) !== null ? { spent: w.costOverride.spent, sanctioned: w.costOverride.sanctioned } : null;
+      return [j.id, { agreement: links(w.agreement), brd: links(w.brd), keyInsights: boxes(w.keyInsights), challenges: Array.isArray(w.challenges) ? boxes(w.challenges) : null,
+        progressOverride: pct(w.progressOverride), costOverride: cost }];
+    })),
+    updatedAt: text(saved.updatedAt), updatedBy: text(saved.updatedBy)
   };
 }

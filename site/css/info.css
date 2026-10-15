@@ -15,3 +15,10 @@
 #info-main .block{opacity:1;transform:none}
 .sol-card:focus-visible{outline:3px solid var(--teal-500);outline-offset:3px}
 #solDetailTitle:focus{outline:none}
+.info-strip{margin:0;padding:10px 24px;text-align:center;font-size:13.5px;color:var(--teal-900);background:var(--teal-050);border-bottom:1px solid var(--teal-100)}
+.info-legend{margin:-6px 0 16px;font-size:13px;color:var(--muted)}
+/* "Read more" opens to the full text, however long */
+#info-main .hero-more.open,#info-main .collab-more.open{max-height:none}
+.info-link{min-height:44px}
+@media (max-width:560px){.info-nav{width:100%}.info-link{flex:1;justify-content:center;padding:0 10px}.info-brand .mark{display:none}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
