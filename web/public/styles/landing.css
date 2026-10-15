@@ -168,3 +168,12 @@ body.editing .contact-card.optional{display:flex}
   .slide::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(1,39,36,.84),rgba(1,39,36,.74)),var(--slide-img) center/cover no-repeat}
   .slide-tabs [role="tab"]{flex:1 1 0;min-width:72px;margin-right:10px}
 }
+
+/* Overview and What is a JDA: text beside a picture (a placeholder until one is supplied); stacked on a phone */
+.soft-box.with-pic{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:clamp(20px,4vw,40px);align-items:center}
+.pic-placeholder{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:220px;padding:24px;text-align:center;
+  border:2px dashed var(--teal-100);border-radius:var(--radius);background:var(--teal-050);color:var(--muted)}
+.pic-placeholder svg{width:40px;height:40px;color:var(--teal-500)}
+.pic-placeholder figcaption{display:grid;gap:2px;font-size:14px}
+.pic-placeholder b{color:var(--teal-800)}
+@media (max-width:760px){.soft-box.with-pic{grid-template-columns:1fr}.pic-placeholder{min-height:160px}}

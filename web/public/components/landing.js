@@ -144,13 +144,19 @@ const contact = (label, field, value, href, paths, optional = false) => {
 };
 const webAddress = v => /^https?:\/\//i.test(String(v || '').trim()) ? String(v).trim() : '';
 
+// Where a section's picture will go, until one is supplied.
+const picturePlaceholder = name => `<figure class="pic-placeholder" aria-label="${esc(name)}: picture to come">
+    ${icon('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>')}
+    <figcaption><b>Picture coming soon</b><span>It will appear here once it is added.</span></figcaption>
+  </figure>`;
+
 export function render(site) {
   const c = site, at = Math.max(0, c.jdas.findIndex(j => j.id === new URLSearchParams(location.search).get('jda'))); // ?jda=jda3 opens JDA 3's tab
   return `
   ${hero(c)}
   ${figures(c)}
 
-  <section class="sec" id="overview"><div class="soft-box">${sectionHead(c.overview, 'overview')}${paras(c.overview.body, 'overview.body')}</div></section>
+  <section class="sec" id="overview"><div class="soft-box with-pic"><div>${sectionHead(c.overview, 'overview')}${paras(c.overview.body, 'overview.body')}</div>${picturePlaceholder('Overview')}</div></section>
 
   <section class="sec" id="roles">
     ${sectionHead(c.roles, 'roles')}
@@ -160,7 +166,7 @@ export function render(site) {
     </figure>
   </section>
 
-  <section class="sec" id="what-is-jda"><div class="soft-box">${sectionHead(c.whatIsJda, 'whatIsJda')}${paras(c.whatIsJda.body, 'whatIsJda.body')}</div></section>
+  <section class="sec" id="what-is-jda"><div class="soft-box with-pic"><div>${sectionHead(c.whatIsJda, 'whatIsJda')}${paras(c.whatIsJda.body, 'whatIsJda.body')}</div>${picturePlaceholder('What is a JDA')}</div></section>
 
   <section class="sec" id="jdas">
     ${sectionHead(c.existing, 'existing')}
