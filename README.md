@@ -8,7 +8,7 @@ Two sites and one server, in one repository.
 | [jda/web/](jda/web/) | The Invoice Tracker: the CJI3 register (every invoice, entered once), the Payment Tables, budgets and the assistant. | [jda/README.md](jda/README.md) |
 | [jda/server/](jda/server/) | The server. It serves both sites, checks sign-ins and passkeys, saves every report, invoice and payment, and talks to Google Drive, Claude and Bank Negara. | [jda/README.md](jda/README.md) |
 | [shared/](shared/) | Code both sites and the server use (escaping, dates, the Firebase settings) and the libraries kept in the repository ([shared/vendor/](shared/vendor/README.md)). | |
-| [reviews/](reviews/) | The five-role review of the system and what has been fixed since. | [reviews/SUMMARY.md](reviews/SUMMARY.md) |
+| [OVERHAUL_CHECKLIST.md](OVERHAUL_CHECKLIST.md) | The TriCipta AI overhaul: what was asked, what is done and how each item was checked. | |
 
 Nothing is built or compiled. The pages are plain files; the server is Node.
 
