@@ -34,8 +34,9 @@ test('the public pages and their files open without signing in', async () => {
   for (const p of ['/', '/login', '/jda/jda1/info', '/jda/jda3/info', '/site/css/site.css', '/site/js/login.js', '/shared/esc.js', '/shared/session.js',
     '/site/portal/css/styles.css', '/site/portal/assets/press.jpg']) assert.equal((await get(p)).status, 200, p);
   assert.equal((await get('/jda/jdaz/info')).status, 404);                 // not a JDA
-  assert.equal((await get('/site/portal/js/blocks.js')).status, 200);       // how a detail page is drawn: code, no data
-  assert.equal((await get('/site/portal/js/report.js')).status, 404);      // only the portal's css, images and blocks.js are public
+  assert.equal((await get('/lib/blocks.js')).status, 200);                  // how a detail page is drawn: code, no data
+  assert.equal((await get('/site/portal/js/blocks.js')).status, 404);
+  assert.equal((await get('/site/portal/js/report.js')).status, 404);      // only the portal's css and images are public
   for (const sneaky of ['/site/portal/css/../js/report.js', '/site/portal/css/%2e%2e/js/config/jda-content.js', '/site/portal/assets/../jda-report.html',
     '/site/portal/css/../README.md', '/site/portal/css/%2E%2E/firestore-rules-addition.txt', '/site/portal/assets/%2e%2e%2fjda-report.html',
     '/site/portal/css/..%2fjs/report.js', '/site/../portal/js/report.js', '/shared/../portal/js/report.js', '/site/%2e%2e/jda/web/index.html']) {

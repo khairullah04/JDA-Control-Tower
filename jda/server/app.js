@@ -5,6 +5,8 @@ import chat from './routes/chat.js';
 import drive from './routes/drive.js';
 import portal from './routes/portal.js';
 import financeRoutes from './routes/finance.js';
+import { publicRoutes } from './routes/site.js';
+import { siteStore } from './site-store.js';
 import { requireUser, requirePage, authRoutes } from './auth.js';
 import { rateLimit } from './rate-limit.js';
 import { apiErrors, apiNotFound } from './errors.js';
@@ -20,14 +22,17 @@ export const SITE = dir('../../site/'), PORTAL = dir('../../portal/'), TRACKER =
 //   public   /                 TriCipta AI landing page            site/index.html
 //            /login            employee sign-in                     site/login.html
 //            /jda/<id>/info    a JDA's public Info page             site/info.html
-//            /site/...         the public pages' own files; /site/portal/ is only the portal's css/, assets/ and js/blocks.js
+//            /site/...         the public pages' own files; /site/portal/ is only the portal's css/ and assets/
+//            /lib/blocks.js    how a solution's detail page is drawn (portal/js/blocks.js: code, no data), for the Info page
 //            /shared/...       code and libraries the pages share (no data)
 //            /api/auth/...     sign in, sign out, "am I signed in"
+//            /api/public/...   what the public pages show (routes/site.js), and nothing else
 //   private  /control-tower/   the JDA Control Tower (portal/), with the Invoice Tracker at /control-tower/tracker/
 //            /api/...          everything else
 //
-// `finance` is the store for invoices and payments (finance-store.js); `storage` says which kind it is.
-export function createApp({ finance, storage }) {
+// `finance` is the store for invoices and payments (finance-store.js); `storage` says which kind it is,
+// and the landing pages' text is kept the same way (site-store.js) unless `site` is given.
+export function createApp({ finance, storage, site = siteStore(storage) }) {
   const app = express();
   app.set('trust proxy', 1); // one reverse proxy in front: the caller's address is the one it reports
   // ALLOWED_ORIGIN only matters if a site is served from somewhere else; it may list several origins, comma-separated.
@@ -38,13 +43,15 @@ export function createApp({ finance, storage }) {
 
   // ---- Public ----
   app.use('/api/auth', authRoutes);
+  app.use('/api/public', rateLimit({ windowMs: 60_000, max: 120, what: 'page loads' }), publicRoutes(site));
   app.get('/', (req, res) => res.sendFile('index.html', { root: SITE }));
   app.get('/login', (req, res) => res.sendFile('login.html', { root: SITE }));
   app.get('/jda/:id/info', (req, res, next) => JDAS.some(j => j.id === req.params.id) ? res.sendFile('info.html', { root: SITE }) : next());
   // Each its own root, so no path ("..", encoded or not) can climb out of it into the rest of portal/.
   app.use('/site/portal/css', express.static(`${PORTAL}css`));
   app.use('/site/portal/assets', express.static(`${PORTAL}assets`));
-  app.get('/site/portal/js/blocks.js', (req, res) => res.sendFile('js/blocks.js', { root: PORTAL })); // how a solution's detail page is drawn, for the Info page
+  // At the top level, so its own import of ../../shared/esc.js lands on /shared/esc.js.
+  app.get('/lib/blocks.js', (req, res) => res.sendFile('js/blocks.js', { root: PORTAL }));
   app.use('/site/portal', (req, res) => res.sendStatus(404));
   app.use('/site', express.static(SITE));
   app.use('/shared', express.static(SHARED));

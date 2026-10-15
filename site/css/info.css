@@ -1,0 +1,17 @@
+/* The public Info page's own frame, over the Control Tower's Master Page styles (portal/css/styles.css). */
+.skip{position:absolute;left:12px;top:-60px;z-index:300;background:var(--teal-800);color:#fff;padding:10px 14px;border-radius:10px}
+.skip:focus{top:12px}
+.info-brand{text-decoration:none;color:#fff}
+.info-mark{width:36px;height:36px;flex:none;border-radius:10px;display:grid;place-items:center;font:800 17px/1 var(--font);color:#fff;
+  background:linear-gradient(140deg,var(--teal-400),var(--teal-800));box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.info-mark.small{width:26px;height:26px;font-size:13px;border-radius:8px}
+.info-nav{display:flex;flex-wrap:wrap;gap:8px}
+.info-link{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.3);color:#fff;text-decoration:none;font-weight:600;font-size:14px;background:rgba(255,255,255,.08)}
+.info-link:hover{background:rgba(255,255,255,.18)}
+.info-link.solid{background:#fff;color:var(--teal-800);border-color:#fff}
+.info-link:focus-visible,.info-brand:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.info-load{padding:48px 0;color:var(--muted)}
+#info-main{outline:none}
+#info-main .block{opacity:1;transform:none}
+.sol-card:focus-visible{outline:3px solid var(--teal-500);outline-offset:3px}
+#solDetailTitle:focus{outline:none}

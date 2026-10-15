@@ -90,13 +90,13 @@ written beside it. Review findings are logged under each phase.
 
 ## Phase 3 (Priority 3): public landing page
 
-- [ ] Persistent sidebar: Home, JDA Status, Contacts (scroll to sections) and Sign in.
-- [ ] Sections in order: TRICIPTA AI header, Overview, Roles image (jpg or png, placeholder until supplied), What is JDA, Existing JDAs, JDA Status cards, Contacts.
-- [ ] Existing JDAs: tab per JDA with press release overview, projects, Program Lead cards, Business Champions cards, View more to its Info page; long text truncated.
-- [ ] People seeded with "Name TBC" / "Title TBC" placeholders.
-- [ ] JDA Status cards: name, title, number of projects, status badge (In the works / In progress / Finished).
-- [ ] Info page per JDA at `/jda/<id>/info`: a separate read-only copy of the Master Page; private data stripped and listed below.
-- [ ] Desktop and phone layouts checked.
+- [x] Persistent sidebar: Home, JDA Status, Contacts (scroll to sections, the current one highlighted) and Sign in ("Open Control Tower" when already signed in). On a phone it is a drawer behind a menu button (Escape closes it). *Checked: screenshots at 1440px and 390px.*
+- [x] Sections in order: TRICIPTA AI header, Overview, Roles image (`site/public/roles.jpg`, `.png`, `.jpeg` or `.webp`; placeholder until supplied), What is JDA, Existing JDAs, JDA Status cards, Contacts. *Checked: screenshots; `site-content.test.mjs` (roles image null until supplied).*
+- [x] Existing JDAs: a tab per JDA (arrow keys move between tabs) with press release overview (five lines, then Read more), projects (six shown, then "+N more"), Program Lead cards, Business Champions cards, and View more to its Info page. *Checked: screenshots; links open `/jda/<id>/info`.*
+- [x] People seeded with "Name TBC" / "Title TBC" placeholders (one Program Lead, two Business Champions per JDA). *Checked: `site-content.test.mjs`.*
+- [x] JDA Status cards: name, title, number of projects, status badge with its own colour and icon (In the works amber / clock, In progress teal / pulse, Finished green / tick). *Checked: screenshots.*
+- [x] Info page per JDA at `/jda/<id>/info`: a separate read-only copy of the Master Page (`site/info.html`, `site/js/info.js`; the original `portal/jda-report.html` is untouched by it and shares no state). The server builds what it shows (`infoPage` in `jda/server/site-content.js`); private data is never sent and is listed below. *Checked: `site-content.test.mjs` (no owner, %, task, update, challenge, S-curve, backup or bad link in the answer); pages loaded in a browser with no console errors.*
+- [x] Desktop and phone layouts checked. *Checked: screenshots at 1440, 1366 and 390px; no sideways scroll.*
 
 ## Phase 4 (Priority 4): Control Tower landing page
 
@@ -148,6 +148,8 @@ written beside it. Review findings are logged under each phase.
 | A15 | A username typed at /login means `<username>@jda.app` (`shared/firebase-config.js`); a full email is used as typed. | Matches how the tracker's accounts were created. |
 | A16 | `REQUIRE_AUTH=false` opens everything, for trying things on one's own computer only; refused with `NODE_ENV=production`. | Lets the demo mode run without Firebase accounts. |
 | A17 | Changes to private APIs must be sent as JSON (415 otherwise). | With SameSite=Lax this closes form-post CSRF, including from another subdomain. |
+| A18 | A JDA's landing-page title is its Master Page tagline, its press release overview the Master Page press release, and its projects the names on Overall progress, unless written in edit mode. Status, when not set, is "In progress" if it has projects, otherwise "In the works". | Shows real content before anyone edits; edit mode overrides each one. |
+| A19 | The public pages' report reads are cached for a minute and rate-limited (120 per minute per address). | Public traffic must not become a stream of database reads. |
 | A9 | There is no build, lint or type-check in this repository; `npm test` plus `node --check` stand in for it. | Nothing to run otherwise. |
 | A10 | The cleanup matches a tracker JDA only when its name is exactly "JDA <n>". Every other name is listed as kept in the dry run, so an odd name can be checked before `--apply`. | A looser match could delete a JDA by accident. |
 | A11 | An invoice or sanctioned amount filed under another JDA (e.g. Unsorted) but against a JDA 4+ project is deleted with that project. | It would otherwise point at a project that no longer exists. |
@@ -155,7 +157,17 @@ written beside it. Review findings are logged under each phase.
 
 ## Stripped from the public Info pages
 
-(Filled in during Phase 3.)
+Not sent by the server at all (`infoPage`, `publicJda` in `jda/server/site-content.js`, tested in `site-content.test.mjs`):
+
+- **Overall progress**: projects' owners, % complete, status, descriptions; overall status; challenges; the S-curve.
+- **Weekly progress**: tasks (names, owners, due dates), key updates, the week label.
+- **The system architecture diagram** (internal systems and data flows).
+- **Solution detail pages' targets and delivery leads** (built-in content); detail pages written as blocks are kept as written.
+- **Editing**: the editor, Edit report, Drive sync and Master File folder links, saved versions, `overviewBackup`.
+- **Anything that is not a safe picture or link**: images other than this site's stock pictures or `https://` addresses; links other than `http(s)://`.
+- **Invoices, payments, costs**: never on a Master Page in the first place (decided 2026-10-12), and not read by these endpoints.
+
+Kept, because the Master Page has always shown them publicly (the old portal had no sign-in): the banner, winning aspiration (including its targets, e.g. "30% NPV"), solution cards, collaborators, press release and sections added in the editor. On the landing page each JDA shows only its title, press release text, project **names** and how many there are.
 
 ## Known issues
 
