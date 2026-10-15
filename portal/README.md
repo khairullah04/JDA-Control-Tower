@@ -6,7 +6,7 @@ images and behaviour, shared from one place.
 ```
 portal/
   index.html               Portal main page: one card per JDA (live progress) + Administration
-  jda-report.html          One template for every JDA: its Master Page at jda-report.html#/jda1 ... #/jda4,
+  jda-report.html          One template for every JDA: its Master Page at jda-report.html#/jda1 ... #/jda3,
                            and its Editor Page at #/jda1/edit
   css/
     styles.css               The reference stylesheet verbatim, plus a short portal-only block at the bottom
@@ -46,7 +46,7 @@ work opened from a plain file server that has only this folder.
 | JDA | Firebase project | Document |
 |---|---|---|
 | JDA 3 | `jda3-9c0c5` (the original JDA3 report's own project) | `report/current` |
-| JDA 1, 2, 4 | `test-invoice-c38a4` (same as the Invoice Tracker) | `jdaReports/jda1`, `jda2`, `jda4` |
+| JDA 1, 2 | `test-invoice-c38a4` (same as the Invoice Tracker) | `jdaReports/jda1`, `jda2` |
 
 JDA 3 reads the same document the reference page does, so the Excel -> Power Automate sync that
 feeds it carries on working. To move a JDA, change its `source` in

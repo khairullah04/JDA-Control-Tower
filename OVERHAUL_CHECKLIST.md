@@ -69,12 +69,12 @@ written beside it. Review findings are logged under each phase.
 
 ## Phase 1 (Priority 1): remove JDA 4 and onwards
 
-- [ ] JDA 4+ removed from code: portal JDA list, tracker default JDAs, demo data, passkey example, docs.
-- [ ] Test fixtures no longer name JDA numbers above 3.
-- [ ] Repo search for `JDA 4`, `JDA4`, `jda-4`, `jda_4`, `jda4` and 5+ finds nothing.
-- [ ] Database cleanup script removes JDA 4+ tracker records and every dependent row (projects, invoices, sanctioned amounts, audit lines, activity log, processed Drive files, report documents and their versions), dry run by default, backup first.
+- [x] JDA 4+ removed from code: portal JDA list (`portal/js/config/app-config.js`), tracker default JDAs (`jda/web/js/config/app-config.json`), demo data and its JDA 4 projects DA/DB/DC (`jda/web/js/services/demo/data.js`), passkey example and the local `portal-passkeys.json`, READMEs, rule and code comments. *Checked: grep below; `npm test` 102/102.*
+- [x] Test fixtures no longer name JDA numbers above 3 (jda7/jda9 became `jdaz` / "JDA Z"). *Checked: grep below.*
+- [x] Repo search for `JDA 4`, `JDA4`, `jda-4`, `jda_4`, `jda4` and 5+ finds nothing outside this checklist and the review agent's instructions. *Checked: `grep -rniE "jda[ _-]?([4-9]|[1-9][0-9])\b"` and a search for "1, 2 and 4" / "1-4" (excluding node_modules, backups, vendor, drive-test-files).*
+- [x] Database cleanup script `jda/server/scripts/remove-jdas.mjs` (logic in `jda/server/jda-removal.js`) removes JDA 4+ tracker records and every dependent row: projects, invoices, sanctioned amounts, audit lines (by JDA, project or record), activity log lines, report documents and their versions. Dry run by default; `--apply` runs `scripts/backup.mjs` first and deletes nothing unless the main project was saved. `processedFiles` is left: it names no JDA, and deleting a line would make the next Drive sync import that file again. *Checked: `jda-removal.test.mjs` (3 tests) on a stand-in database, including an invoice filed under Unsorted against a JDA 4 project.*
 - [ ] Script run against the real database, and a second dry run finds nothing left. *Needs the service-account key.*
-- [ ] JDA list still comes from data/config, so adding a JDA later needs no code change.
+- [x] JDA list still comes from data/config, so adding a JDA later needs no code change. *Checked: the portal reads `JDAS` in `portal/js/config/app-config.js`; the tracker reads its `jdas` collection; nothing counts to 3.*
 
 ## Phase 2 (Priority 2): access control and routing
 

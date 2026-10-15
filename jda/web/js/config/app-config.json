@@ -10,7 +10,6 @@
     { "name": "JDA 1", "subProjects": ["AA", "AB", "AC"] },
     { "name": "JDA 2", "subProjects": ["BA", "BB"] },
     { "name": "JDA 3", "subProjects": ["CA", "CB", "CC", "CD", "CE", "CF", "CG"] },
-    { "name": "JDA 4", "subProjects": ["DA", "DB", "DC"] },
     { "name": "Unsorted", "subProjects": ["UNSORTED"] }
   ],
   "defaultSubProjectBudget": 2000000,

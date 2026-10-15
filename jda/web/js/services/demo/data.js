@@ -3,19 +3,18 @@ import { fmt, scale } from '../../finance/money.js';
 const TASKS = ['Engineering design', 'Procurement', 'Fabrication', 'Installation', 'Commissioning', 'Site services'];
 
 export const jdas = [
-  { id: 'j1', name: 'JDA 1' }, { id: 'j2', name: 'JDA 2' }, { id: 'j3', name: 'JDA 3' },
-  { id: 'j4', name: 'JDA 4' }, { id: 'j5', name: 'Unsorted' }
+  { id: 'j1', name: 'JDA 1' }, { id: 'j2', name: 'JDA 2' }, { id: 'j3', name: 'JDA 3' }, { id: 'j5', name: 'Unsorted' }
 ];
 const STRUCTURE = [
   ['j1', ['AA', 'AB', 'AC']], ['j2', ['BA', 'BB']],
-  ['j3', ['CA', 'CB', 'CC', 'CD', 'CE', 'CF', 'CG']], ['j4', ['DA', 'DB', 'DC']], ['j5', ['UNSORTED']]
+  ['j3', ['CA', 'CB', 'CC', 'CD', 'CE', 'CF', 'CG']], ['j5', ['UNSORTED']]
 ];
 export const projects = [];
 STRUCTURE.forEach(([jdaId, codes]) => codes.forEach(name =>
   projects.push({ id: name, jdaId, name, budget: 2000000, startDate: '2026-01-01', endDate: '2026-12-31' })
 ));
 // Give the "flagship" project of each JDA a realistic budget; the rest start blank until synced.
-const BUDGET = { AA: 16000000, BA: 9600000, CA: 6600000, DA: 14400000 };
+const BUDGET = { AA: 16000000, BA: 9600000, CA: 6600000 };
 projects.forEach(p => { if (BUDGET[p.id]) p.budget = BUDGET[p.id]; });
 
 export const logs = [], processedFiles = [];
@@ -23,7 +22,7 @@ logs.push({ id: 'aa-l-budget', projectId: 'AA', action: 'project', by: 'demo', d
 
 // (project, partner, sanctioned per month in sen before tax, invoiced as a % of that). 115% runs over its
 // sanctioned amount, 100% lands exactly on it, the others stay under.
-const RICH = [['AA', 'IBM', 100000000, 115], ['BA', 'TAI', 80000000, 85], ['CA', 'IBM', 50000000, 100], ['DA', 'TAI', 120000000, 60]];
+const RICH = [['AA', 'IBM', 100000000, 115], ['BA', 'TAI', 80000000, 85], ['CA', 'IBM', 50000000, 100]];
 
 // Sample sanctioned amounts for the whole year and invoices for January to August, put through the
 // register's own import so they are validated and worked out exactly as real ones are.

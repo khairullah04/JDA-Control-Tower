@@ -6,7 +6,7 @@ reading is open. Writing is closed: every save goes through the JDA server
 (POST /api/portal/save), which checks the JDA's passkey session and writes with its
 service-account key. The rules below are what makes the passkey real.
 
-JDA 1, 2 and 4 (project test-invoice-c38a4)
+JDA 1 and 2 (project test-invoice-c38a4)
 -------------------------------------------
 Nothing to add by hand: jda/firestore.rules already holds this block. Publish that file.
 

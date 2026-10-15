@@ -29,7 +29,7 @@ test('a weak passkey put in while the server runs is treated as not set', () => 
   write({ ...good, jda2: 'short' });
   assert.equal(passkeyFor('jda1'), 'long-enough-1');
   assert.equal(passkeyFor('jda2'), null);
-  assert.equal(passkeyFor('jda9'), null);
+  assert.equal(passkeyFor('jdaz'), null);
 });
 
 let server, base;

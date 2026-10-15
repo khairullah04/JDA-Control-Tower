@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { FIREBASE_PROJECTS } from '../../shared/firebase-config.js';
 
 // The one place the server opens a Firebase project with a service-account key.
-//   portal - the main project (invoices, payments, the reports of JDA 1, 2 and 4, the access list).
+//   portal - the main project (invoices, payments, the reports of JDA 1 and 2, the access list).
 //            Key: GOOGLE_APPLICATION_CREDENTIALS in .env.
 //   jda3   - the original JDA 3 report's own project. Key: JDA3_GOOGLE_APPLICATION_CREDENTIALS.
 // With FIRESTORE_EMULATOR_HOST set, both go to the local emulator and no key is needed.

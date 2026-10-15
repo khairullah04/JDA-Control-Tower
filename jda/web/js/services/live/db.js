@@ -8,7 +8,7 @@ const usernameOf = () => (auth.currentUser?.email || 'unknown@').split('@')[0];
 const rows = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
 const byField = (coll, field, val) => getDocs(query(collection(db, coll), where(field, '==', val))).then(rows);
 
-// Seeds JDA 1-4 (+ an Unsorted catch-all) and their projects only the very first time this Firestore
+// Seeds the default JDAs in app-config.json (+ an Unsorted catch-all) and their projects only the very first time this Firestore
 // project is used, marked by meta/seed. A later empty read (e.g. a transient network glitch) never re-seeds.
 export async function listJdas() {
   let list = rows(await getDocs(collection(db, 'jdas')));

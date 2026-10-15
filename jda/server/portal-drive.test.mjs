@@ -48,7 +48,7 @@ test('sorts files by the folder they sit under, oldest first', async () => {
 
 test('finds a JDA folder by name or id, and reports a missing one', async () => {
   assert.ok(await listJdaFiles({ id: 'jda2', name: 'JDA 2' }));
-  assert.equal(await listJdaFiles({ id: 'jda7', name: 'JDA 7' }), null);
+  assert.equal(await listJdaFiles({ id: 'jdaz', name: 'JDA Z' }), null);
 });
 
 test('reads Excel as text, every sheet', async () => {

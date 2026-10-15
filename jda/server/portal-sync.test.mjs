@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 
 const file = (id, name, modifiedTime) => ({ id, name, modifiedTime, mimeType: 'text/plain' });
 const drive = {
-  master: [file('m1', 'About JDA 9.docx', '2026-09-01T00:00:00Z')],
+  master: [file('m1', 'About JDA Z.docx', '2026-09-01T00:00:00Z')],
   overall: [file('o1', 'Overall.xlsx', '2026-09-10T00:00:00Z'), file('o2', 'broken.pptx', '2026-09-11T00:00:00Z')],
   weekly: [file('w2', 'Week 2.pdf', '2026-09-20T00:00:00Z'), file('w1', 'Week 1.pdf', '2026-09-13T00:00:00Z')],
   ignored: [file('x1', 'stray.txt', '2026-09-01T00:00:00Z')]
@@ -27,7 +27,7 @@ const replies = {
 let calls = 0;
 
 mockModule('./portal-drive.js', {
-  listJdaFiles: async jda => jda.id === 'jda9' ? drive : null,
+  listJdaFiles: async jda => jda.id === 'jdaz' ? drive : null,
   fileBlocks: async f => { if (f.name.endsWith('.pptx')) throw new Error('unsupported file type'); return [{ type: 'text', text: `FILE ${f.id}` }]; }
 });
 mockModule('./claude.js', {
@@ -43,12 +43,12 @@ mockModule('node:fs', { default: { readFileSync: () => { throw new Error('no cac
 
 const { syncJda } = await import('./portal-sync.js');
 
-const JDA9 = { id: 'jda9', name: 'JDA 9' };
+const JDAZ = { id: 'jdaz', name: 'JDA Z' };
 test('unknown JDA folder', async () => assert.deepEqual(await syncJda({ id: 'jda1', name: 'JDA 1' }, { scope: 'master' }), { found: false }));
 
 test('master scope reads only the Master File folder', async () => {
   const before = calls;
-  const { patch, counts } = await syncJda(JDA9, { scope: 'master' });
+  const { patch, counts } = await syncJda(JDAZ, { scope: 'master' });
   assert.deepEqual(Object.keys(patch), ['overview']);
   assert.deepEqual(counts, { master: 1, overall: 0, weekly: 0 });
   assert.equal(calls, before + 1);
@@ -62,7 +62,7 @@ test('master scope reads only the Master File folder', async () => {
 });
 
 test('progress scope assembles overall and weekly, and leaves the home page alone', async () => {
-  const { found, patch, counts, skipped } = await syncJda(JDA9, { scope: 'progress' });
+  const { found, patch, counts, skipped } = await syncJda(JDAZ, { scope: 'progress' });
   assert.equal(found, true);
   assert.deepEqual(counts, { master: 0, overall: 1, weekly: 2 });
   assert.equal('overview' in patch, false);
@@ -86,7 +86,7 @@ test('progress scope assembles overall and weekly, and leaves the home page alon
 
 test('unchanged files are served from the cache, not sent to Claude again', async () => {
   const before = calls;
-  await syncJda(JDA9, { scope: 'master' });
-  await syncJda(JDA9, { scope: 'progress' });
+  await syncJda(JDAZ, { scope: 'master' });
+  await syncJda(JDAZ, { scope: 'progress' });
   assert.equal(calls, before);
 });

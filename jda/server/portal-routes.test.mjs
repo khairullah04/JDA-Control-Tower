@@ -35,7 +35,7 @@ after(() => server.close());
 
 test('a passkey is exchanged for a session token; a wrong one is not', async () => {
   assert.equal((await unlock('jda1', 'wrong')).status, 401);
-  assert.equal((await unlock('jda9', 'anything')).status, 503);                      // no passkey set for it
+  assert.equal((await unlock('jdaz', 'anything')).status, 503);                      // no passkey set for it
   assert.equal((await call('unlock', { jdaId: 'jda1' })).status, 400);
   const ok = await unlock('jda1', passkeys.jda1);
   assert.equal(ok.status, 200);
@@ -97,7 +97,7 @@ test('a JDA 1 session cannot reach JDA 2\'s Drive folder, whatever name the page
   await call('sync', { jda: { id: 'jda1', name: 'jda2' }, scope: 'progress' }, token);
   assert.deepEqual(synced.map(([jda]) => jda.name).filter(n => n !== 'JDA 1'), []);
   assert.equal((await call('master-folder', { jda: { id: 'jda2', name: 'JDA 2' } }, token)).status, 401);
-  assert.equal((await call('master-folder', { jda: { id: 'jda7', name: 'JDA 1' } }, token)).status, 400);   // not a JDA the portal knows
+  assert.equal((await call('master-folder', { jda: { id: 'jdaz', name: 'JDA 1' } }, token)).status, 400);   // not a JDA the portal knows
 });
 
 test('a report is saved through the server, only with that JDA\'s session', async () => {
