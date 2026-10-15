@@ -14,7 +14,7 @@ import { logoFor, contentFromOverview as overviewContent, overviewFromContent as
 import { esc } from '../../shared/esc.js';
 import { digest, digests } from '../../shared/digest.js';
 import { localToday } from '../../shared/dates.js';
-import { withProjectIds, linkTasks, tasksOf } from './progress.js';
+import { withProjectIds, linkTasks, tasksOf, normalizeTask, taskProgress, viewTasks, isOverdue as taskOverdue } from './progress.js';
 
 const $ = id => document.getElementById(id);
 // An image field holds an address (https://..., /..., assets/..., data:image/...). Anything else typed into it is not drawn as a broken image.
@@ -33,6 +33,8 @@ let c = { ...baseContent, extraSections: [], sectionOrder: ['aspiration', 'proje
 
 /* ---------- Saving goes through the JDA server, behind the JDA Control Tower sign-in ---------- */
 const masterHash = `#/${jda.id}`;
+// Back to the Control Tower lands on this JDA's tab.
+document.querySelectorAll('a[href="index.html"]').forEach(a => { a.href = `index.html#${jda.id}`; });
 const api = (path, body = {}) => portalApi(path, { jda: { id: jda.id, name: jda.name }, ...body });
 // The Master Page and the Editor Page differ only in the hash, so moving between them swaps the
 // hash and reloads to start again in the other mode.
@@ -495,6 +497,65 @@ function handleInitialRoute(){
 
 // `data` is null when this JDA has no report document yet: every section keeps its place and its
 // values stay blank - no zeros, no sample numbers.
+/* ---------- Weekly progress: the tasks. Filtered and sorted for reading; in the editor every task is
+   shown in its stored order with its details open, so each row is the task it edits. ---------- */
+const taskView = { status: '', owner: '', sort: 'due' }, openTasks = new Set();
+const PRIORITY_CLASS = { High: 'high', Medium: 'medium', Low: 'low' };
+function taskDetails(t){
+  const pct = taskProgress(t);
+  const date = (label, iso, field) => `<div><dt>${label}</dt><dd class="mono" data-field="${field}">${iso ? esc(formatDueDate(iso)) : '—'}</dd></div>`;
+  return `
+    <div class="task-detail-grid">
+      <div class="task-detail-main">
+        <h5>Description</h5><p class="task-desc" data-field="description">${esc(t.description) || '<span class="muted">No description.</span>'}</p>
+        <h5>Checklist${t.checklist.length ? ` <span class="muted">${t.checklist.filter(c => c.done).length} of ${t.checklist.length} done</span>` : ''}</h5>
+        <ul class="task-checklist" data-field="checklist">${t.checklist.map(c => `<li class="${c.done ? 'done' : ''}"><span class="tick" aria-hidden="true">${c.done ? '✓' : ''}</span><span class="visually-hidden">${c.done ? 'Done: ' : 'To do: '}</span>${esc(c.text)}</li>`).join('') || '<li class="muted">No checklist.</li>'}</ul>
+        <h5>Notes and blockers</h5><p class="task-notes" data-field="notes">${esc(t.notes) || '<span class="muted">None.</span>'}</p>
+      </div>
+      <dl class="task-facts">
+        <div><dt>Project</dt><dd>${esc(t.project) || '—'}</dd></div>
+        ${date('Start', t.start, 'start')}${date('Due', t.due, 'due')}${date('Completed', t.completed, 'completed')}
+        <div><dt>Progress</dt><dd class="mono" data-field="progress">${pct === null ? '—' : pct + '%'}${t.checklist.length ? ' <span class="muted">(checklist)</span>' : ''}</dd></div>
+        <div><dt>Last updated</dt><dd class="mono">${t.updatedAt ? esc(formatDueDate(t.updatedAt)) : '—'}</dd></div>
+      </dl>
+    </div>`;
+}
+function renderTasks(raw){
+  const tasks = (raw || []).map((t, i) => ({ ...normalizeTask(t), _i: i }));
+  const owners = [...new Set(tasks.map(t => t.owner).filter(Boolean))].sort();
+  $('taskOwner').innerHTML = '<option value="">Everyone</option>' + owners.map(o => `<option${o === taskView.owner ? ' selected' : ''}>${esc(o)}</option>`).join('');
+  if (!owners.includes(taskView.owner)) taskView.owner = '';
+  $('taskToolbar').hidden = editing;
+  const shown = editing ? tasks : viewTasks(tasks, taskView, todayISO);
+  $('taskCount').textContent = editing || !tasks.length ? '' : `${shown.length} of ${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
+  const tbody = $('tasksBody');
+  tbody.innerHTML = !tasks.length ? `<tr><td colspan="6">${empty('No tasks yet.')}</td></tr>`
+    : !shown.length ? `<tr><td colspan="6">${empty('No tasks match these filters.')}</td></tr>` : shown.map(t => {
+      const overdue = taskOverdue(t, todayISO), open = editing || openTasks.has(t._i), pct = taskProgress(t);
+      return `<tr class="task-row${open ? ' open' : ''}" data-index="${t._i}">
+        <td data-cell="task"><button type="button" class="task-toggle" aria-expanded="${open}" aria-controls="task-detail-${t._i}"${editing ? ' hidden' : ''}><span class="chev" aria-hidden="true">›</span><span class="visually-hidden">Details of </span></button><span class="task-name">${esc(t.task)}</span>${t.project ? `<span class="task-project">${esc(t.project)}</span>` : ''}</td>
+        <td class="mono" data-cell="owner">${esc(t.owner)}</td>
+        <td data-cell="priority">${t.priority ? `<span class="prio ${PRIORITY_CLASS[t.priority]}">${esc(t.priority)}</span>` : '<span class="prio none">—</span>'}</td>
+        <td class="mono${overdue ? ' overdue' : ''}" data-cell="due">${esc(formatDueDate(t.due))}${overdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</td>
+        <td data-cell="progress">${pct === null ? '<span class="muted">—</span>' : `<span class="task-bar" role="img" aria-label="${pct}% done"><span style="width:${pct}%"></span></span><span class="mono task-pct">${pct}%</span>`}</td>
+        <td data-cell="status"><span class="task-status ${taskStatusClass[t.status] || 'notstarted'}">${esc(t.status)}</span></td>
+      </tr>
+      <tr class="task-detail" id="task-detail-${t._i}" data-index="${t._i}"${open ? '' : ' hidden'}><td colspan="6">${taskDetails(t)}</td></tr>`;
+    }).join('');
+}
+// Reading: a row opens and closes its details; the toolbar filters and sorts.
+$('tasksBody').addEventListener('click', e => {
+  if (editing || e.target.closest('a, select, input')) return;
+  const row = e.target.closest('.task-row');
+  if (!row) return;
+  const i = Number(row.dataset.index), open = !openTasks.has(i);
+  open ? openTasks.add(i) : openTasks.delete(i);
+  row.classList.toggle('open', open);
+  row.querySelector('.task-toggle').setAttribute('aria-expanded', open);
+  row.nextElementSibling.hidden = !open;
+});
+for (const [id, key] of [['taskStatus', 'status'], ['taskOwner', 'owner'], ['taskSort', 'sort']]) $(id).onchange = e => { taskView[key] = e.target.value; renderTasks(currentData.tasks); };
+
 function render(data){
   const hasReport = !!data;
   data = data || {};
@@ -534,16 +595,7 @@ function render(data){
     requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = p.pct + "%"; }));
   });
 
-  const tbody = $('tasksBody');
-  tbody.innerHTML = (data.tasks || []).length ? "" : `<tr><td colspan="4">${empty('No tasks yet.')}</td></tr>`;
-  (data.tasks || []).forEach(t=>{
-    const overdue = isOverdue(t.due, t.status);
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${esc(t.task)}</td><td class="mono">${esc(t.owner)}</td>
-      <td class="mono${overdue ? ' overdue' : ''}">${esc(formatDueDate(t.due))}${overdue ? ' <span class="overdue-tag">OVERDUE</span>' : ''}</td>
-      <td><span class="task-status ${taskStatusClass[t.status]||'notstarted'}">${esc(t.status)}</span></td>`;
-    tbody.appendChild(tr);
-  });
+  renderTasks(data.tasks);
 
   const log = $('updatesLog');
   log.innerHTML = (data.updates || []).length ? "" : empty('No updates posted yet.', 'padding-left:24px');

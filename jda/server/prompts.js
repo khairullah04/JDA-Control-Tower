@@ -65,7 +65,9 @@ Return a JSON object:
 {
  "weekLabel": string (how this week is headed, e.g. "Week of September 8, 2026 — Execution week 6"),
  "weekDate": "YYYY-MM-DD"|null (the Monday or first day of the week the report covers),
- "tasks": [{ "task": string, "project": string (exact project name from the list, or "" if it belongs to none), "owner": string, "due": "YYYY-MM-DD" | "" , "status": "Not started" | "In progress" | "Done" }],
+ "tasks": [{ "task": string (short title), "project": string (exact project name from the list, or "" if it belongs to none), "owner": string, "due": "YYYY-MM-DD" | "" , "status": "Not started" | "In progress" | "Done",
+   "description": string (what the task is, if the report says; else ""), "priority": "High" | "Medium" | "Low" | "" (only if stated), "start": "YYYY-MM-DD" | "", "completed": "YYYY-MM-DD" | "",
+   "progress": number (0-100, only if stated) | null, "checklist": [{ "text": string, "done": boolean }] (sub-steps, if listed), "notes": string (blockers or remarks, if any; else "") }],
  "updates": [{ "date": "YYYY-MM-DD", "text": string (one notable event or achievement, one sentence) }],
  "projectProgress": [{ "name": string (exact project name from the list), "pct": number (0-100), "status": "green" | "amber" | "red" | null }] (only projects whose percent complete this report states)
 }

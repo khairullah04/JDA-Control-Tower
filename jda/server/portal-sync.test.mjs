@@ -21,7 +21,8 @@ const replies = {
     scurve: { startMonth: '2026-07', months: ['Jul', 'Aug'], planned: [5, 10], actual: [4, null] } },
   w1: { weekLabel: 'Week 1', weekDate: '2026-09-07', tasks: [{ task: 'old task', project: 'Alpha', owner: 'x', due: '2026-09-09', status: 'Done' }],
     updates: [{ date: '2026-09-08', text: 'First' }], projectProgress: [{ name: 'Alpha', pct: 41, status: null }] },
-  w2: { weekLabel: 'Week 2', weekDate: '2026-09-14', tasks: [{ task: 'new task', project: 'Not a project', owner: 'y', due: 'soon', status: 'Blocked' }],
+  w2: { weekLabel: 'Week 2', weekDate: '2026-09-14', tasks: [{ task: 'new task', project: 'Not a project', owner: 'y', due: 'soon', status: 'Blocked' },
+    { task: 'rich task', project: 'Alpha', owner: 'z', due: '2026-09-20', status: 'In progress', description: 'Why', priority: 'High', start: '2026-09-01', progress: 140, checklist: [{ text: 'a', done: true }, { text: '' }], notes: 'Waiting on IT', priority2: 'x' }],
     updates: [{ date: '2026-09-15', text: 'Second' }, { date: '2026-09-08', text: 'First' }], projectProgress: [{ name: 'Alpha', pct: 48, status: 'amber' }, { name: 'Ghost', pct: 99 }] }
 };
 let calls = 0;
@@ -77,7 +78,9 @@ test('progress scope assembles overall and weekly, and leaves the home page alon
 
   // weekly: latest week by date wins the label and tasks; updates accumulate, deduplicated, newest first
   assert.equal(patch.weekLabel, 'Week 2');
-  assert.deepEqual(patch.tasks, [{ task: 'new task', project: '', owner: 'y', due: '', status: 'Not started' }]);
+  const blank = { description: '', priority: '', start: '', completed: '', progress: null, checklist: [], notes: '', updatedAt: '2026-09-14' };
+  assert.deepEqual(patch.tasks, [{ task: 'new task', project: '', owner: 'y', due: '', status: 'Not started', ...blank },
+    { task: 'rich task', project: 'Alpha', owner: 'z', due: '2026-09-20', status: 'In progress', ...blank, description: 'Why', priority: 'High', start: '2026-09-01', progress: 100, checklist: [{ text: 'a', done: true }], notes: 'Waiting on IT' }]);
   assert.deepEqual(patch.updates, [{ date: '2026-09-15', text: 'Second' }, { date: '2026-09-08', text: 'First' }]);
 
   assert.deepEqual(skipped.sort(), ['broken.pptx: unsupported file type', 'stray.txt: not inside a Master File, Overall Progress or Weekly Progress folder'].sort());

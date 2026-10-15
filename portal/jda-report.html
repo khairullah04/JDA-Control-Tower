@@ -376,9 +376,15 @@
     <div class="block reveal" style="margin-top:0;">
       <h3>Tasks</h3>
       <p class="block-intro" id="tasksIntro"></p>
+      <div class="task-toolbar" id="taskToolbar">
+        <label>Status <select id="taskStatus"><option value="">All</option><option>Not started</option><option>In progress</option><option>Done</option><option value="overdue">Overdue</option></select></label>
+        <label>Owner <select id="taskOwner"><option value="">Everyone</option></select></label>
+        <label>Sort by <select id="taskSort"><option value="due">Due date</option><option value="priority">Priority</option><option value="status">Status</option><option value="owner">Owner</option><option value="updated">Last updated</option></select></label>
+        <span class="task-count" id="taskCount" role="status"></span>
+      </div>
       <div class="table-card">
         <table class="tasks">
-          <thead><tr><th>Task</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
+          <thead><tr><th>Task</th><th>Owner</th><th>Priority</th><th>Due</th><th>Progress</th><th>Status</th></tr></thead>
           <tbody id="tasksBody"></tbody>
         </table>
       </div>

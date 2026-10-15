@@ -111,10 +111,10 @@ written beside it. Review findings are logged under each phase.
 
 ## Phase 5 (Priority 5): richer Weekly Progress tasks
 
-- [ ] Task fields: title, description, owner, status, priority, start, due, completed dates, progress % or checklist, project, notes/blockers, last updated.
-- [ ] Older tasks read without error (missing fields filled with blanks), with a way back.
-- [ ] Filter and sort by status, owner, due date; expandable rows.
-- [ ] Editable in the existing editor; Drive sync keeps working.
+- [x] Task fields: title, description, owner, status (badge), priority (badge), start, due and completed dates, progress % or a checklist (progress then worked out from it), project, notes and blockers, last updated, and a stable id. Completed is set when a task is marked Done; last updated is set on save for every task that changed. *Checked: `portal-pages.test.mjs` (normalizeTask, taskProgress, stampTasks); the editor in a browser.*
+- [x] Older tasks read without error (missing fields read as blank, `normalizeTask` in `portal/js/progress.js`), with a migration that writes the fields into the stored reports and a way back: `jda/server/scripts/migrate-tasks.mjs` (dry run by default, `--apply`, `--revert`; backup first; each save also keeps the previous version). *Checked: `task-migration.test.mjs` (old → new → revert gives back the old tasks exactly, keeps anything typed since). Not run on the real database: needs the key.*
+- [x] Filter by status (and Overdue) and owner; sort by due date, priority, status, owner or last updated; each row opens to its details (description, checklist, notes and blockers, dates, progress, last updated). *Checked: `portal-pages.test.mjs` (viewTasks); browser: sort by status, filter Not started (2 of 5), rows open and close.*
+- [x] Editable in the existing editor (every task shown in stored order with its details as a form: description, notes, start, completed, checklist items; priority and status by clicking their badges; progress as a number when there is no checklist); the Drive sync reads the new fields when a weekly report states them. *Checked: browser (typed a description, added a checklist item, set priority; "Unsaved changes"); `portal-sync.test.mjs`.*
 
 ## Phase 6 (Priority 6): edit mode
 
@@ -257,3 +257,23 @@ No High findings.
 | dev | Low | `trust proxy` lets `X-Forwarded-For` dodge the public rate limit when no proxy is in front; no Content-Security-Policy on public pages. | Logged (Known issues). |
 | designer | Low | Shared tokens differ between `site.css` and `styles.css`; status stripe colours alike; detail-page block headings are `div`s. | Logged for the final pass. |
 | member | Low | "Program Lead" vs "Programme". | Kept the brief's wording ("Program Lead"). |
+
+### Phase 4 (web-designer, team-member; software-developer and team-leader stopped early on a usage limit and are run again with Phase 5)
+
+| Who | Sev. | Finding | Done |
+|---|---|---|---|
+| designer, member | High | Sync from Drive stayed clickable while running (the tracker's code was handed the label, not the button): a second click read the same files again. | Fixed: the whole button is held (`disabled`, `aria-busy`) until the sync ends. |
+| member | Med | Detail cost fell back to the first JDA's Payment Table when a JDA was not in the tracker. | Fixed: no button then; "Not in the Invoice Tracker yet". |
+| member | Med | Cost failure looked like "no data". | Fixed: "Cost figures could not be read just now". |
+| member | Med | Pending-invoice count from the old front page was gone. | Fixed: "N invoices pending →" on the cost gauge, to that JDA's CJI3 register. |
+| member | Med | Recent activity lines lost their JDA / project. | Fixed: "JDA / project:" in front again; reloads after a sync. |
+| member, designer | Med/Low | Add JDA message told staff to edit a code file. | Fixed: plain wording. |
+| member | Med | Landing "sanctioned" vs tracker "budget" figures. | Labelled: the ring says paid of sanctioned, with tax; the tracker page's budget figures are a different measure (logged). |
+| designer | Med | Rings alike and far apart; progress ring had no heading. | Fixed: progress (teal) and cost (blue, red over 100%) side by side in one card, each with a heading. |
+| designer | Med | Sticky tab bar slid under a two-row top bar at tablet widths. | Fixed: sticky only above 1100px. |
+| designer | Med | Status pill contrast 2.5–3.0:1. | Fixed on this page (darker text). |
+| designer | Med | Tab panel focus invisible. | Fixed: panels are no longer a Tab stop (they hold links and buttons). |
+| designer | Med | Insight and challenge text cut at 4 lines with no way to read it. | Fixed: long text opens with "Read all". |
+| designer, member | Low | Selected tab badge contrast; top-bar link contrast; summary had no disclosure sign; low severity looked like an insight; small touch targets; title after the button; import failure left "Loading" forever; stale update not marked; "Detail cost" wording; back links lost the tab; "Sync from Drive" ambiguous. | Fixed. |
+| designer | Low | Shared `#modal` has no accessible name; refresh resets "Show all". | Logged for the final pass. |
+| member | Low | Tracker Copilot's all-JDA question chips went with the old front page. | Logged. |

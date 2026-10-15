@@ -153,3 +153,45 @@ test('cleanHtml: what is typed or pasted into a block cannot carry script, style
   const twice = clean(clean('<b><a href="https://ok.test">x</a></b><img src=x onerror=1>'));
   assert.equal(twice, '<b><a href="https://ok.test" target="_blank" rel="noopener">x</a></b>');     // cleaning what is already clean changes nothing
 });
+
+const { normalizeTask, taskProgress, stampTasks, viewTasks, isOverdue } = await import('../../portal/js/progress.js');
+
+test('a task from an older report reads with every new field blank', () => {
+  const t = normalizeTask({ task: 'Pilot', project: 'P1', owner: 'IBM', due: '2026-09-12', status: 'In progress' });
+  assert.match(t.id, /^[a-z0-9]{8}$/);
+  assert.deepEqual({ ...t, id: 'x' }, { id: 'x', task: 'Pilot', description: '', project: 'P1', owner: 'IBM', status: 'In progress', priority: '', start: '', due: '2026-09-12',
+    completed: '', progress: null, checklist: [], notes: '', updatedAt: '' });
+  assert.equal(normalizeTask({ id: 'keep', task: 'x' }).id, 'keep');
+  const odd = normalizeTask({ status: 'Finished', priority: 'Urgent', due: '12/9/2026', progress: '140', checklist: [{ text: 'a', done: 1 }, { text: ' ' }, null] });
+  assert.deepEqual([odd.status, odd.priority, odd.due, odd.progress, odd.checklist], ['Not started', '', '', 100, [{ text: 'a', done: true }]]);
+});
+
+test('progress: the checklist, else the % written, else 100 when done', () => {
+  assert.equal(taskProgress({ checklist: [{ done: true }, { done: false }, { done: true }], progress: 10 }), 67);
+  assert.equal(taskProgress({ checklist: [], progress: 40 }), 40);
+  assert.equal(taskProgress({ checklist: [], progress: null, status: 'Done' }), 100);
+  assert.equal(taskProgress({ checklist: [], progress: null, status: 'In progress' }), null);
+});
+
+test('saving stamps what changed, and the completed date follows Done', () => {
+  const a = normalizeTask({ id: 'a', task: 'A', status: 'In progress', updatedAt: '2026-10-01' });
+  const b = normalizeTask({ id: 'b', task: 'B', status: 'Done', completed: '2026-09-30', updatedAt: '2026-09-30' });
+  const [a2, b2, c2] = stampTasks([a, { ...b, status: 'In progress' }, normalizeTask({ id: 'c', task: 'C', status: 'Done' })], [a, b], '2026-10-15');
+  assert.equal(a2.updatedAt, '2026-10-01');                                    // untouched
+  assert.deepEqual([b2.completed, b2.updatedAt], ['', '2026-10-15']);           // taken out of Done
+  assert.deepEqual([c2.completed, c2.updatedAt], ['2026-10-15', '2026-10-15']); // new, and done today
+  const [done] = stampTasks([{ ...a, status: 'Done' }], [a], '2026-10-16');
+  assert.deepEqual([done.completed, done.updatedAt], ['2026-10-16', '2026-10-16']);
+});
+
+test('the Weekly progress view filters by status, overdue and owner, and sorts', () => {
+  const T = (task, extra) => normalizeTask({ task, ...extra });
+  const list = [T('late', { due: '2026-10-01', status: 'In progress', owner: 'IBM', priority: 'Low' }), T('soon', { due: '2026-10-20', owner: 'TAI', priority: 'High' }),
+    T('none', { owner: 'IBM' }), T('done', { due: '2026-09-01', status: 'Done', owner: 'TAI', priority: 'Medium' })];
+  const names = v => v.map(t => t.task);
+  assert.deepEqual(names(viewTasks(list, {}, '2026-10-15')), ['done', 'late', 'soon', 'none']);       // by due date, undated last
+  assert.deepEqual(names(viewTasks(list, { status: 'overdue' }, '2026-10-15')), ['late']);
+  assert.deepEqual(names(viewTasks(list, { owner: 'TAI' }, '2026-10-15')), ['done', 'soon']);
+  assert.deepEqual(names(viewTasks(list, { sort: 'priority' }, '2026-10-15')), ['soon', 'done', 'late', 'none']);
+  assert.ok(isOverdue(list[0], '2026-10-15') && !isOverdue(list[3], '2026-10-15'));
+});

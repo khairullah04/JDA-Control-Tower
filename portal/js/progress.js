@@ -31,3 +31,56 @@ export function linkTasks(tasks = [], projects = []) {
     return p ? { ...rest, projectId: p.id, project: p.name || '' } : rest;
   });
 }
+
+/* ---------- Tasks (Weekly progress) ---------- */
+// A task: { id, task (its title), description, project, projectId, owner, status, priority, start,
+// due, completed, progress, checklist: [{ text, done }], notes (notes and blockers), updatedAt }.
+// Reports written before these fields existed hold only { task, project, owner, due, status }: every
+// task is read through normalizeTask, which fills the rest with blanks, so old and new read the same.
+export const TASK_STATUSES = ['Not started', 'In progress', 'Done'];
+export const PRIORITIES = ['High', 'Medium', 'Low'];
+const str = v => typeof v === 'string' ? v : '';
+const day = v => /^\d{4}-\d{2}-\d{2}$/.test(str(v)) ? v : '';
+export function normalizeTask(t = {}) {
+  const pct = Number(t.progress);
+  return {
+    ...t,
+    id: str(t.id) || newId(), task: str(t.task), description: str(t.description), project: str(t.project), owner: str(t.owner),
+    status: TASK_STATUSES.includes(t.status) ? t.status : 'Not started', priority: PRIORITIES.includes(t.priority) ? t.priority : '',
+    start: day(t.start), due: day(t.due), completed: day(t.completed),
+    progress: t.progress === '' || t.progress == null || !Number.isFinite(pct) ? null : Math.max(0, Math.min(100, Math.round(pct))),
+    checklist: (Array.isArray(t.checklist) ? t.checklist : []).filter(c => c && str(c.text).trim()).map(c => ({ text: str(c.text), done: !!c.done })),
+    notes: str(t.notes), updatedAt: day(t.updatedAt)
+  };
+}
+// How far along a task is: its checklist when it has one, else the % written for it, else 100 when Done.
+export function taskProgress(t) {
+  if (t.checklist?.length) return Math.round(t.checklist.filter(c => c.done).length / t.checklist.length * 100);
+  if (Number.isFinite(t.progress)) return t.progress;
+  return t.status === 'Done' ? 100 : null;
+}
+export const isOverdue = (t, today) => !!t.due && t.status !== 'Done' && t.due < today;
+
+// Before saving: a task that changed (or is new) gets today as its last-updated date; one marked Done
+// gets a completed date if it has none, and one taken out of Done loses it.
+export function stampTasks(tasks, before = [], today) {
+  const was = new Map(before.map(t => [t.id, JSON.stringify({ ...t, updatedAt: '' })]));
+  return tasks.map(t => {
+    const next = { ...t, completed: t.status === 'Done' ? (t.completed || today) : '' };
+    return was.get(t.id) === JSON.stringify({ ...next, updatedAt: '' }) ? next : { ...next, updatedAt: today };
+  });
+}
+
+// The task list as the Weekly progress screen shows it: filtered by status ("overdue" too) and owner, then sorted.
+const RANK = { priority: t => ['High', 'Medium', 'Low', ''].indexOf(t.priority), status: t => ['In progress', 'Not started', 'Done'].indexOf(t.status) };
+export function viewTasks(tasks, { status = '', owner = '', sort = 'due' } = {}, today = '') {
+  const keep = t => (!status || (status === 'overdue' ? isOverdue(t, today) : t.status === status)) && (!owner || t.owner === owner);
+  const key = {
+    due: t => t.due || '9999', priority: RANK.priority, status: RANK.status, owner: t => t.owner.toLowerCase() || '￿',
+    updated: t => t.updatedAt ? -Number(t.updatedAt.replaceAll('-', '')) : 0
+  }[sort] || (t => t.due || '9999');
+  return tasks.filter(keep).map((t, i) => ({ t, i })).sort((a, b) => {
+    const x = key(a.t), y = key(b.t);
+    return x < y ? -1 : x > y ? 1 : (a.t.due || '9999').localeCompare(b.t.due || '9999') || a.i - b.i;
+  }).map(x => x.t);
+}
