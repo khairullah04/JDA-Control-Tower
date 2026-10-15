@@ -392,8 +392,10 @@ Assumptions: the hero uses the two existing wide photos (`hero-banner.jpg`, `pre
 
 ## R2 Phase 3: master page only public
 
-- [ ] Private master page routes, components and links removed; no references left.
-- [ ] Master Page edited on the public Info page by signed-in staff; Info pages still render.
+- [x] Private master page routes, components and links removed; no references left. The Overview screen, solution detail screen, architecture diagram (markup, script, 70 + 29 style rules), jump bar, "Continue to…" band and the JDA's edit icon are gone from `web/control-tower/jda-report.html` and `components/report.js`. The page is now only Overall and Weekly progress, at `/control-tower/<jda>/overall-progress` and `/weekly-progress` (`/control-tower/<jda>` leads to the first). Old addresses (`jda-report.html#/jda1/...`, `?jda=`) are forwarded by `web/control-tower/lib/old-addresses.js` (tested): the Master Page and its solutions → `/jda/<jda>/info`; progress, project, weekly and their edit modes → the new pages (`#edit`, `#project/<name>`). The Control Tower's "Master Page" link is now "Master Page (public) ↗".
+- [x] Master Page edited on the public Info page by signed-in staff; Info pages still render. Signed in, the Info page shows **Edit Master Page**, which loads `web/control-tower/components/master-edit.js` and `master-page.html` (private: signed out, both answer 302 to /login, tested) and turns the page into the editor in place: the same in-place editing, drag-to-reorder, block editor for solution pages, Update from Google Drive, Reset and Save as before, saving through `/api/portal/save`. `editor.js` now has two modes (`master`, `progress`). Progress is edited on its own pages (**Edit progress** in the bottom bar). Its top bar: Control Tower › JDA Master Page ↗ › Overall progress › Weekly progress.
+
+Assumption: Microsoft Calendar's sign-in now returns to one fixed address, `/control-tower/` (the per-page address changed with every JDA and page); docs updated.
 
 ## R2 Phase 4: Agreement & BRD page
 

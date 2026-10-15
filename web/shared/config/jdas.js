@@ -1,7 +1,7 @@
 // `source` says where a JDA's report document lives. Left out, it is jdaReports/<id> in the portal's
 // own Firebase project. JDA 3 keeps reading and writing the original JDA3 report document, so the
 // Excel -> Power Automate sync that feeds it carries on working.
-// `icon` is the JDA's own edit icon on its Master Page (the inside of a 24x24 stroked SVG); give
+// `icon` is the JDA's own icon in the Control Tower's sidebar (the inside of a 24x24 stroked SVG); give
 // each JDA a different one. Adding a JDA here adds it everywhere (both landing pages, Info page, report).
 export const JDAS = [
   { id: 'jda1', name: 'JDA 1', icon: '<path d="M12 2 3 7l9 5 9-5-9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>' },

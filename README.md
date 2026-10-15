@@ -7,19 +7,22 @@ web/                      The front end. Plain HTML, CSS and ES modules, no buil
                           served at the address of the same name.
   public/                 Public (/public): the TriCipta AI landing page (/), sign-in (/login) and each
                           JDA's Info page (/jda/<id>/info)
-    components/           landing, info, login, edit (the landing page's edit mode)
+    components/           landing, info (a JDA's Master Page), login, edit (the landing page's edit mode)
     styles/  assets/      their styles; uploaded pictures (the Roles picture)
-  control-tower/          Private (/control-tower, sign-in needed): the JDA Control Tower
-    components/           the landing page and its edit mode; the JDA report pages and their editors
-    lib/                  the Control Tower's figures (progress %, cost %, latest update)
+  control-tower/          Private (/control-tower, sign-in needed): the JDA Control Tower. jda-report.html is
+                          each JDA's Overall and Weekly progress (/control-tower/<id>/overall-progress,
+                          /weekly-progress); master-page.html is the Master Page's edit mode, drawn on the
+                          public Info page for people signed in
+    components/           the landing page and its edit mode, the sidebar, the progress pages, the editors
+    lib/                  the Control Tower's figures (progress %, cost %, latest update); old addresses
     config/               jda-content.js: each JDA's built-in content (private: it holds starter data)
     styles/
     invoices/             the Invoice Tracker (CJI3 register, Payment Tables): its own small app
   shared/                 Public (/shared), code and pictures only, no data: what every page uses
     lib/                  sign-in session, Firebase, escaping, dates, report and task logic, picture paths
-    components/           account (sign out), edit-mode kit, solution detail blocks
+    components/           sidebar, account (sign out), edit-mode kit, solution detail blocks
     config/               the JDA list (jdas.js), the Firebase web settings
-    styles/               tokens.css (every colour, size and font), the report styles, edit mode
+    styles/               tokens.css (every colour, size and font), sidebar, the report styles, edit mode
     assets/               brand/ (logos, icon), solutions/, photos/
     vendor/               Firebase, Chart.js, SortableJS, kept in the repository
 server/                   Node + Express: serves web/, checks the sign-in, saves everything, Drive and AI

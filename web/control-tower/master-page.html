@@ -1,0 +1,107 @@
+<!-- The Master Page in edit mode, drawn into a JDA's public Info page (/jda/<id>/info) for people signed
+     in: components/master-edit.js fetches this file (private, like everything under /control-tower) and
+     fills it. Once saved, the Info page shows the result to the public. -->
+<section class="screen active" id="screen-overview">
+    <div class="editor-top" id="editorTop" hidden>
+      <div class="edit-card">
+        <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 19a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6-1.8A4 4 0 0 1 17 19"/><path d="M12 12v8M9 17l3 3 3-3"/></svg></span><h3>Update from Google Drive</h3></div>
+        <p class="hint">Files are not uploaded from this page. Put this JDA's files in its <b>Master File</b> folder in Google Drive (Open Master File folder takes you there), then update. What the files say is loaded into this page for you to review; nothing reaches the Master Page until you press Save changes.</p>
+        <button class="save" id="editorSyncBtn">Update from Google Drive</button>
+        <button class="add-row" id="editorFolderBtn" style="margin-left:8px;">Open Master File folder</button>
+        <div class="cal-status" id="editorSyncStatus"></div>
+        <div class="entry-list" id="editorSyncSkipped"></div>
+      </div>
+      <p class="editor-note"><b id="editorHeading">Editing the Master Page</b> — click any dashed text to change it, and use the dashed buttons to add or remove blocks. This is the public Info page: what you save is what the public sees. <a id="editorBackTop" href="#">← Leave without saving</a></p>
+      <button type="button" class="entry-cancel" id="editorResetBtn"      <button type="button" class="entry-cancel" id="editorResetBtn" style="margin:10px 2px 0;">Reset to the built-in content</button>
+    </div>
+
+    <div class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow" id="heroEyebrow"></div>
+        <h2 id="heroTitle"></h2>
+        <p class="sub" id="heroSub" hidden></p>
+        <button type="button" class="hero-more-toggle" id="heroMoreBtn" aria-expanded="false" aria-controls="heroMore" hidden>
+          <span>Read more</span><span class="chev">&#8250;</span>
+        </button>
+        <div class="hero-more" id="heroMore">
+          <p id="heroMoreText"></p>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="block reveal" style="margin-top:0;" id="ov-aspiration">
+      <h3>Winning aspiration</h3>
+      <p class="block-intro" id="aspirationIntro"></p>
+      <div id="aspirationBody"></div>
+    </div>
+
+    <div class="block reveal" id="ov-project">
+      <h3>AI technology solutions</h3>
+      <p class="block-intro" id="solutionsIntro"></p>
+      <div id="solutionsBody"></div>
+    </div>
+
+    <div class="block reveal" id="ov-collaborators">
+      <h3>Collaborators</h3>
+      <p class="block-intro" id="collabIntro"></p>
+      <div id="collabBody"></div>
+    </div>
+
+    <div class="block reveal" id="ov-press">
+      <h3>Press release</h3>
+      <p class="block-intro" id="pressIntro"></p>
+      <div id="pressBody"></div>
+    </div>
+
+    <div id="extraSections"></div>
+    <div id="editorAddSection"></div>
+
+  </section>
+
+  <section class="screen" id="screen-blocks">
+    <div class="blk-toolbar" id="blkToolbar">
+      <div class="blk-toolbar-row">
+        <button type="button" class="blk-link" id="blkBack">← Back to the Master Page</button>
+        <span class="blk-status" id="blkStatus" role="status" aria-live="polite"></span>
+        <button type="button" class="add-row" id="blkCancel">Cancel</button>
+        <button type="button" class="save" id="blkSave" disabled>Save</button>
+      </div>
+      <div class="blk-toolbar-row blk-format" id="blkFormat" role="toolbar" aria-label="Text formatting">
+        <button type="button" class="blk-btn" data-cmd="bold" title="Bold" aria-label="Bold"><b>B</b></button>
+        <button type="button" class="blk-btn" data-cmd="italic" title="Italic" aria-label="Italic"><i>I</i></button>
+        <button type="button" class="blk-btn" data-cmd="underline" title="Underline" aria-label="Underline"><u>U</u></button>
+        <button type="button" class="blk-btn" data-cmd="insertUnorderedList" title="Bullet list" aria-label="Bullet list">• List</button>
+        <button type="button" class="blk-btn" data-cmd="insertOrderedList" title="Numbered list" aria-label="Numbered list">1. List</button>
+        <button type="button" class="blk-btn" id="blkLinkBtn" title="Link the selected words" aria-label="Add link">Link</button>
+        <button type="button" class="blk-btn" id="blkUnlinkBtn" title="Remove the link" aria-label="Remove link">Unlink</button>
+        <span class="blk-link-row" id="blkLinkRow" hidden>
+          <input id="blkLinkInput" type="url" placeholder="https://…" aria-label="Link address">
+          <button type="button" class="blk-btn" id="blkLinkApply">Apply</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="block" style="margin-top:0;">
+      <div class="sol-detail-card">
+        <div class="sol-detail-head">
+          <span class="sol-detail-icon" id="blkIcon"></span>
+          <div class="sol-detail-headtext">
+            <span class="sol-tier" id="blkTier">—</span>
+            <h2 class="ed-text" id="blkTitle" contenteditable="true" data-ph="Solution name" role="textbox" aria-label="Solution name"></h2>
+          </div>
+        </div>
+        <div id="blkTop"></div>
+        <div id="blkCanvas" class="blk-grid"></div>
+        <p class="detail-tasks-empty" id="blkEmpty" hidden>No blocks yet. Use “+ Add block” above to start the page.</p>
+      </div>
+    </div>
+  </section>
+
+<footer class="editor-savebar" id="editorSaveBar" hidden>
+  <span class="footer-left" id="editorSaveStatus">No changes yet</span>
+  <span class="editor-savebar-actions">
+    <a id="editorBack" href="#">← Leave the editor</a>
+    <button class="save" id="editorSaveBtn" disabled>Save changes</button>
+  </span>
+</footer>

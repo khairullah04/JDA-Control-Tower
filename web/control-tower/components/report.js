@@ -1,54 +1,54 @@
-// One JDA's page (jda-report.html#/<id>): its Master Page (the overview screen), progress screens
-// and Edit report, plus the Editor Page (#/<id>/edit) - the same Master Page made editable.
+// A JDA's private pages: Overall progress (/control-tower/<jda>/overall-progress) and Weekly progress
+// (/weekly-progress), a project's page (#project/<slug>), Edit report (housekeeping), and edit mode
+// (#edit). Its Master Page is public, on its Info page (/jda/<jda>/info), and edited there.
 // Behaviour is ported from the JDA3 reference file's inline script; what differs per JDA is its
-// content entry (config/jda-content.js) and where its report document lives (config/app-config.js).
-import { assetUrl } from '../../shared/lib/assets.js';
+// content entry (config/jda-content.js) and where its report document lives (shared/config/jdas.js).
 import { onSnapshot } from '../../shared/vendor/firebase-firestore.js';
-import { JDAS, DEFAULT_JDA_ICON, MS_CLIENT_ID, MS_AUTHORITY } from '../../shared/config/jdas.js';
+import { JDAS, MS_CLIENT_ID, MS_AUTHORITY } from '../../shared/config/jdas.js';
 import { portalApi } from '../../shared/lib/portal-api.js';
 import { isConfigured, reportRefFor } from '../../shared/lib/firebase.js';
 import '../../shared/components/account.js';
 import { mountCtSidebar } from './ct-sidebar.js';
-import { contentFor, SOLUTION_ICONS } from '../config/jda-content.js';
+import { contentFor } from '../config/jda-content.js';
 import { startEditor } from './editor.js';
-import { blocksHtml } from '../../shared/components/blocks.js';
-import { logoFor, contentFromOverview as overviewContent, overviewFromContent as contentOverview, blocksOf } from '../../shared/lib/overview.js';
+import { contentFromOverview as overviewContent } from '../../shared/lib/overview.js';
 import { esc } from '../../shared/lib/esc.js';
 import { digest, digests } from '../../shared/lib/digest.js';
 import { localToday } from '../../shared/lib/dates.js';
 import { withProjectIds, linkTasks, tasksOf, normalizeTasks, mergeTasks, stampTasks, taskProgress, viewTasks, isOverdue as taskOverdue, TASK_STATUSES } from '../../shared/lib/progress.js';
+import { newAddress } from '../lib/old-addresses.js';
+
+// Addresses from before (jda-report.html#/jda1/...) lead to where that screen is now.
+if (location.pathname.endsWith('/jda-report.html')) { location.replace(newAddress(location.hash, location.search)); await new Promise(() => {}); } // nothing more runs here
 
 const $ = id => document.getElementById(id);
-// An image field holds an address (https://..., /..., assets/..., data:image/...). Anything else typed into it is not drawn as a broken image.
-const isImageSrc = v => /^(https?:\/\/|\/|assets\/|data:image\/)/i.test(String(v || '').trim());
 const empty = (text = 'Not added yet.', style = '') => `<p class="detail-tasks-empty"${style ? ` style="${style}"` : ''}>${text}</p>`;
 
-// The JDA is named in the hash (#/jda3, #/jda3/project/<slug>), not the query string: static servers
-// that tidy URLs (e.g. `serve`) redirect jda-report.html to /jda-report and drop ?jda= on the way,
-// while a hash survives any redirect. ?jda= is still read so older links keep working.
-const hashParts = location.hash.replace(/^#\/?/, '').split('/');
-const jdaKey = JDAS.some(j => j.id === hashParts[0]) ? hashParts.shift() : new URLSearchParams(location.search).get('jda');
-mountCtSidebar({ wrap: document.querySelector('.app'), bar: document.querySelector('.topbar-inner'), current: jdaKey });
+const [, , jdaKey, pageName] = location.pathname.split('/'); // /control-tower/<jda>/<overall|weekly>-progress
 const jda = JDAS.find(j => j.id === jdaKey);
-if (!jda) { location.replace('index.html'); throw new Error('Unknown JDA'); }
+if (!jda) { location.replace('/control-tower/'); await new Promise(() => {}); }
+mountCtSidebar({ wrap: document.querySelector('.app'), bar: document.querySelector('.topbar-inner'), current: jda.id });
+const PAGE_FOR = { 'screen-progress': 'overall-progress', 'screen-weekly': 'weekly-progress' };
+const pathFor = screen => `/control-tower/${jda.id}/${PAGE_FOR[screen] || 'overall-progress'}`;
 const baseContent = contentFor(jda);
-let c = { ...baseContent, extraSections: [], sectionOrder: ['aspiration', 'project', 'architecture', 'collaborators', 'press'] }; // + the saved Master Page content, once the report document arrives
+let c = baseContent; // + the saved Master Page content (titles, intros), once the report document arrives
 
 /* ---------- Saving goes through the JDA server, behind the JDA Control Tower sign-in ---------- */
-const masterHash = `#/${jda.id}`;
-// Back to the Control Tower lands on this JDA's tab.
-document.querySelectorAll('a[href="index.html"]').forEach(a => { a.href = `index.html#${jda.id}`; });
+// Back to the Control Tower lands on this JDA's tab; its Master Page is its public Info page.
+document.querySelectorAll('a[href="/control-tower/"]').forEach(a => { a.href = `/control-tower/#${jda.id}`; });
+$('navMaster').href = `/jda/${encodeURIComponent(jda.id)}/info`;
 const api = (path, body = {}) => portalApi(path, { jda: { id: jda.id, name: jda.name }, ...body });
-// The Master Page and the Editor Page differ only in the hash, so moving between them swaps the
-// hash and reloads to start again in the other mode.
-function goTo(hash, notice){
+// Reading and edit mode differ only in the hash (#edit), so moving between them swaps it and reloads
+// to start again in the other mode.
+function goTo(address, notice){
   if (notice) sessionStorage.setItem('jda-notice', notice);
-  history.replaceState(null, '', hash);
+  history.replaceState(null, '', address);
   location.reload();
 }
 
-// The Editor Page is this same page in editing mode, for anyone signed in to the JDA Control Tower.
-const editing = hashParts[0] === 'edit';
+// Edit mode is this same page made editable, for anyone signed in to the JDA Control Tower.
+const editing = location.hash === '#edit';
+const hashParts = location.hash.replace(/^#/, '').split('/');
 let editor = null, firstLoadDone;
 const firstLoad = new Promise(resolve => { firstLoadDone = resolve; });
 const starterData = baseContent.starter; // only a JDA with its own starter dataset has one
@@ -62,124 +62,19 @@ let chart, currentData = starterData || {};
 const firebaseReady = isConfigured(jda);
 let reportRef;
 
-/* ============= Overview: everything written about this JDA, or the same sections left empty ============= */
-function renderOverview(){
-  document.title = c.docTitle;
+/* ---------- The page's titles, from the JDA's content (and what its Master Page saved) ---------- */
+function renderHeader(){
+  document.title = `${c.short}: progress · JDA Control Tower`;
   $('brandMark').textContent = c.mark;
   $('brandTitle').textContent = c.reportTitle;
   $('navJdaName').textContent = c.short;
   $('footBrand').textContent = c.footBrand;
   $('footNote').textContent = c.footNote;
-
-  $('heroEyebrow').textContent = c.eyebrow;
-  $('heroTitle').innerHTML = esc(c.short) + (c.tagline || editing ? `<span class="hero-tagline">${esc(c.tagline)}</span>` : '');
-  $('heroSub').textContent = c.sub; $('heroSub').hidden = !c.sub && !editing;
-  $('heroMoreText').textContent = c.more; $('heroMoreBtn').hidden = !c.more || editing;
-
-  $('aspirationIntro').textContent = c.aspirationIntro;
-  $('aspirationBody').innerHTML = c.aspiration.length ? `
-    <div class="aspiration-strip">${c.aspiration.map(a => `
-      <div class="aspiration-chip${a.highlight ? ' highlight' : ''}"><strong>${esc(a.value)}</strong><span>${esc(a.label)}</span></div>`).join('')}
-    </div>
-    <div class="aspiration-bar"></div>` : empty();
-
-  $('solutionsIntro').innerHTML = c.solutionsIntroHtml;
-  $('solutionsBody').innerHTML = c.solutionGroups.length ? c.solutionGroups.map(g => `
-    <div class="sol-group-label">${esc(g.label)}</div>
-    <div class="sol-grid">${g.cards.map(({ key, tags }) => {
-      const s = c.solutions[key], tier1 = s.tier === 'Tier 1';
-      return `
-      <div class="sol-card${tier1 ? '' : ' edge'}" data-sol="${key}">
-        ${s.img === null ? '' : `<div class="sol-visual"><img src="${esc(assetUrl(s.img || `assets/sol-${key}.jpg`))}" alt="" onerror="this.closest('.sol-visual').style.display='none'"></div>`}
-        <div class="sol-card-head">
-          <span class="sol-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${s.icon}</svg></span>
-          <span class="sol-tier ${tier1 ? 'tier1' : 'edge'}">${esc(s.tier)}</span>
-        </div>
-        <div class="sol-card-body">
-          <h4>${esc(s.title)}</h4>
-          <div class="sol-tags">${tags.map(([text, accent]) => accent
-            ? `<span class="sol-tag accent"><i class="dot"></i><span>${esc(text)}</span></span>`
-            : `<span class="sol-tag"><span>${esc(text)}</span></span>`).join('')}</div>
-        </div>
-      </div>`; }).join('')}
-    </div>`).join('') : empty();
-
-  $('archIntro').textContent = c.archIntro;
-  $('archTeaserCard').hidden = !c.architecture; $('archEmpty').hidden = !!c.architecture;
-
-  $('collabIntro').textContent = c.collabIntro;
-  $('collabBody').innerHTML = c.collaborators.length ? `
-    <div class="collab-grid">${c.collaborators.map((p, i) => `
-      <div class="collab-card">
-        ${p.logo ? `<div class="logo-holder"><img src="${esc(assetUrl(p.logo))}" alt="${esc(p.alt)}"></div>` : ''}
-        <h4>${esc(p.name)}</h4>
-        <div class="collab-role">${esc(p.role)}</div>
-        <p>${esc(p.text)}</p>
-        ${p.more || editing ? `<button type="button" class="collab-more-toggle" data-target="collabMore${i}" aria-expanded="false">
-          <span>Read more</span><span class="chev">&#8250;</span>
-        </button>
-        <div class="collab-more" id="collabMore${i}"><p>${esc(p.more)}</p></div>` : ''}
-      </div>`).join('')}
-    </div>` : empty();
-
-  $('pressIntro').textContent = c.pressIntro;
-  const pr = c.press;
-  $('pressBody').innerHTML = pr ? `
-    <div class="press-card">
-      ${isImageSrc(pr.img) ? `<div class="press-visual"><img src="${esc(assetUrl(pr.img))}" alt="${esc(pr.alt)}"></div>` : ''}
-      <div class="press-body">
-        <p>${esc(pr.text)}</p>
-        ${pr.more || editing ? `<button type="button" class="collab-more-toggle" data-target="pressMore" aria-expanded="false">
-          <span>Read more</span><span class="chev">&#8250;</span>
-        </button>
-        <div class="collab-more" id="pressMore"><p>${esc(pr.more)}</p></div>` : ''}
-        ${pr.href || editing ? `<a href="${esc(pr.href)}" target="_blank" rel="noopener">${esc(pr.linkText)}</a>` : ''}
-      </div>
-    </div>` : empty();
-
-  // Sections added on the Editor Page: a heading, an intro and a row of cards, in the reference's own blocks.
-  document.querySelectorAll('#screen-overview > .extra-block').forEach(n => n.remove());
-  $('extraSections').innerHTML = c.extraSections.map(sec => `
-    <div class="block reveal in extra-block" data-key="x:${esc(sec.id)}">
-      <h3>${esc(sec.title)}</h3>
-      <p class="block-intro">${esc(sec.intro)}</p>
-      ${sec.cards.length ? `<div class="collab-grid">${sec.cards.map(card => `
-        <div class="collab-card">
-          <h4>${esc(card.title)}</h4>
-          <div class="collab-role">${esc(card.sub)}</div>
-          <p>${esc(card.text)}</p>
-        </div>`).join('')}
-      </div>` : ''}
-    </div>`).join('');
-
-  placeSections();
-
   $('progressIntro').textContent = c.progressIntro;
   $('tasksIntro').textContent = c.tasksIntro;
-  bindOverview();
-  if (editor) editor.decorate();
-}
-
-// The Master Page's sections in the order saved from the Editor Page (the built-in order if none
-// was saved). The jump bar under the banner follows the same order.
-function placeSections(){
-  const anchor = $('extraSections');
-  const extras = Object.fromEntries([...anchor.children].map(n => [n.dataset.key, n]));
-  c.sectionOrder.forEach((key, i) => {
-    const node = extras[key] || $('ov-' + key);
-    if (!node) return;
-    anchor.before(node);
-    node.style.marginTop = i === 0 ? '0' : '';
-  });
-  const nav = document.querySelector('.jumpnav-card');
-  c.sectionOrder.map(key => nav.querySelector(`[data-anchor="ov-${key}"]`)).filter(Boolean).forEach((step, i) => {
-    nav.append(step);
-    step.querySelector('.n').textContent = i + 1;
-  });
 }
 
 const contentFromOverview = ov => overviewContent(ov, baseContent);
-const overviewFromContent = () => contentOverview(c);
 
 let appliedOverview = '';
 function applyOverview(ov){
@@ -187,7 +82,7 @@ function applyOverview(ov){
   if (json === appliedOverview) return;
   appliedOverview = json;
   c = contentFromOverview(ov);
-  renderOverview();
+  renderHeader();
 }
 
 function slugify(str){ return (str||"").toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
@@ -230,13 +125,12 @@ function renderDetailTasks(project, tasks){
   return assigned;
 }
 $('todayLabel').textContent = "Today: " + formatDueDate(todayISO);
-const pagenavTabFor = { "screen-overview":"screen-overview", "screen-progress":"screen-progress", "screen-project-detail":"screen-progress", "screen-solution-detail":"screen-overview", "screen-blocks":"screen-overview", "screen-weekly":"screen-weekly", "screen-edit":"screen-edit" };
-const SCREEN_FOR = { progress: 'screen-progress', weekly: 'screen-weekly' };
+const pagenavTabFor = { "screen-progress":"screen-progress", "screen-project-detail":"screen-progress", "screen-weekly":"screen-weekly", "screen-edit":"screen-edit" };
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   $(id).classList.add('active');
-  // The Editor Page keeps the screen in the address, so a reload or Leave returns to the same one.
-  if (editor) history.replaceState(null, '', `${masterHash}/edit${['', '/progress', '/weekly'][['screen-overview', 'screen-progress', 'screen-weekly'].indexOf(id)] || ''}`);
+  // The address follows the screen, so a reload, a shared link or Leave returns to the same one.
+  if (PAGE_FOR[id]) history.replaceState(null, '', pathFor(id) + (editor ? '#edit' : ''));
   const activeTab = pagenavTabFor[id];
   document.querySelectorAll('.pagenav-tab').forEach(t => t.classList.toggle('active', t.dataset.target === activeTab));
   const onEdit = id === 'screen-edit';
@@ -249,68 +143,10 @@ document.querySelectorAll('.btn[data-target], .back-link, .crumb-link, .pagenav-
   btn.addEventListener('click', () => showScreen(btn.dataset.target));
 });
 
-function showSolutionDetail(key){
-  const s = c.solutions[key];
-  if (!s) return;
-  const tierClass = s.tier === 'Tier 1' ? 'tier1' : 'edge';
-  $('solDetailIcon').innerHTML = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${s.icon}</svg>`;
-  const tierEl = $('solDetailTier');
-  tierEl.textContent = s.tier;
-  tierEl.className = `sol-tier ${tierClass}`;
-  $('solDetailTitle').textContent = s.title;
-  $('solDetailBoxes').innerHTML = blocksHtml(blocksOf(s));
-
-  showScreen('screen-solution-detail');
-  history.replaceState(null, "", `#/${jda.id}/solution/${key}`);
-}
-// Runs after every overview render: the cards and toggles it wires are rebuilt each time.
-function bindOverview(){
-  if (editing) return; // the Editor Page edits cards in place instead of opening them
-  document.querySelectorAll('.sol-card').forEach(card => {
-    card.setAttribute('tabindex', '0');
-    card.setAttribute('role', 'button');
-    card.addEventListener('click', () => showSolutionDetail(card.dataset.sol));
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); showSolutionDetail(card.dataset.sol); }
-    });
-  });
-  document.querySelectorAll('.collab-more-toggle').forEach(btn => {
-    const target = $(btn.dataset.target);
-    if (!target) return;
-    btn.addEventListener('click', () => {
-      const open = target.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open);
-      btn.querySelector('span').textContent = open ? 'Read less' : 'Read more';
-    });
-  });
-}
-
-document.querySelectorAll('[data-anchor]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const target = $(btn.dataset.anchor);
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-});
-
-(function(){
-  const steps = Array.from(document.querySelectorAll('.jumpnav-step'));
-  if (!steps.length) return;
-  const targets = steps.map(s => $(s.dataset.anchor)).filter(Boolean);
-  if (!targets.length) return;
-  const setCurrent = (id) => {
-    steps.forEach(s => s.classList.toggle('current', s.dataset.anchor === id));
-  };
-  const spy = new IntersectionObserver((entries) => {
-    const visible = entries.filter(e => e.isIntersecting).sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
-    if (visible) setCurrent(visible.target.id);
-  }, { rootMargin: '-20% 0px -60% 0px', threshold: [0, .25, .5, .75, 1] });
-  targets.forEach(t => spy.observe(t));
-})();
-
 document.addEventListener('keydown', (e) => {
   const typingTags = ['INPUT', 'TEXTAREA', 'SELECT'];
   if (document.activeElement && (typingTags.includes(document.activeElement.tagName) || document.activeElement.isContentEditable)) return;
-  const order = ['screen-overview','screen-progress','screen-weekly']; // the three reading screens only: a stray arrow never leaves Edit report, or lands on it
+  const order = ['screen-progress','screen-weekly']; // the two reading screens only: a stray arrow never leaves Edit report, or lands on it
   const current = order.find(id => $(id).classList.contains('active'));
   const idx = order.indexOf(current);
   if (idx === -1) return; // Edit report, a detail screen or the block editor: the arrow keys belong to the page
@@ -325,34 +161,7 @@ function updateScrollProgress(){
 }
 document.addEventListener('scroll', updateScrollProgress, {passive:true});
 
-const archViewBtn = $('archViewBtn');
-const archTeaserCard = $('archTeaserCard');
-const archModal = $('archModal');
-const archModalClose = $('archModalClose');
-const archModalBackdrop = $('archModalBackdrop');
-function openArchModal(){ archModal.classList.add('open'); document.body.style.overflow = 'hidden'; }
-function closeArchModal(){ archModal.classList.remove('open'); document.body.style.overflow = ''; }
-if (archViewBtn && archModal){
-  archViewBtn.addEventListener('click', openArchModal);
-  archTeaserCard.addEventListener('click', openArchModal);
-  archTeaserCard.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openArchModal(); } });
-  archModalClose.addEventListener('click', closeArchModal);
-  archModalBackdrop.addEventListener('click', closeArchModal);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && archModal.classList.contains('open')) closeArchModal(); });
-}
-
-const heroMoreBtn = $('heroMoreBtn');
-const heroMore = $('heroMore');
-if (heroMoreBtn && heroMore){
-  heroMoreBtn.addEventListener('click', () => {
-    const open = heroMore.classList.toggle('open');
-    heroMoreBtn.setAttribute('aria-expanded', open);
-    heroMoreBtn.querySelector('span').textContent = open ? 'Read less' : 'Read more';
-  });
-}
-
-
-renderOverview();
+renderHeader();
 
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => { if (entry.isIntersecting){ entry.target.classList.add('in'); revealObserver.unobserve(entry.target); } });
@@ -482,7 +291,7 @@ function showProjectDetail(slug){
   }
 
   showScreen('screen-project-detail');
-  history.replaceState(null, "", `#/${jda.id}/project/${slug}`);
+  history.replaceState(null, "", `${pathFor('screen-progress')}#project/${encodeURIComponent(slug)}`);
 }
 
 let initialRouteHandled = false;
@@ -490,9 +299,8 @@ function handleInitialRoute(){
   if (initialRouteHandled) return;
   initialRouteHandled = true;
   firstLoadDone();
-  if (!editing && SCREEN_FOR[hashParts[0]]) showScreen(SCREEN_FOR[hashParts[0]]);
-  if (hashParts[0] === 'project') showProjectDetail(hashParts[1]);
-  if (hashParts[0] === 'solution') showSolutionDetail(hashParts[1]);
+  if (pageName === 'weekly-progress') showScreen('screen-weekly');
+  if (!editing && hashParts[0] === 'project') { try { showProjectDetail(decodeURIComponent(hashParts[1] || '')); } catch { /* a malformed address: stay on the page */ } }
 }
 
 // `data` is null when this JDA has no report document yet: every section keeps its place and its
@@ -525,7 +333,7 @@ function renderTasks(raw){
   $('taskOwner').innerHTML = '<option value="">Everyone</option>' + owners.map(o => `<option${o === taskView.owner ? ' selected' : ''}>${esc(o)}</option>`).join('');
   if (!owners.includes(taskView.owner)) taskView.owner = '';
   $('taskToolbar').hidden = editing;
-  $('editTasksLink').href = `${masterHash}/edit/weekly`;
+  $('editTasksLink').href = `${pathFor('screen-weekly')}#edit`;
   const shown = editing ? tasks : viewTasks(tasks, taskView, todayISO);
   $('taskCount').textContent = editing || !tasks.length ? '' : `${shown.length} of ${tasks.length} task${tasks.length === 1 ? '' : 's'}`;
   const tbody = $('tasksBody');
@@ -652,7 +460,7 @@ function render(data){
    here or there writes to the database: every save goes to the JDA server, which checks the
    sign-in, refuses to overwrite a part someone else changed since this
    page loaded it, and keeps the previous version. ---------- */
-const REPORT_FIELDS = ['weekLabel', 'overallStatus', 'projects', 'challenges', 'tasks', 'updates', 'overview', 'overviewBackup'];
+const REPORT_FIELDS = ['weekLabel', 'overallStatus', 'projects', 'challenges', 'tasks', 'updates'];
 const saveReport = (patch, { remove = [], base = digests(currentData, [...Object.keys(patch), ...remove]), force = false } = {}) =>
   api('save', { patch, remove, base, force });
 // Runs one save and always says how it went: the message on success, the reason in red (and left on screen) on failure.
@@ -773,7 +581,7 @@ function ensureMsalInstance(){
     auth: {
       clientId: MS_CLIENT_ID,
       authority: MS_AUTHORITY,
-      redirectUri: window.location.origin + window.location.pathname
+      redirectUri: `${window.location.origin}/control-tower/` // one address for every JDA's pages, as registered in Azure
     }
   });
   return msalInstance;
@@ -900,15 +708,9 @@ if (!firebaseReady) {
   });
 }
 
-/* ---------- Master Page: this JDA's own edit icon -> Editor Page ---------- */
-const jdaIcon = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${jda.icon || DEFAULT_JDA_ICON}</svg>`;
-const editTitle = `Edit ${jda.name}`;
-// The one way in: this JDA's icon on its Master Page. Inside the editor, the tabs in the top bar move
-// between the Master Page, Overall progress and Weekly progress.
-$('masterEditBtn').innerHTML = `${jdaIcon}<span>Edit</span>`;
-$('masterEditBtn').title = editTitle;
-$('masterEditBtn').setAttribute('aria-label', editTitle);
-$('masterEditBtn').onclick = () => goTo(masterHash + '/edit');
+/* ---------- Edit mode: "Edit progress" in the bar at the bottom ---------- */
+$('progressEditBtn').hidden = editing;
+$('progressEditBtn').onclick = () => goTo(location.pathname + '#edit');
 
 const notice = sessionStorage.getItem('jda-notice');
 if (notice){
@@ -934,10 +736,8 @@ if (editing){
       for (const k of fields) loaded[k] = digest(patch[k]);
     }
     editor = startEditor({
-      jda, api, logoFor, blocksOf, showScreen,
-      iconFor: art => SOLUTION_ICONS[art] || SOLUTION_ICONS.agentic,
-      leave: () => goTo(masterHash + ({ 'screen-progress': '/progress', 'screen-weekly': '/weekly' }[document.querySelector('.screen.active').id] || '')),
-      toMaster: () => goTo(masterHash),
+      mode: 'progress', jda, api, showScreen,
+      leave: () => goTo(location.pathname),
       // Overall and Weekly progress: the same screens, drawn from a draft of the report's progress fields.
       progress: JSON.parse(JSON.stringify({
         weekLabel: currentData.weekLabel || '', overallStatus: currentData.overallStatus || 'green',
@@ -945,23 +745,9 @@ if (editing){
       })),
       showProgress(progress){ render({ ...currentData, ...progress }); },
       saveProgress: progress => saveDraft(progress),
-      statusLabel, taskStatuses: TASK_STATUSES, today: todayISO, openTask: id => openTasks.add(id),
-      artKeys: Object.keys(SOLUTION_ICONS),
-      draft: overviewFromContent(),
-      sectionOrder: () => [...c.sectionOrder],
-      show(overview){ c = contentFromOverview(overview); renderOverview(); },
-      // `overview` is replaced whole (so parts the editor removed are gone) and progress is left alone.
-      // The first time a page stored in the older (pre-block) shape is saved over, that version is kept as `overviewBackup`.
-      save(overview){
-        const old = currentData.overview;
-        const backup = old && !currentData.overviewBackup && !JSON.stringify(old).includes('"blocks"');
-        return saveDraft(backup ? { overview, overviewBackup: old } : { overview });
-      },
-      // Back to the content written in js/config/jda-content.js, which then shows again as it is edited there.
-      reset: () => saveDraft({}, ['overview'])
+      statusLabel, taskStatuses: TASK_STATUSES, today: todayISO, openTask: id => openTasks.add(id)
     });
-    if (SCREEN_FOR[hashParts[1]]) showScreen(SCREEN_FOR[hashParts[1]]);
   }).catch(e => {
-    goTo(masterHash, `The editor didn't open: ${e.message}`);
+    goTo(location.pathname, `Edit mode didn't open: ${e.message}`);
   });
 }

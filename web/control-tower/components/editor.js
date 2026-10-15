@@ -1,7 +1,8 @@
-// The Editor Page: a JDA's Master Page, Overall progress and Weekly progress, rendered by the same
-// code (report.js), with every piece of text editable in place and controls to add or remove
-// blocks. Edits live in two drafts (the Master Page's `overview`, and the progress fields) until
-// "Save changes"; the "Update from Google Drive" buttons load the Drive folders into those drafts.
+// Edit mode, in place, for one of two things: a JDA's Master Page (`mode: 'master'`, on its public Info
+// page, drawn by master-edit.js) or its Overall and Weekly progress (`mode: 'progress'`, on its private
+// pages, drawn by report.js). Every piece of text is editable where it stands, with controls to add or
+// remove blocks. Edits live in a draft (the Master Page's `overview`, or the progress fields) until
+// "Save changes"; "Update from Google Drive" loads the Drive folders into that draft.
 import { setupBlockEditor } from './block-editor.js';
 import { starterBlocks, cleanBlocks } from '../../shared/components/blocks.js';
 import { withProjectIds, linkTasks, newId, normalizeTask, normalizeTasks, stampTasks, mergeTasks, PRIORITIES } from '../../shared/lib/progress.js';
@@ -11,11 +12,14 @@ const $ = id => document.getElementById(id);
 const newSolution = () => ({ title: '', tier: 'Tier 1', art: null, tags: [], blocks: starterBlocks() });
 const NEW_PRESS = { text: '', more: '', url: '', linkText: 'Read the full release →', img: '' };
 
-export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today, openTask }){
-  let d = draft, p = progress;
-  // Tasks are tied to their project by its id, not its name (progress.js), so a rename keeps them together.
-  p.projects = withProjectIds(p.projects); p.tasks = linkTasks(normalizeTasks(p.tasks), p.projects);
-  let savedTasks = JSON.parse(JSON.stringify(p.tasks)); // as last saved: what changed since gets today as its last-updated date
+export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today, openTask }){
+  const master = mode === 'master', prog = mode === 'progress';
+  let d = draft, p = progress, savedTasks = [];
+  if (prog) {
+    // Tasks are tied to their project by its id, not its name (progress.js), so a rename keeps them together.
+    p.projects = withProjectIds(p.projects); p.tasks = linkTasks(normalizeTasks(p.tasks), p.projects);
+    savedTasks = JSON.parse(JSON.stringify(p.tasks)); // as last saved: what changed since gets today as its last-updated date
+  }
   const dirty = { master: false, progress: false };
   let part = 'master'; // which draft the controls being built right now belong to
   const openDescriptions = new Set(); // likewise for project descriptions
@@ -467,7 +471,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
 
   // One "Update from Google Drive" card at the top of each progress screen; both read the same
   // Overall Progress and Weekly Progress folders into the progress draft.
-  const driveCards = ['screen-progress', 'screen-weekly'].map(screen => {
+  const driveCards = (prog ? ['screen-progress', 'screen-weekly'] : []).map(screen => {
     const top = document.createElement('div');
     top.className = 'editor-top';
     top.innerHTML = `<div class="edit-card">
@@ -514,7 +518,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
 
   /* ---------- Update from Google Drive: the Master File folder, into the draft ---------- */
   const status = (textValue, color) => { $('editorSyncStatus').textContent = textValue; $('editorSyncStatus').style.color = color || 'var(--muted)'; };
-  $('editorSyncBtn').onclick = async () => {
+  if (master) $('editorSyncBtn').onclick = async () => {
     $('editorSyncBtn').disabled = true; $('editorSyncSkipped').innerHTML = '';
     status('Reading the Master File folder and extracting — this can take a minute or two…');
     try {
@@ -541,7 +545,7 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
       $('editorSyncBtn').disabled = false;
     }
   };
-  $('editorFolderBtn').onclick = async () => {
+  if (master) $('editorFolderBtn').onclick = async () => {
     const tab = window.open('', '_blank'); // opened now, while this is still a click, so it isn't blocked
     try { tab.location = (await api('master-folder')).url; }
     catch (e){ tab?.close(); status(e.message, 'var(--red)'); }
@@ -593,10 +597,10 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
     }
   }
   $('editorSaveBtn').onclick = () => saveAll().catch(() => {}); // the failure is already on screen
-  const blockEditor = setupBlockEditor();
+  const blockEditor = master ? setupBlockEditor() : null;
 
   // Two clicks: the first only asks.
-  $('editorResetBtn').onclick = async () => {
+  if (master) $('editorResetBtn').onclick = async () => {
     const btn = $('editorResetBtn');
     if (!btn.dataset.armed){ btn.dataset.armed = '1'; btn.textContent = 'Click again to remove everything saved from this editor'; return; }
     try { await reset(); dirty.master = false; location.reload(); }
@@ -606,16 +610,16 @@ export function startEditor({ jda, api, toMaster, leave, logoFor, blocksOf, show
   /* ---------- Leaving ---------- */
   window.addEventListener('beforeunload', e => { if (dirty.master || dirty.progress) e.preventDefault(); });
   window.hasUnsavedChanges = () => dirty.master || dirty.progress; // Sign out asks first (account.js)
-  $('editorBackTop').onclick = e => { e.preventDefault(); toMaster(); };
+  if (master) $('editorBackTop').onclick = e => { e.preventDefault(); leave(); };
   $('editorBack').onclick = e => { e.preventDefault(); leave(); };
 
-  $('editorHeading').textContent = `Editing ${jda.name}: the Master Page`;
-  $('editorTop').hidden = false;
   $('editorSaveBar').hidden = false;
-  $('reportFooter').hidden = true;
-  $('masterEditBtn').hidden = true;
-  show(d);
-  decorate();
-  redrawProgress();
-  return { decorate };
+  if ($('reportFooter')) $('reportFooter').hidden = true;
+  if (master) {
+    $('editorHeading').textContent = `Editing ${jda.name}: the Master Page`;
+    $('editorTop').hidden = false;
+    show(d);
+    decorate();
+  } else redrawProgress();
+  return { decorate: master ? decorate : () => {} };
 }

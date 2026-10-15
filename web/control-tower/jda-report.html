@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="/shared/vendor/chart.umd.min.js"></script>
 <link rel="stylesheet" href="/shared/styles/tokens.css">
-<link rel="stylesheet" href="../shared/styles/report.css">
+<link rel="stylesheet" href="/shared/styles/report.css">
 <link rel="stylesheet" href="/shared/styles/sidebar.css">
 </head>
 <body>
@@ -22,24 +22,21 @@
 <div class="topbar">
  <div class="topbar-inner">
   <div class="brand">
-    <a href="index.html" aria-label="Back to the JDA Control Tower"><img class="brand-logo" src="../shared/assets/brand/carigali-logo.png" alt="Petronas Carigali"></a>
+    <a href="/control-tower/" aria-label="Back to the JDA Control Tower"><img class="brand-logo" src="/shared/assets/brand/carigali-logo.png" alt="Petronas Carigali"></a>
     <div><div class="mark" id="brandMark"></div><h1 id="brandTitle">JDA Report</h1></div>
   </div>
 
   <nav class="pagenav" aria-label="Report sections">
     <div class="pagenav-scroll">
       <div class="pagenav-inner">
-        <a class="pagenav-tab" href="index.html">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        <a class="pagenav-tab" href="/control-tower/" id="navHome">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
           Control Tower
         </a>
         <span class="pagenav-sep">›</span>
-        <button type="button" class="pagenav-tab active" data-target="screen-overview">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span id="navJdaName">JDA</span>
-        </button>
+        <a class="pagenav-tab" id="navMaster" href="/" target="_blank" rel="noopener"><span id="navJdaName">JDA</span> <span>Master Page ↗</span></a>
         <span class="pagenav-sep">›</span>
-        <button type="button" class="pagenav-tab" data-target="screen-progress">Overall progress</button>
+        <button type="button" class="pagenav-tab active" data-target="screen-progress">Overall progress</button>
         <span class="pagenav-sep">›</span>
         <button type="button" class="pagenav-tab" data-target="screen-weekly">Weekly progress</button>
         <span class="pagenav-sep" id="pagenavEditSep" style="display:none;">›</span>
@@ -53,277 +50,8 @@
 
 <div class="page-wrap">
 
-  <!-- SCREEN 1: Overview (content comes from js/config/jda-content.js, one entry per JDA) -->
-  <section class="screen active" id="screen-overview">
-    <!-- Editor Page only: shown once the report has loaded (js/editor.js) -->
-    <div class="editor-top" id="editorTop" hidden>
-      <div class="edit-card">
-        <div class="edit-card-head"><span class="edit-card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 19a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6-1.8A4 4 0 0 1 17 19"/><path d="M12 12v8M9 17l3 3 3-3"/></svg></span><h3>Update from Google Drive</h3></div>
-        <p class="hint">Files are not uploaded from this page. Put this JDA's files in its <b>Master File</b> folder in Google Drive (Open Master File folder takes you there), then update. What the files say is loaded into this page for you to review; nothing reaches the Master Page until you press Save changes.</p>
-        <button class="save" id="editorSyncBtn">Update from Google Drive</button>
-        <button class="add-row" id="editorFolderBtn" style="margin-left:8px;">Open Master File folder</button>
-        <div class="cal-status" id="editorSyncStatus"></div>
-        <div class="entry-list" id="editorSyncSkipped"></div>
-      </div>
-      <p class="editor-note"><b id="editorHeading">Editor Page</b> — click any dashed text to change it, and use the dashed buttons to add or remove blocks. Overall progress and Weekly progress, in the bar above, are editable the same way. <a id="editorBackTop" href="#">← Back to Master Page</a></p>
-      <button type="button" class="entry-cancel" id="editorResetBtn" style="margin:10px 2px 0;">Reset to the built-in content</button>
-    </div>
-
-    <div class="hero">
-      <div class="hero-inner">
-        <button type="button" class="master-edit-btn" id="masterEditBtn"></button>
-        <div class="eyebrow" id="heroEyebrow"></div>
-        <h2 id="heroTitle"></h2>
-        <p class="sub" id="heroSub" hidden></p>
-        <button type="button" class="hero-more-toggle" id="heroMoreBtn" aria-expanded="false" aria-controls="heroMore" hidden>
-          <span>Read more</span><span class="chev">&#8250;</span>
-        </button>
-        <div class="hero-more" id="heroMore">
-          <p id="heroMoreText"></p>
-        </div>
-      </div>
-    </div>
-
-    <div class="journey">
-      <div class="jumpnav-card">
-        <button type="button" class="jumpnav-step" data-anchor="ov-aspiration"><span class="n">1</span><span><h4>Winning aspiration</h4><p>Why this programme exists</p></span><span class="go">&#8250;</span></button>
-        <button type="button" class="jumpnav-step" data-anchor="ov-project"><span class="n">2</span><span><h4>Project</h4><p>The AI solution portfolio</p></span><span class="go">&#8250;</span></button>
-        <button type="button" class="jumpnav-step" data-anchor="ov-architecture"><span class="n">3</span><span><h4>Architecture</h4><p>How the AI system works</p></span><span class="go">&#8250;</span></button>
-        <button type="button" class="jumpnav-step" data-anchor="ov-collaborators"><span class="n">4</span><span><h4>Collaborators</h4><p>Who's building it</p></span><span class="go">&#8250;</span></button>
-      </div>
-    </div>
-
-    <div class="block reveal" style="margin-top:0;" id="ov-aspiration">
-      <h3>Winning aspiration</h3>
-      <p class="block-intro" id="aspirationIntro"></p>
-      <div id="aspirationBody"></div>
-    </div>
-
-    <div class="block reveal" id="ov-project">
-      <h3>AI technology solutions</h3>
-      <p class="block-intro" id="solutionsIntro"></p>
-      <div id="solutionsBody"></div>
-    </div>
-
-    <div class="block reveal" id="ov-architecture">
-      <h3>System architecture</h3>
-      <p class="block-intro" id="archIntro"></p>
-      <p class="detail-tasks-empty" id="archEmpty" hidden>Not added yet.</p>
-
-      <div class="arch-teaser" id="archTeaserCard" hidden role="button" tabindex="0" aria-label="View full architecture diagram">
-        <div class="arch-teaser-top">
-          <div class="arch-teaser-head">
-            <span class="arch-teaser-icon"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.3"/><rect x="14" y="3" width="7" height="7" rx="1.3"/><rect x="3" y="14" width="7" height="7" rx="1.3"/><rect x="14" y="14" width="7" height="7" rx="1.3"/><path d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4"/></svg></span>
-            <div>
-              <h4 class="arch-teaser-title">Overall Solution Architecture</h4>
-              <p class="arch-teaser-sub">Source systems, data integration, the agentic AI core, and governance — end to end.</p>
-            </div>
-          </div>
-          <span class="arch-teaser-badge">Interactive diagram</span>
-        </div>
-        <div class="arch-teaser-flow">
-          <span class="arch-teaser-pill">External Systems</span>
-          <span class="arch-teaser-arrow">&#8594;</span>
-          <span class="arch-teaser-pill">Data Integration Staging Area</span>
-          <span class="arch-teaser-arrow">&#8594;</span>
-          <span class="arch-teaser-pill core">Command Center · Agentic Flows · AI &amp; Automation · Operational Platform</span>
-          <span class="arch-teaser-arrow">&#8596;</span>
-          <span class="arch-teaser-pill">Control Tower</span>
-        </div>
-        <button type="button" class="arch-view-btn" id="archViewBtn">View full architecture diagram <span class="go">&#8250;</span></button>
-      </div>
-
-    </div>
-
-      <div class="arch-modal" id="archModal">
-        <div class="arch-modal-backdrop" id="archModalBackdrop"></div>
-        <div class="arch-modal-dialog">
-          <div class="arch-modal-head">
-            <h3>Overall Solution Architecture</h3>
-            <button type="button" class="arch-modal-close" id="archModalClose" aria-label="Close">&times;</button>
-          </div>
-          <div class="arch-modal-body">
-        <div class="arch2-panel">
-          <div class="arch2-scroll">
-            <div class="arch2-grid">
-
-              <div class="arch2-col arch2-col-ext">
-                <div class="arch2-col-title">External Systems</div>
-                <div class="arch2-group">
-                  <div class="arch2-group-head">ERP / Enterprise Systems</div>
-                  <div class="arch2-group-body">
-                    <span class="arch2-pill">SAP S/4HANA</span>
-                    <span class="arch2-pill">PM/MM/FI/CO</span>
-                    <span class="arch2-pill">Material Master</span>
-                  </div>
-                </div>
-                <div class="arch2-group">
-                  <div class="arch2-group-head">Asset &amp; Maintenance SAP PM</div>
-                  <div class="arch2-group-body">
-                    <span class="arch2-pill">Assets</span>
-                    <span class="arch2-pill">Work Orders</span>
-                    <span class="arch2-pill">PM/Reliability</span>
-                  </div>
-                </div>
-                <div class="arch2-group">
-                  <div class="arch2-group-head">Historian &amp; OT Systems</div>
-                  <div class="arch2-group-body">
-                    <span class="arch2-pill">Time Series Data</span>
-                    <span class="arch2-pill">Process Data</span>
-                  </div>
-                </div>
-                <div class="arch2-group">
-                  <div class="arch2-group-head">Engineering Systems</div>
-                  <div class="arch2-group-body">
-                    <span class="arch2-pill">P&amp;ID</span>
-                    <span class="arch2-pill">3D Models</span>
-                    <span class="arch2-pill">Eng. Data</span>
-                    <span class="arch2-pill">Drawings</span>
-                  </div>
-                </div>
-                <div class="arch2-group">
-                  <div class="arch2-group-head">Document &amp; Content</div>
-                  <div class="arch2-group-body">
-                    <span class="arch2-pill">SharePoint</span>
-                    <span class="arch2-pill">Documentum</span>
-                    <span class="arch2-pill">Eng Docs</span>
-                    <span class="arch2-pill">Manuals/SOPs</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="arch2-arrow">&#8594;</div>
-
-              <div class="arch2-col arch2-col-stage">
-                <div class="arch2-col-title">Data Integration Staging Area</div>
-                <div class="arch2-stagebar">Time Series Data</div>
-                <div class="arch2-stagebar">Engineering Documents</div>
-                <div class="arch2-stagebar">Inspection reports</div>
-                <div class="arch2-stagebar">Bad actor reports</div>
-                <div class="arch2-stagebar">P&amp;IDs, PFDs, SCADA, HMI</div>
-                <div class="arch2-stagebar">Historical RCA reports</div>
-                <div class="arch2-stagebar">Asset Hierarchy</div>
-                <div class="arch2-stagebar">Work Orders History</div>
-                <div class="arch2-stagebar">Docs/Reports (SAP S/4HANA)</div>
-                <div class="arch2-stagebar">Others (HSE, Emissions)</div>
-              </div>
-
-              <div class="arch2-arrow">&#8594;</div>
-
-              <div class="arch2-col arch2-col-core">
-                <div class="arch2-command">
-                  <div class="arch2-col-title">Command Center</div>
-                  <div class="arch2-command-row">
-                    <span class="arch2-pill lg">Dashboard</span>
-                    <span class="arch2-pill lg">Engineering Workbench</span>
-                  </div>
-                  <div class="arch2-bar teal">Workflow — Human in the loop &amp; Automation Integration</div>
-                </div>
-
-                <div class="arch2-core-body">
-                  <div class="arch2-integration">
-                    <div class="arch2-col-title">Integration</div>
-                    <div class="arch2-bar dark sm">AI Gateway</div>
-                    <div class="arch2-bar dark sm">MCP Gateway</div>
-                    <div class="arch2-bar dark sm">Integration Framework</div>
-                    <div class="arch2-bar dark sm">REST APIs</div>
-                  </div>
-
-                  <div class="arch2-core-right">
-                    <div class="arch2-group">
-                      <div class="arch2-group-head">Agentic Flows</div>
-                      <div class="arch2-group-body grid2">
-                        <span class="arch2-bar teal sm">Asset Integrity</span>
-                        <span class="arch2-bar teal sm">HSSE</span>
-                        <span class="arch2-bar teal sm">Maintenance and Reliability</span>
-                        <span class="arch2-bar teal sm">Production and Performance Management</span>
-                      </div>
-                    </div>
-
-                    <div class="arch2-group">
-                      <div class="arch2-group-head">AI and Automation Capabilities</div>
-                      <div class="arch2-group-body grid3">
-                        <span class="arch2-pill lg">Agentic AI</span>
-                        <span class="arch2-pill lg">Agent Orchestration</span>
-                        <span class="arch2-pill lg">Generative AI</span>
-                        <span class="arch2-pill lg">Machine Learning</span>
-                        <span class="arch2-pill lg">Optimizer</span>
-                        <span class="arch2-pill lg">Vision Analytics</span>
-                        <span class="arch2-pill lg">Domain Driven Ontologies</span>
-                        <span class="arch2-pill lg">Symbolic AI</span>
-                        <span class="arch2-pill lg">Physics Model</span>
-                        <span class="arch2-pill lg">Scheduler</span>
-                      </div>
-                    </div>
-
-                    <div class="arch2-group">
-                      <div class="arch2-group-head">Operational Reference Platform</div>
-                      <div class="arch2-group-body grid2">
-                        <span class="arch2-pill lg">Job Plan</span>
-                        <span class="arch2-pill lg">Asset Hierarchy</span>
-                        <span class="arch2-pill lg">Regulatory Compliance</span>
-                        <span class="arch2-pill lg">RCFA</span>
-                        <span class="arch2-pill lg">RBI</span>
-                        <span class="arch2-pill lg">RSL</span>
-                        <span class="arch2-pill lg">FMEA/FMCA</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="arch2-bar dark">Cloud Platform</div>
-              </div>
-
-              <div class="arch2-arrow">&#8596;</div>
-
-              <div class="arch2-col arch2-col-tower">
-                <div class="arch2-col-title">Control Tower</div>
-                <div class="arch2-bar teal">AI Governance</div>
-                <div class="arch2-bar teal">Observability</div>
-                <div class="arch2-bar teal">DevSecOps</div>
-                <div class="arch2-bar teal">Security</div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-          </div>
-        </div>
-      </div>
-
-    <div class="block reveal" id="ov-collaborators">
-      <h3>Collaborators</h3>
-      <p class="block-intro" id="collabIntro"></p>
-      <div id="collabBody"></div>
-    </div>
-
-    <div class="block reveal" id="ov-press">
-      <h3>Press release</h3>
-      <p class="block-intro" id="pressIntro"></p>
-      <div id="pressBody"></div>
-    </div>
-
-    <div id="extraSections"></div>
-    <div id="editorAddSection"></div>
-
-    <div class="cta-band reveal">
-      <svg class="mesh" width="220" height="170" viewBox="0 0 260 200" fill="none" aria-hidden="true">
-        <circle cx="50" cy="60" r="7" stroke="#fff" stroke-width="1.6"/><circle cx="130" cy="30" r="7" stroke="#fff" stroke-width="1.6"/>
-        <circle cx="210" cy="70" r="7" stroke="#fff" stroke-width="1.6"/><circle cx="90" cy="140" r="7" stroke="#fff" stroke-width="1.6"/>
-        <circle cx="185" cy="155" r="7" stroke="#fff" stroke-width="1.6"/>
-        <path d="M57 62 122 34M138 34 202 66M55 66 84 132M98 142 178 153M136 37 182 148" stroke="#fff" stroke-width="1.2"/>
-      </svg>
-      <div>
-        <h3>Ready for this week's detail?</h3>
-        <p>See the S-curve, per-project status and open challenges, then the active tasks and key updates for the week.</p>
-      </div>
-      <button class="btn btn-solid" data-target="screen-progress">Continue to overall progress →</button>
-    </div>
-    <button class="btn btn-line" data-target="screen-weekly">Go straight to weekly progress →</button>
-  </section>
-
-    <!-- SCREEN 2: Overall Progress -->
-  <section class="screen" id="screen-progress">
+    <!-- Overall progress (/control-tower/<jda>/overall-progress) -->
+  <section class="screen active" id="screen-progress">
     <div class="journey" style="margin:20px 0 32px;">
       <div class="journey-card">
         <div class="progress-ring">
@@ -367,7 +95,7 @@
     <button class="btn btn-teal" data-target="screen-weekly">Continue to weekly progress →</button>
   </section>
 
-  <!-- SCREEN 3: Weekly Progress -->
+  <!-- Weekly progress (/control-tower/<jda>/weekly-progress) -->
   <section class="screen" id="screen-weekly">
     <div class="page-title reveal">
       <h2>Weekly Progress</h2>
@@ -456,64 +184,6 @@
     </div>
   </section>
 
-  <!-- SCREEN 5: Solution Detail (linked from AI technology solution cards, shareable via #/solution/<key>) -->
-  <section class="screen" id="screen-solution-detail">
-    <button class="back-link" data-target="screen-overview">← Back to overview</button>
-    <div class="block reveal" style="margin-top:0;">
-      <div class="sol-detail-card">
-        <div class="sol-detail-head">
-          <span class="sol-detail-icon" id="solDetailIcon"></span>
-          <div class="sol-detail-headtext">
-            <span class="sol-tier" id="solDetailTier">—</span>
-            <h2 id="solDetailTitle">—</h2>
-          </div>
-        </div>
-        <!-- one box per entry in the solution's `boxes`: a header and a body -->
-        <div id="solDetailBoxes" class="blk-grid"></div>
-      </div>
-    </div>
-  </section>
-
-    <!-- Editor Page only: the full-page block editor for one solution's detail page (js/block-editor.js) -->
-  <section class="screen" id="screen-blocks">
-    <div class="blk-toolbar" id="blkToolbar">
-      <div class="blk-toolbar-row">
-        <button type="button" class="blk-link" id="blkBack">← Back to Editor Page</button>
-        <span class="blk-status" id="blkStatus" role="status" aria-live="polite"></span>
-        <button type="button" class="add-row" id="blkCancel">Cancel</button>
-        <button type="button" class="save" id="blkSave" disabled>Save</button>
-      </div>
-      <div class="blk-toolbar-row blk-format" id="blkFormat" role="toolbar" aria-label="Text formatting">
-        <button type="button" class="blk-btn" data-cmd="bold" title="Bold" aria-label="Bold"><b>B</b></button>
-        <button type="button" class="blk-btn" data-cmd="italic" title="Italic" aria-label="Italic"><i>I</i></button>
-        <button type="button" class="blk-btn" data-cmd="underline" title="Underline" aria-label="Underline"><u>U</u></button>
-        <button type="button" class="blk-btn" data-cmd="insertUnorderedList" title="Bullet list" aria-label="Bullet list">• List</button>
-        <button type="button" class="blk-btn" data-cmd="insertOrderedList" title="Numbered list" aria-label="Numbered list">1. List</button>
-        <button type="button" class="blk-btn" id="blkLinkBtn" title="Link the selected words" aria-label="Add link">Link</button>
-        <button type="button" class="blk-btn" id="blkUnlinkBtn" title="Remove the link" aria-label="Remove link">Unlink</button>
-        <span class="blk-link-row" id="blkLinkRow" hidden>
-          <input id="blkLinkInput" type="url" placeholder="https://…" aria-label="Link address">
-          <button type="button" class="blk-btn" id="blkLinkApply">Apply</button>
-        </span>
-      </div>
-    </div>
-
-    <div class="block" style="margin-top:0;">
-      <div class="sol-detail-card">
-        <div class="sol-detail-head">
-          <span class="sol-detail-icon" id="blkIcon"></span>
-          <div class="sol-detail-headtext">
-            <span class="sol-tier" id="blkTier">—</span>
-            <h2 class="ed-text" id="blkTitle" contenteditable="true" data-ph="Solution name" role="textbox" aria-label="Solution name"></h2>
-          </div>
-        </div>
-        <div id="blkTop"></div>
-        <div id="blkCanvas" class="blk-grid"></div>
-        <p class="detail-tasks-empty" id="blkEmpty" hidden>No blocks yet. Use “+ Add block” above to start the page.</p>
-      </div>
-    </div>
-  </section>
-
     <!-- SCREEN 4: Edit report -->
   <section class="screen" id="screen-edit">
     <div class="page-title reveal">
@@ -566,7 +236,7 @@
   <div class="foot-inner">
     <div>
       <div class="foot-brand">
-        <img src="../shared/assets/brand/carigali-logo.png" alt="Petronas Carigali">
+        <img src="/shared/assets/brand/carigali-logo.png" alt="Petronas Carigali">
         <span id="footBrand">JDA Control Tower</span>
       </div>
     </div>
@@ -576,7 +246,7 @@
 
 <footer id="reportFooter">
   <span class="footer-left"><span class="live-dot"></span>Live report, backed by Firestore</span>
-  <button id="openEditBtn">Edit report</button>
+  <span class="editor-savebar-actions"><button id="progressEditBtn">Edit progress</button><button id="openEditBtn">Edit report</button></span>
 </footer>
 <footer class="editor-savebar" id="editorSaveBar" hidden>
   <span class="footer-left" id="editorSaveStatus">No changes yet</span>
@@ -587,6 +257,6 @@
 </footer>
 </div>
 
-<script type="module" src="components/report.js"></script>
+<script type="module" src="/control-tower/components/report.js"></script>
 </body>
 </html>

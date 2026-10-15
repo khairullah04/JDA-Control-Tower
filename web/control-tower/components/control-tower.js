@@ -20,7 +20,7 @@ const SEVERITY = { high: 'High', medium: 'Medium', low: 'Low' };
 const STATUS = REPORT_STATUS;
 const SHOWN = 4; // boxes shown before "Show all"
 const STALE_DAYS = 14; // a latest key update older than this is marked
-const reportUrl = (j, screen = '') => `jda-report.html#/${encodeURIComponent(j.id)}${screen}`;
+const reportUrl = (j, page = 'overall', hash = '') => `/control-tower/${encodeURIComponent(j.id)}/${page}-progress${hash}`;
 const fmtDate = iso => { const d = new Date(`${iso}T00:00:00`); return isNaN(d) ? esc(iso || '') : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const daysAgo = iso => { const d = new Date(`${iso}T00:00:00`); return isNaN(d) ? null : Math.floor((Date.now() - d) / 86_400_000); };
 const age = n => n === null ? '' : n <= 0 ? 'today' : n === 1 ? 'yesterday' : n < 14 ? `${n} days ago` : n < 60 ? `${Math.round(n / 7)} weeks ago` : `${Math.round(n / 30)} months ago`;
@@ -98,8 +98,8 @@ function panel(j, f, written, costsFailed) {
       <div><h3>${esc(j.name)}</h3>${f.tagline ? `<p>${esc(f.tagline)}</p>` : ''}</div>
     </div>
     <nav class="ct-links" aria-label="${esc(j.name)} pages">
-      <a href="${reportUrl(j)}">Master Page</a><a href="${reportUrl(j, '/progress')}">Overall progress</a><a href="${reportUrl(j, '/weekly')}">Weekly progress &amp; tasks</a>
-      <a href="${reportUrl(j, '/edit/weekly')}">Edit tasks</a><a href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener">Public page ↗</a>
+      <a href="${reportUrl(j)}">Overall progress</a><a href="${reportUrl(j, 'weekly')}">Weekly progress &amp; tasks</a>
+      <a href="${reportUrl(j, 'weekly', '#edit')}">Edit tasks</a><a href="/jda/${encodeURIComponent(j.id)}/info" target="_blank" rel="noopener">Master Page (public) ↗</a>
     </nav>
   </div>
   ${f.failed ? `<p class="ct-notice warn">${esc(j.name)}'s report could not be read just now, so its progress, update and challenges are missing. Reload to try again.</p>` : ''}
@@ -118,7 +118,7 @@ function panel(j, f, written, costsFailed) {
       <h4>Latest key update</h4>
       ${f.latest ? `<p class="ct-when"><time datetime="${esc(f.latest.date || '')}">${fmtDate(f.latest.date)}</time><span class="${stale !== null && stale > STALE_DAYS ? 'ct-stale' : 'ct-hint'}">${age(stale)}</span></p><p class="ct-clamp">${esc(f.latest.text)}</p>`
         : `<p class="ct-empty">No key updates yet. They come from the Weekly progress page.</p>`}
-      <a class="ct-arrow" href="${reportUrl(j, '/weekly')}">All updates and tasks${f.updates > 1 ? ` (${f.updates} updates)` : ''} →</a>
+      <a class="ct-arrow" href="${reportUrl(j, 'weekly')}">All updates and tasks${f.updates > 1 ? ` (${f.updates} updates)` : ''} →</a>
     </div>
     <div class="ct-gauge cost">
       <h4>Cost ${f.cost?.override ? tag('Set by hand') : ''}</h4>

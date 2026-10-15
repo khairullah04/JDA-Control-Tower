@@ -24,8 +24,11 @@ only this folder. The public site (TriCipta AI landing page, Info pages, sign-in
 - A JDA -> Control Tower: the "Control Tower" tab, the logo or the sidebar. Invoice Tracker -> Control Tower:
   the sidebar or its logo. The tracker's old front page (a card per JDA) is gone: its address
   leads to the Control Tower.
-- Inside a JDA: Overview, Overall progress, Weekly progress, plus project and solution detail
-  screens and Edit report (footer link).
+- Inside a JDA: **Overall progress** (`/control-tower/<jda>/overall-progress`, a project's page at
+  `#project/<name>`) and **Weekly progress** (`/control-tower/<jda>/weekly-progress`), with **Edit progress**
+  and **Edit report** in the bar at the bottom. Its **Master Page** is public: the JDA's Info page
+  (`/jda/<jda>/info`), linked from the top bar. Addresses of the old single page
+  (`jda-report.html#/jda1/...`) lead to the same screen in its new place.
 
 ## Where each JDA's data lives
 
@@ -51,52 +54,48 @@ Document shape (all fields optional):
 }
 ```
 
-## Master Page and Editor Page
+## Master Page and editing
 
-The **Master Page** is a JDA's main page (the overview screen). Each one carries that JDA's own
-icon, top right of the banner (`icon` in `js/config/app-config.js`); it is the only way into the
-editor, and the tabs in the top bar then move between the three screens. Clicking it opens the
-**Editor Page** (`#/jda1/edit`, `/edit/progress`, `/edit/weekly`): the same three
-screens, drawn by the same code. On the Master Page it has
+A JDA's **Master Page** (hero text, winning aspiration, AI solutions and their detail pages,
+collaborators, press release) is its public Info page, `/jda/<jda>/info`. There is no private copy.
+Signed in, the Info page shows **Edit Master Page** in its top bar; it opens the same page in edit mode,
+in place (`web/control-tower/components/master-edit.js` and `master-page.html`, served only to people
+signed in). In edit mode:
 
-- every piece of text editable in place (dashed outline);
-- dashed buttons to add or remove aspirations, solution groups, solutions (with their detail
-  pages), collaborators, the press release, and whole new sections of cards;
-- drag handles (the dotted grip): drag an aspiration, solution, collaborator or card to reorder it
-  (solutions can be dragged between groups), and drag **Move section** to move a whole section up
-  or down the page. With the keyboard, focus a handle and use the arrow keys;
-- **Edit detail page** on a solution card opens a full-page block editor for that solution's
-  detail page. The page is a list of blocks: Header, Sub Header, Sub Sub Header, Body, or a Box
-  row (boxes side by side, each a title and an optional explanation). Add a block between any two,
-  drag the grip to reorder (mouse or touch; SortableJS, kept in `web/shared/vendor`), or use the up/down
-  buttons; change a block's type, duplicate or delete it; format text with bold, italic, underline,
-  lists and links. Its Save publishes straight away, together with any other unsaved Master Page
-  edits. Detail pages saved in the older shape load as blocks automatically, and the first save
-  over one keeps the old version in the record as `overviewBackup`;
-- **Update from Google Drive** at the top, which reads the JDA's Master File folder into the page
-  as an unsaved draft, and **Open Master File folder**, which opens that folder in Drive. Nothing is
-  uploaded from the page: files are put into the folder in Drive itself;
-- **Save changes** in the bottom bar. Nothing changes on the live pages until then.
+- every piece of text is editable in place (dashed outline);
+- dashed buttons add or remove aspirations, solution groups, solutions (with their detail pages),
+  collaborators, the press release, and whole new sections of cards;
+- drag handles (the dotted grip) reorder an aspiration, solution, collaborator or card (solutions can
+  be dragged between groups), and **Move section** moves a whole section. With the keyboard, focus a
+  handle and use the arrow keys;
+- **Edit detail page** on a solution card opens a full-page block editor for that solution's detail
+  page: Header, Sub Header, Sub Sub Header, Body, or a Box row. Add a block between any two, drag the
+  grip to reorder (SortableJS, kept in `web/shared/vendor`) or use the up/down buttons; change a
+  block's type, duplicate or delete it; format text with bold, italic, underline, lists and links. Its
+  Save publishes straight away, with any other unsaved Master Page edits. Detail pages saved in the
+  older shape load as blocks, and the first save over one keeps the old version as `overviewBackup`;
+- **Update from Google Drive** at the top reads the JDA's Master File folder into the page as an
+  unsaved draft, and **Open Master File folder** opens that folder in Drive;
+- **Save changes** in the bottom bar publishes; **Leave the editor** goes back to the page as saved;
+- **Reset to the built-in content** removes what was saved, so the page shows what is written in
+  `web/control-tower/config/jda-content.js` again.
 
-On Overall progress and Weekly progress it has the same in-place editing, with **Delete** on every
-project, challenge, task and key update and **+ Add** for each; click a status, severity or the
-overall status pill to change it. **Update from Google Drive** at the top of both screens reads the
-Overall Progress and Weekly Progress folders into the page as a draft. The S-curve is not editable
+Once saved from edit mode, the saved version is what shows: later changes to that JDA's entry in
+`jda-content.js` do not appear until it is reset. The architecture diagram of the old private Master
+Page is gone.
+
+**Overall progress** and **Weekly progress** are edited on their own pages: **Edit progress** in the
+bottom bar (or `#edit` on the address, which **Edit tasks** uses) makes them editable the same way,
+with **Delete** on every project, challenge, task and key update and **+ Add** for each; click a
+status, severity or the overall status pill to change it. **Update from Google Drive** at the top of
+both reads the Overall Progress and Weekly Progress folders into a draft. The S-curve is not editable
 here (it comes from Drive or the database).
 
-**Edit report**, in the footer, is housekeeping, not a second editor: Sync
-from Drive, Load starter data (for a JDA that has some and no report yet), Clear completed tasks
-(asks first, and says how many), and Microsoft Calendar once it is configured. The left and right
-arrow keys move between the three reading screens only.
+**Edit report**, in the bottom bar, is housekeeping: Sync from Drive, Load starter data (for a JDA
+that has some and no report yet), Clear completed tasks (asks first, and says how many), and Microsoft
+Calendar once it is configured. The left and right arrow keys move between the two progress pages.
 
-- **Reset to the built-in content** removes what the editor saved, so the page shows what is
-  written in `web/control-tower/config/jda-content.js` again.
-
-Once a Master Page has been saved from the editor, the saved version is what shows: later changes
-to that JDA's entry in `jda-content.js` do not appear until it is reset. The architecture diagram,
-header and footer are not editable here; they stay in the template and `jda-content.js`.
-
-Who may edit: everyone signed in to the JDA Control Tower (there are no per-JDA passkeys any more).
+Who may edit: everyone signed in to the JDA Control Tower.
 
 Every save goes to the JDA server (`POST /api/portal/save`), which checks the sign-in and
 writes with its service-account key; with the rules in `firebase/jda3-rules.txt` published,
@@ -107,8 +106,8 @@ last 20 versions of each report.
 ## Updating from Google Drive
 
 Every JDA is updated by dropping files into its Drive folder. The Master File folder is read from
-the Editor Page (**Update from Google Drive**), and the two Progress folders from Edit report
-(**Sync from Drive**). The JDA server reads the folder and Claude extracts the information.
+the Master Page's edit mode (**Update from Google Drive**), and the two Progress folders from the
+progress pages' edit mode or Edit report (**Sync from Drive**). The JDA server reads the folder and Claude extracts the information.
 
 ```
 <portal Drive folder>/
@@ -136,7 +135,7 @@ the Editor Page (**Update from Google Drive**), and the two Progress folders fro
   files and states percent complete for a project, that figure is used.
 - A progress sync replaces the sections it has files for, including edits made by hand on Edit
   report. A section whose folder is empty is left alone. A Master File update only fills the
-  editor; you review and save.
+  edit mode; you review and save.
 - Not filled from Drive: pictures (solutions use the stock illustrations, collaborator logos only
   for Petronas Carigali, IBM and Tridiagonal) and the architecture diagram.
 - Claude is only called when a folder's files have changed since the last sync; results are cached
@@ -160,9 +159,9 @@ One-time setup:
 It gets the same page with every section in place and the values blank: no zeros, no sample
 numbers, and never another JDA's content. To fill it in:
 
-- Master Page: its Editor Page, typing it in or updating from its Master File folder. Or as an
-  entry in `web/control-tower/config/jda-content.js`, next to `jda3` (the only way to add an architecture diagram).
-- Progress: its Editor Page (Overall progress and Weekly progress), by hand or from Drive; or Sync
+- Master Page: Edit Master Page on its Info page, typing it in or updating from its Master File
+  folder. Or as an entry in `web/control-tower/config/jda-content.js`, next to `jda3`.
+- Progress: Edit progress on its Overall or Weekly progress page, by hand or from Drive; or Sync
   from Drive on Edit report.
 - S-curve: there is no S-curve editor (the reference has none either). Add a `scurve` field to its
   document in the Firebase console.
@@ -190,10 +189,9 @@ The card is hidden until a client ID is set. To turn it on:
 
 1. In the Azure portal (https://portal.azure.com): Microsoft Entra ID > App registrations > New
    registration. Name it, and choose who may sign in (your organisation's accounts).
-2. Under Redirect URI choose **Single-page application (SPA)** and enter the address of the report
-   page exactly as people open it, without anything after `.html`, for example
-   `https://jda.example.com/control-tower/jda-report.html` (and `http://localhost:8080/control-tower/jda-report.html` to try
-   it on your own computer).
+2. Under Redirect URI choose **Single-page application (SPA)** and enter the Control Tower's address,
+   for example `https://jda.example.com/control-tower/` (and `http://localhost:8080/control-tower/` to try
+   it on your own computer). Every JDA's pages use this one address.
 3. API permissions > Add a permission > Microsoft Graph > Delegated permissions >
    `Calendars.ReadWrite`.
 4. Copy the **Application (client) ID** from the app's Overview page into `MS_CLIENT_ID` in

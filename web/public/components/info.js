@@ -116,9 +116,26 @@ try {
 } catch (e) {
   $('loadNote').innerHTML = `This page could not be loaded just now (${esc(e.message)}). <a href="">Try again</a> · <a href="/">Back to TriCipta AI</a>`;
 }
-// Employees go on to the full, private report of this JDA: straight there when signed in, through sign-in otherwise.
-const report = `/control-tower/jda-report.html#/${encodeURIComponent(id)}`;
+// Employees go on to this JDA's private pages: straight there when signed in, through sign-in otherwise.
+// Signed in, they can also edit this page: it is the JDA's Master Page (there is no private copy).
+const report = `/control-tower/${encodeURIComponent(id)}/overall-progress`;
 me().then(who => {
-  $('fullReport').textContent = 'Open full report';
-  $('fullReport').href = who.signedIn ? report : `/login?next=${encodeURIComponent(report)}`;
+  $('fullReport').textContent = who.signedIn ? 'Open in Control Tower' : 'Employee sign-in';
+  $('fullReport').href = who.signedIn ? report : `/login?next=${encodeURIComponent(location.pathname)}`;
+  if (!who.signedIn || !info) return;
+  const edit = Object.assign(document.createElement('button'), { type: 'button', className: 'info-link', id: 'editMasterBtn', textContent: 'Edit Master Page' });
+  edit.onclick = async () => {
+    edit.disabled = true; edit.textContent = 'Opening…';
+    history.replaceState(null, '', location.pathname);
+    try {
+      const { start } = await import('/control-tower/components/master-edit.js');
+      await start({ id, main: $('info-main'), leave: () => location.reload() });
+      $('infoStrip').hidden = true;
+      edit.remove();
+    } catch (e) {
+      edit.disabled = false; edit.textContent = 'Edit Master Page';
+      $('infoStrip').textContent = `Edit mode could not open: ${e.message}`; $('infoStrip').hidden = false;
+    }
+  };
+  $('fullReport').before(edit);
 });

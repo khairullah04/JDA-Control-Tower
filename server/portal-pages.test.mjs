@@ -220,3 +220,16 @@ test('the Weekly progress view filters by status, due date and owner, and sorts'
   assert.deepEqual(names(viewTasks(list, { sort: 'priority' }, today)), ['soon', 'done', 'late', 'later', 'none']);
   assert.ok(isOverdue(list[0], today) && !isOverdue(list[3], today));
 });
+
+test('the old JDA page addresses lead to where each screen is now', async () => {
+  const { newAddress } = await import('../web/control-tower/lib/old-addresses.js');
+  const cases = [
+    ['#/jda1', '', '/jda/jda1/info'], ['#/jda1/edit', '', '/jda/jda1/info'], ['', '?jda=jda2', '/jda/jda2/info'],
+    ['#/jda3/solution/sap', '', '/jda/jda3/info#solution/sap'],
+    ['#/jda1/progress', '', '/control-tower/jda1/overall-progress'], ['#/jda2/weekly', '', '/control-tower/jda2/weekly-progress'],
+    ['#/jda1/edit/progress', '', '/control-tower/jda1/overall-progress#edit'], ['#/jda1/edit/weekly', '', '/control-tower/jda1/weekly-progress#edit'],
+    ['#/jda1/project/seismic-data-lake', '', '/control-tower/jda1/overall-progress#project/seismic-data-lake'],
+    ['#/jda9/weekly', '', '/control-tower/'], ['', '', '/control-tower/'], ['#/%E0%A4%A', '', '/control-tower/']
+  ];
+  for (const [hash, search, to] of cases) assert.equal(newAddress(hash, search), to, hash + search);
+});
