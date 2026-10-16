@@ -1,5 +1,5 @@
 {
-  "demoMode": false,
+  "demoMode": true,
   "apiBase": "",
   "baseCurrency": "MYR",
   "fxToMYR": { "MYR": "1", "USD": "4.7", "SGD": "3.5", "EUR": "5.1", "JPY": "0.031", "GBP": "6" },
