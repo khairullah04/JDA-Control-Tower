@@ -150,7 +150,7 @@ written beside it. Review findings are logged under each phase.
 | A17 | Changes to private APIs must be sent as JSON (415 otherwise). | With SameSite=Lax this closes form-post CSRF, including from another subdomain. |
 | A18 | A JDA's landing-page title is its Master Page tagline, its press release overview the Master Page press release, and its projects the names on Overall progress, unless written in edit mode. Status, when not set, is "In progress" if it has projects, otherwise "In the works". | Shows real content before anyone edits; edit mode overrides each one. |
 | A19 | The public pages' report reads are cached for a minute and rate-limited (120 per minute per address). | Public traffic must not become a stream of database reads. |
-| A20 | **Needs the user's confirmation.** What the Master Page shows stays public on the Info page: banner, winning aspiration (including targets such as "Unit Production Cost below USD 6/BOE" and "30% NPV"), solution cards and detail pages (less targets and delivery leads), collaborators (including their "Read more" text, e.g. the IP terms) and sections added in the editor. | The old portal showed all of it with no sign-in, but that does not prove it was meant to be public. |
+| A20 | **Confirmed by the user (2026-10-19).** What the Master Page shows stays public on the Info page: banner, winning aspiration (including targets such as "Unit Production Cost below USD 6/BOE" and "30% NPV"), solution cards and detail pages (less targets and delivery leads), collaborators (including their "Read more" text, e.g. the IP terms) and sections added in the editor. | The old portal showed all of it with no sign-in, but that does not prove it was meant to be public. |
 | A21 | The landing page's text in `PUBLIC_DEFAULTS` (`jda/server/site-content.js`) is draft copy for the user to rewrite in edit mode; contacts are empty ("To be announced") until written. | No real copy or contacts were supplied. |
 | A22 | The tracker's old front page (a card per JDA, Sync from Drive, Add JDA, Recent activity) is replaced by the Control Tower landing page, which carries Sync from Drive, Add JDA and Recent activity; the tracker's own address now leads there. | The brief scraps that page; its tools stay reachable. |
 | A23 | A JDA added with Add JDA exists only in the Invoice Tracker until it is also added to `portal/js/config/app-config.js` (`JDAS`), which gives it a tab, a report and an Info page. The page says so after adding. | The two JDA lists are separate records (A8). |
@@ -199,7 +199,7 @@ What the code cannot do on its own, in the order it is needed:
 5. **For a real server**: `NODE_ENV=production`, `FINANCE_STORE=firestore`, HTTPS in front (docs/server-and-invoices.md, "Running in production").
 6. **Publish the database rules** after steps 1 and 4 (start the server once so it copies the access list): `cd firebase && npx firebase-tools deploy --only firestore`. Until then the report documents stay publicly readable (the one outstanding High finding, Phase 2). Close JDA 3's own project rules the same way (`portal/firestore-rules-addition.txt`).
 7. **Fill in the public page with Edit page**: the Roles picture, Program Lead and Business Champion names and job titles, contacts, and rewrite the draft copy (A21). On the Control Tower: each JDA's Agreement and BRD links, and key insights.
-8. **Confirm A20**: that the Master Page content shown on the public Info pages (aspiration targets, collaborators' terms, extra sections) may be public.
+8. ~~Confirm A20~~: confirmed 2026-10-19, the Master Page content may be public.
 9. **Data to correct**: JDA 1's press release image field holds "kai"; JDA 3's feed lists "Project 2b" twice.
 
 ## Known issues
@@ -368,7 +368,7 @@ Audit of the tree before the move (2026-10-15):
 - **Design tokens defined four times**: `:root` colours in `site/css/site.css`, `portal/css/styles.css`, `jda/web/css/base.css` and `jda/web/css/finance.css`, already drifting (`--muted`, `--green`, `--amber`, `--red` differ).
 - **Business logic in components**: progress % (average of projects), cost % (paid / sanctioned), latest key update and challenge selection live inside `portal/js/control-tower.js` (`figures`, `loadCosts`).
 - **Misplaced and leftover code**: `SYNC_API_URL` (`portal/js/config/app-config.js`, `portal/js/api.js`) for a cross-origin setup the single sign-in no longer supports; `portal/js/config/jda-content.js` (private starter data) beside public config; the architecture diagram markup and styles (`arch2-*`, `archModal`) used by no public page and only by the private master page that Round 2 removes; the private master page itself (`portal/jda-report.html` overview screen, `masterEditBtn`, `editorTop`).
-- **Local leftovers**: `jda/server/portal-passkeys.json` (passkeys were removed in Phase 2; not in git).
+- **Local leftovers**: `jda/server/portal-passkeys.json` (passkeys were removed in Phase 2; not in git). *Deleted 2026-10-19 at the user's request.*
 - **Docs spread** over `README.md`, `jda/README.md`, `portal/README.md`, `portal/firestore-rules-addition.txt`, `portal/assets/README.md`, `site/public/README.md`.
 - Not ours, left alone: `graphify-out/`, `.gitattributes` and the git hooks that stage them (another tool on this machine).
 
