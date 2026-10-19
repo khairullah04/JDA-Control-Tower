@@ -72,7 +72,7 @@ logged (who, when, note).
 
 ## Approval workflow
 
-- [ ] Stage graph and stage → status mapping as pure functions (`finance/workflow.js`), shared by browser and server.
+- [x] Stage graph and stage → status mapping as pure functions (`finance/workflow.js`), shared by browser and server.
 - [ ] Server: `POST /api/finance/entries/stage` — move invoices along the graph (refuses moves not on it), with note; writes `financeStages` lines; archive on Reject, restore from archive.
 - [ ] Existing invoices get a stage from their status on first read (pending → received, approved → to_be_paid, paid → paid, rejected → rejected); nothing rewritten until moved.
 - [ ] Intake queue (Accountant 1): Received invoices, choose Route 1 or Route 2.
@@ -113,7 +113,7 @@ logged (who, when, note).
 - [ ] CJI3 importer: missing columns refuse the file.
 - [ ] CJI3 importer: unmapped WBS kept as Unmapped; mapping applied on the next import.
 - [ ] Matching: one match → Paid; none / several → manual list.
-- [ ] State machine: every allowed move; every refused move; Reject archives and Restore returns; stage → status keeps the Payment Table figures as before.
+- [x] State machine: every allowed move; every refused move; Reject archives and Restore returns; stage → status keeps the Payment Table figures as before. (`server/workflow.test.mjs`)
 - [ ] Existing tests still pass.
 
 ## Docs
