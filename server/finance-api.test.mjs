@@ -85,3 +85,23 @@ test('the approval process over HTTP: moves, refusals, and Paid is not a button'
   const history = await call(`/api/finance/stages?entityId=${id}`);
   assert.deepEqual(history.body.map(h => [h.from, h.to, h.by]), [['received', 'sent_to_pd', 'acc1']]);
 });
+
+test('the approval roles: an empty list is open to anyone; a filled one only to the people on it', async () => {
+  const { rolesFromEnv } = await import('./routes/finance.js');
+  assert.deepEqual(rolesFromEnv({ ROLE_LEAD: ' Lead@jda.app, x@jda.app ' }), { accountant1: [], pm: [], lead: ['lead@jda.app', 'x@jda.app'], accountant2: [] });
+  const app = express();
+  app.use(express.json());
+  app.use('/api', (req, res, next) => { req.user = { name: req.headers['x-test-user'], email: `${req.headers['x-test-user']}@jda.app` }; next(); });
+  app.use('/api/finance', financeRoutes(createFinance(memoryStore()), 'memory', { roles: rolesFromEnv({ ROLE_LEAD: 'lead@jda.app' }) }));
+  const srv = app.listen(0), at = `http://localhost:${srv.address().port}`;
+  const post = async (path, body, who) => (await fetch(at + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Test-User': who }, body: JSON.stringify(body) })).json();
+  try {
+    const { id } = await post('/api/finance/entries', { ...invoice, invoiceNo: 'IN-ROLE' }, 'aina');
+    await post('/api/finance/entries/stage', { ids: [id], to: 'with_pm' }, 'aina');                    // Accountant 1: open to all
+    await post('/api/finance/entries/stage', { ids: [id], to: 'pending_lead' }, 'aina');               // PM: open to all
+    const refused = await post('/api/finance/entries/stage', { ids: [id], to: 'to_be_paid' }, 'aina'); // Lead: only lead@jda.app
+    assert.match(refused.refused[0].why, /Only the Project Lead/);
+    const ok = await post('/api/finance/entries/stage', { ids: [id], to: 'to_be_paid' }, 'lead');
+    assert.equal(ok.changed, 1);
+  } finally { srv.close(); }
+});

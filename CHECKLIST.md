@@ -81,7 +81,7 @@ logged (who, when, note).
 - [x] To Be Paid queue (Accountant 2): Approved and Sent to PD invoices, oldest due date first.
 - [x] Archive view: rejected invoices, with Restore.
 - [x] Every move: a confirmation step with an optional note (a reason when rejecting); the history shown on the invoice.
-- [ ] Roles hook for later: `ROLE_*` lists in `server/.env`; empty means anyone signed in (today's case).
+- [x] Roles hook for later: `ROLE_*` lists in `server/.env`; empty means anyone signed in (today's case).
 
 ## CJI3 import
 

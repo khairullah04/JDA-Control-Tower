@@ -43,6 +43,10 @@ export const MOVES = [
   { from: 'paid', to: 'to_be_paid', action: 'Undo the CJI3 match', by: 'cji3', route: 'validation' }
 ];
 
+// Who makes each move. Until the role lists are filled in (server/.env, ROLE_*), anyone signed in may.
+export const ROLES = { accountant1: 'Accountant 1', pm: 'Project Manager', lead: 'Project Lead', accountant2: 'Accountant 2' };
+export const roleFor = move => move.by === 'cji3' ? 'accountant2' : { received: 'accountant1', with_pm: 'pm', pending_lead: 'lead', rejected: 'lead' }[move.from];
+
 // What the Payment Table sees for each stage.
 const STATUS_OF = { received: 'pending', with_pm: 'pending', pending_lead: 'pending', sent_to_pd: 'approved', to_be_paid: 'approved', paid: 'paid', rejected: 'rejected' };
 export const statusFor = stage => STATUS_OF[stage];

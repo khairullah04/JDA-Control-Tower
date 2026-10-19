@@ -2,11 +2,17 @@ import { Router } from 'express';
 import { bnmRate } from '../forex.js';
 import { readSheets, writeWorkbook } from '../finance-xlsx.js';
 import { isDate } from '../../web/control-tower/invoices/js/finance/core.js';
+import { ROLES, roleFor } from '../../web/control-tower/invoices/js/finance/workflow.js';
+
+// Who holds each role in the approval process: ROLE_ACCOUNTANT1, ROLE_PM, ROLE_LEAD, ROLE_ACCOUNTANT2 in
+// server/.env, comma-separated emails. A role whose list is empty is open to anyone signed in.
+export const rolesFromEnv = (env = process.env) => Object.fromEntries(Object.keys(ROLES).map(k =>
+  [k, String(env[`ROLE_${k.toUpperCase()}`] || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)]));
 
 // The CJI3 register, the sanctioned amounts and their audit log. Every route sits behind the JDA
 // Control Tower sign-in (app.js), and the signed-in person's name goes into the audit log. The browser never writes this data itself: each change is validated, worked out
 // and logged here, by the rules in web/js/finance.
-export default function financeRoutes(finance, storage) {
+export default function financeRoutes(finance, storage, { roles = rolesFromEnv() } = {}) {
   const router = Router();
 
   const actor = req => req.user?.name || 'unknown';
@@ -37,7 +43,11 @@ export default function financeRoutes(finance, storage) {
   router.post('/entries/status', run(req => finance.setStatus(ids(req), String(req.body?.status), actor(req))));
   // The approval process: move invoices to a stage, with a note (a reason when rejecting). Paid is
   // never set here: it comes from matching a CJI3 line.
-  router.post('/entries/stage', run(req => finance.moveStage(ids(req), String(req.body?.to || ''), { note: String(req.body?.note || '') }, actor(req))));
+  const may = req => move => {
+    const role = move && roleFor(move), list = roles[role] || [];
+    return !role || !list.length || list.includes(String(req.user?.email || '').toLowerCase()) ? '' : `Only the ${ROLES[role]} may do this (${move.action}).`;
+  };
+  router.post('/entries/stage', run(req => finance.moveStage(ids(req), String(req.body?.to || ''), { note: String(req.body?.note || ''), may: may(req) }, actor(req))));
   router.get('/stages', run(req => finance.stageHistory(String(req.query.entityId || ''))));
 
   router.post('/sanctioned/batch', run(req => finance.saveAll('sanctioned', Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req))));

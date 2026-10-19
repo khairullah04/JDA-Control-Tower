@@ -8,7 +8,7 @@
 //   - Each change answers with the records as they now are, so a page can update without reloading everything.
 import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
 import { toBps, fromBps, normRate } from './money.js';
-import { checkMove, applyMove, stageOf, STAGE_LABEL } from './workflow.js';
+import { checkMove, applyMove, stageOf, STAGE_LABEL, MOVES } from './workflow.js';
 
 const COLL = { entry: 'financeEntries', sanctioned: 'financeSanctioned' };
 export class FinanceError extends Error {
@@ -110,10 +110,11 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
   // move writes the invoice (its stage and the status that goes with it), a line in its stage
   // history (who, when, from, to, note) and a line in the audit log. `byCji3` is a move made by a
   // CJI3 line being matched (Paid) or unmatched; `paidBy` names those lines.
-  async function moveStage(ids, to, { note = '', byCji3 = false, paidBy } = {}, actor) {
+  // `may(move)`: '' when this person may make the move, otherwise why not (the server's role lists).
+  async function moveStage(ids, to, { note = '', byCji3 = false, paidBy, may = () => '' } = {}, actor) {
     const at = now(), refused = [], text = String(note || '').trim().slice(0, 1000);
     const out = await each('entry', ids, 100, r => {
-      const why = checkMove(r, to, { note: text, byCji3 });
+      const why = checkMove(r, to, { note: text, byCji3 }) || may(MOVES.find(m => m.from === stageOf(r) && m.to === to));
       if (why) { refused.push({ id: r.id, ref: refOf('entry', r), why }); return null; }
       const from = stageOf(r), next = stamp(applyMove(r, to, { at, by: actor }), actor, at);
       if (paidBy !== undefined) next.paidBy = paidBy;
