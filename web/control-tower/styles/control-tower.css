@@ -1,4 +1,4 @@
-/* The JDA Control Tower landing page (index.html, js/control-tower.js), over the portal's styles. */
+/* The JDA Control Tower landing page (index.html, components/control-tower.js), over the shared report styles. */
 .ct{padding-top:calc(28px * var(--space-scale));padding-bottom:calc(56px * var(--space-scale))}
 .ct-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:calc(18px * var(--space-scale));margin-bottom:calc(22px * var(--space-scale))}
 .ct-eyebrow{font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-600)}

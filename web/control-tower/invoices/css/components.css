@@ -35,7 +35,7 @@ a.card:hover h3::after{opacity:1;transform:none}
 .card.add:hover{background:var(--teal-050);border-color:var(--teal-500);color:var(--teal-700);transform:none;box-shadow:none}
 .card.add::before{display:none}
 
-/* Spend bars: the portal's progress bar (track, fill, % label) with its values unchanged; .tall is the
+/* Spend bars: the Control Tower's progress bar (track, fill, % label) with its values unchanged; .tall is the
    tracker's 1.5x height, radius scaled with it. .over is the tracker's own over-budget state. */
 .spend-row{display:flex;align-items:center;gap:calc(18px * var(--space-scale))}
 .progress-track{flex:1;min-width:0;height:calc(6px * var(--space-scale));background:var(--teal-050);border-radius:calc(3px * var(--space-scale));overflow:hidden}

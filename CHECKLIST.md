@@ -65,8 +65,8 @@ logged (who, when, note).
 
 ## Leftover overhaul items
 
-- [ ] "Portal" wording left in docs, comments and the AI prompts → "JDA Control Tower" (file names,
-  `/api/portal` and `PORTAL_DRIVE_ROOT_FOLDER_ID` kept: renaming them would break saved settings).
+- [x] "Portal" wording left in docs, comments and the AI prompts → "JDA Control Tower" (file names,
+  `/api/portal` and `PORTAL_DRIVE_ROOT_FOLDER_ID` kept: renaming them would break saved settings). *Also kept: the Drive folder name "JDA Portal" that the server looks for (`server/portal-drive.js`), which is a real folder name, not wording.*
 - [ ] Owner, with the database key: run `remove-jdas.mjs --apply` (JDA 4+ out of the database).
 - [ ] Owner, with the key: publish the Firestore rules (the rest of the system private in the database too).
 

@@ -1,5 +1,5 @@
 /* The public TriCipta AI site: landing page, sign-in and the JDA Info pages' frame.
-   Same palette, glass cards and figures as the JDA Control Tower (portal/css/styles.css). */
+   Same palette, glass cards and figures as the JDA Control Tower (web/shared/styles/report.css). */
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:calc(24px * var(--space-scale))}
 body{margin:0;color:var(--text);font-family:var(--font);font-size:max(min(15.5px, 14px), calc(15.5px * var(--type-scale)));line-height:1.6;overflow-x:clip;

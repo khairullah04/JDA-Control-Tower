@@ -193,7 +193,7 @@ git) and lists what it saved:
 
 - every collection of the main Firebase project, with the saved versions of each report
   (needs `service-account.json`);
-- each JDA's report document, read the way the portal reads it, which also covers JDA 3's
+- each JDA's report document, read the way the Control Tower reads it, which also covers JDA 3's
   separate project;
 - the local finance file, if the server was saving to one.
 

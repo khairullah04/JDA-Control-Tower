@@ -1,4 +1,4 @@
-/* Edit mode on the two landing pages (site/js/edit-kit.js, site/js/edit.js, portal/js/control-tower-edit.js). */
+/* Edit mode on the two landing pages (web/shared/components/edit-kit.js, web/public/components/edit.js, web/control-tower/components/control-tower-edit.js). */
 body.editing{padding-bottom:calc(96px * var(--space-scale))}
 .edit-bar{position:fixed;left:0;right:0;bottom:0;z-index:90;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:calc(12px * var(--space-scale));
   padding:calc(12px * var(--space-scale)) clamp(calc(16px * var(--space-scale)),4vw,calc(32px * var(--space-scale)));background:#fff;border-top:3px solid #6b4fc7;box-shadow:0 -8px 24px rgba(2,62,58,.14);font-family:"Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif}

@@ -1,4 +1,4 @@
-/* CJI3 register and Payment Tables. Colours and shapes follow the portal's design (index5):
+/* CJI3 register and Payment Tables. Colours and shapes follow the Control Tower's design (index5):
    its status pills, glass cards and IBM Plex Mono figures. */
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 .banner.notice{margin-bottom:calc(1rem * var(--space-scale))}

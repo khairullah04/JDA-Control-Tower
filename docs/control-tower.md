@@ -129,7 +129,7 @@ the Master Page's edit mode (**Update from Google Drive**), and the two Progress
 progress pages' edit mode or Edit report (**Sync from Drive**). The JDA server reads the folder and Claude extracts the information.
 
 ```
-<portal Drive folder>/
+<JDA Control Tower Drive folder>/
   JDA 1/
     Master File/              -> the home page: hero text, winning aspiration, solutions,
                                  collaborators, press release
@@ -162,10 +162,10 @@ progress pages' edit mode or Edit report (**Sync from Drive**). The JDA server r
 
 One-time setup:
 
-1. In Google Drive, create the portal folder and the JDA folders inside it as above. Share the
-   portal folder (Viewer) with the service account's email - the `client_email` in
+1. In Google Drive, create the JDA Control Tower folder and the JDA folders inside it as above. Share
+   that folder (Viewer) with the service account's email - the `client_email` in
    `server/service-account.json`.
-2. In `server/.env` add `PORTAL_DRIVE_ROOT_FOLDER_ID` (the portal folder's id, the last part of
+2. In `server/.env` add `PORTAL_DRIVE_ROOT_FOLDER_ID` (that folder's id, the last part of
    its Drive URL).
 3. Restart the server (`cd server && npm install && npm start`).
 4. Nothing else. The server serves these pages itself, so they call it at the address they came
@@ -185,7 +185,7 @@ numbers, and never another JDA's content. To fill it in:
 
 ## Setup
 
-1. Firestore rules: publish `firebase/firestore.rules` on the portal's project (it holds the `jdaReports`
+1. Firestore rules: publish `firebase/firestore.rules` on the main Firebase project (it holds the `jdaReports`
    block), and follow `firebase/jda3-rules.txt` for the `report` block on the JDA 3 project.
    Read its warning first: two things must be in place before JDA 3's rule is closed.
 2. Accounts: each person needs a Firebase account on `ALLOWED_EMAILS` in `server/.env`
