@@ -118,5 +118,5 @@ logged (who, when, note).
 
 ## Docs
 
-- [ ] `docs/server-and-invoices.md`: the approval process, the queues, CJI3 import and the dedup rule, matching.
+- [x] `docs/server-and-invoices.md`: the approval process, the queues, CJI3 import and the dedup rule, matching.
 - [ ] `BRANCH_DEMO.md`: run `main` and this branch side by side (git worktree, two ports, separate data).

@@ -83,6 +83,69 @@ from the top bar or from the "Invoices and payments" totals on a JDA or project 
 - **Who sees it**: invoices and payments are for people signed in to the JDA Control Tower only.
   Every finance request is checked by the server, and the person's name goes into the audit log.
 
+### Invoice approval (Approvals, `#/approvals`)
+
+Every invoice in the register goes through the approval process before it is paid. The stages and
+the moves allowed between them are in `web/control-tower/invoices/js/finance/workflow.js`; the server
+refuses any other move.
+
+```
+Received ─┬─ Route 1: Direct ─────► Sent to PD ───────────────────────┐
+          └─ Route 2: Validation ─► With PM ─► Pending Lead ─┬─► To Be Paid ─┤
+                                                             └─► Rejected     │
+                                      Paid (shown by a CJI3 line) ◄──────────┘
+```
+
+- **Queues** (one tab each on Approvals): Intake (Accountant 1 chooses the route), PM validation,
+  Lead approval, To Be Paid (Accountant 2: approved invoices and those sent to PD, oldest due date
+  first), Paid, and Rejected (the archive).
+- **Every move is confirmed** in a dialog first, with a note; a reason is required to reject, to
+  return an invoice, or to restore one from the archive. Each move is kept in the invoice's history
+  (`financeStages`: who, when, from, to, note) and in the audit log.
+- **Rejected invoices are archived, not deleted**: they keep everything, leave the active queues, and
+  **Restore from archive** sends one back to the Project Lead.
+- **Route 1 passes nothing to PD**: the invoice is only marked Sent to PD, then waits in To Be Paid.
+- **Paid is never a button**: an invoice becomes Paid when a CJI3 line is matched to it (below).
+- **The Payment Tables do not change**: they read the invoice's `status` (pending / approved / paid /
+  rejected), which is worked out from its stage (Received, With PM, Pending Lead → pending; Sent to PD,
+  To Be Paid → approved; Paid → paid; Rejected → rejected). Invoices entered before the process get
+  their stage from their status; the old status menu in the CJI3 register still works and resets it.
+- **Roles**: `ROLE_ACCOUNTANT1`, `ROLE_PM`, `ROLE_LEAD`, `ROLE_ACCOUNTANT2` in `server/.env`
+  (comma-separated emails) limit each queue's moves to those people. Left empty (as now), anyone
+  signed in may make any move.
+
+### CJI3 payments (`#/cji3-lines`)
+
+The CJI3 export is the only payment evidence. It comes as **two files** (JDA 1 + JDA 2 together, and
+JDA 3) and is uploaded again and again as payments are made one at a time.
+
+- **Upload** on the file's tab: **Preview** says what the file will do (lines added, skipped,
+  updated, rows that cannot be read), then **Import**.
+- **No duplicates**: a line is known by **WBS Element + Reference + Posting Date + Document Date +
+  Document Type + Cost Element + Transaction Currency + Value TranCurr**, and by its order among
+  lines identical in all of these within one file. The same file again, or an overlapping one, adds
+  only the lines not seen before; a known line whose other columns changed (Remarks, Forex,
+  Val/COArea Crcy…) is updated, and the change goes in the audit log. A line's record id is made from
+  this key, so two uploads at the same moment cannot store it twice.
+- **Checks**: a file without one of the key's columns is refused, naming them; a row without a WBS
+  Element, a readable amount (`1,000.00`, `-1,000.00`, `(1,000.00)` and `1,000.00-` are read) or a
+  readable posting date is left out and listed by line number. The last heading of SAP's export
+  ("Forex Confidential - For PETRONAS Staff Only…") is read as Forex.
+- **Log**: every upload (file, who, when, rows, added, skipped, updated, not readable, matched) is kept
+  in `cji3Imports` and listed under Uploads.
+- **Matching**: each new line's Reference is compared with the invoice numbers of its file's JDAs
+  (ignoring case and spaces; CO Object Name narrows a number that bills several projects). One
+  match that is To Be Paid or Sent to PD → the invoice becomes **Paid**, with the line recorded on it;
+  one already Paid → the line is added to it; one not yet approved → linked and flagged, not moved;
+  none or several → left for a person: **Match…** picks the invoice, **Undo match** takes it back
+  (an invoice made Paid by that line returns to To Be Paid), **Match again** tries the unmatched lines
+  against the invoices there are now.
+- **Which project a line is**: today, from the invoice it matches. Assigning lines by WBS Element
+  (a WBS → JDA/project list) is not built yet.
+- **Payment Tables per file**: the tabs **JDA 1 + JDA 2 (CJI3 file)** and **JDA 3 (CJI3 file)** show
+  one Payment Table over the file's JDAs, by the same rules; **Export Excel** writes it, then a sheet
+  per JDA and per project. The CJI3 payments page exports its lines per file.
+
 ### Where invoices and payments are saved
 The browser never writes them. The server does, after validating and working out each change:
 - **Firestore** (collections `financeEntries`, `financeSanctioned`, `financeAudit`, `financeMeta`) when
