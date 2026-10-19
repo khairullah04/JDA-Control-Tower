@@ -32,6 +32,8 @@ export async function importCji3(group, file, { dryRun = false } = {}) {
 }
 export const cji3Lines = (group = '') => call(`/api/finance/cji3/lines?group=${encodeURIComponent(group)}`);
 export const cji3Imports = () => call('/api/finance/cji3/imports');
+export const matchLine = (lineId, invoiceId = '') => post('/api/finance/cji3/match', { lineId, invoiceId });
+export const rematch = group => post('/api/finance/cji3/rematch', { group });
 export const workbook = sheets => post('/api/finance/workbook', { sheets }); // -> the .xlsx file, as a Blob
 
 // A chosen .xlsx or .csv file -> [{ name, rows }]. CSV is read here; Excel is read by the server.

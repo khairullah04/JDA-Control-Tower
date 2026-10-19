@@ -105,4 +105,17 @@ export function planCji3(stored, incoming) {
   }
   return { add, skip, update };
 }
+// Which invoices a line could be the payment of: those of the file's JDAs whose number is the line's
+// Reference (ignoring case and spaces), not rejected or deleted. When there are several (one invoice
+// number billing several projects), the line's CO Object Name narrows them to its project.
+export function candidatesFor(l, invoices) {
+  const ref = refKey(l.reference);
+  if (!ref) return [];
+  const same = invoices.filter(e => !e.deletedAt && e.status !== 'rejected' && inGroup(l.group, e.jdaName) && refKey(e.invoiceNo) === ref);
+  if (same.length < 2 || !l.coObject) return same;
+  const project = same.filter(e => jdaKey(e.projectCode) === jdaKey(l.coObject));
+  return project.length ? project : same;
+}
+export const MATCH_LABEL = { paid: 'Matched: invoice Paid', linked: 'Matched (invoice already Paid)', not_approved: 'Matched, but the invoice is not approved yet', none: 'No invoice with this Reference', ambiguous: 'Several invoices could match', manual: 'Matched by hand' };
+
 const show = (k, l) => /Minor$/.test(k) ? (l[k] == null ? '' : fmt(l[k])) : text(l[k]);

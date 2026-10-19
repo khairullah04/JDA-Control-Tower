@@ -35,4 +35,6 @@ export async function importCji3(group, file, { dryRun = false } = {}) {
 }
 export const cji3Lines = (group = '') => f.cji3Lines(group);
 export const cji3Imports = () => f.cji3Imports();
+export const matchLine = (lineId, invoiceId = '') => f.matchLine(lineId, invoiceId, who());
+export const rematch = async group => f.matchCji3((await f.cji3Lines(group)).filter(l => !l.invoiceId).map(l => l.id), who());
 export const workbook = null; // Excel files are written by the server

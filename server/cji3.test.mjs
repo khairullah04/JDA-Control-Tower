@@ -116,3 +116,44 @@ test('an upload over HTTP: the server reads the file itself', async () => {
     assert.equal((await (await fetch(`${at}/api/finance/cji3/imports`)).json())[0].fileName, 'jda12.csv');
   } finally { srv.close(); }
 });
+
+/* ---------- Matching lines to invoices ---------- */
+const inv = (no, over = {}) => ({ jdaId: 'j3', jdaName: 'JDA 3', projectId: 'pc', projectCode: 'CA', partner: 'IBM', invoiceNo: no, documentDate: '2026-09-01', currency: 'MYR', amount: '1000', ...over });
+
+test('matching: To Be Paid and Sent to PD become Paid; not approved is linked, not moved; none and several are left for a person', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-20T01:00:00Z' });
+  const approved = await f.save('entry', inv('INV-CA-101'), 'a'), direct = await f.save('entry', inv('INV-CA-102'), 'a'), fresh = await f.save('entry', inv('INV-CA-103'), 'a');
+  const twinA = await f.save('entry', inv('INV-CA-104'), 'a'), twinB = await f.save('entry', inv('INV-CA-104', { projectId: 'pd', projectCode: 'CB' }), 'a');
+  await f.save('entry', inv('INV-CA-101', { jdaId: 'j1', jdaName: 'JDA 1' }), 'a');             // same number in JDA 1: not this file's
+  await f.moveStage([approved.id], 'with_pm', {}, 'a'); await f.moveStage([approved.id], 'pending_lead', {}, 'pm'); await f.moveStage([approved.id], 'to_be_paid', {}, 'lead');
+  await f.moveStage([direct.id], 'sent_to_pd', {}, 'a');
+  const out = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(
+    line({ Reference: 'inv-ca-101' }), line({ Reference: 'INV-CA-102' }), line({ Reference: 'INV-CA-103' }),
+    line({ Reference: 'INV-CA-104', 'CO Object Name': '' }), line({ Reference: 'INV-CA-104', 'CO Object Name': 'CB', 'Value TranCurr': '500' }), line({ Reference: 'NOPE-1' })) }, 'acc2');
+  assert.deepEqual(out.match, { paid: 2, linked: 0, not_approved: 2, none: 1, ambiguous: 1 }); // not approved: INV-CA-103, and INV-CA-104 for CB
+  const { entries } = await f.data(), get = id => entries.find(e => e.id === id);
+  assert.deepEqual([get(approved.id).status, get(direct.id).status, get(fresh.id).status, get(twinB.id).status], ['paid', 'paid', 'pending', 'pending']);
+  const lines = await f.cji3Lines('jda3'), byRef = (r, co) => lines.find(l => l.reference === r && (co === undefined || l.coObject === co));
+  assert.deepEqual([byRef('INV-CA-104', '').matchState, byRef('INV-CA-104', '').candidateIds.sort(), byRef('INV-CA-104', 'CB').matchState], ['ambiguous', [twinA.id, twinB.id].sort(), 'not_approved']);
+  assert.deepEqual(get(approved.id).paidBy, [byRef('inv-ca-101').id]);
+  assert.ok((await f.stageHistory(approved.id)).some(h => h.to === 'paid' && h.byCji3));
+  // the same file again: nothing new, nothing matched twice
+  const again = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(line({ Reference: 'inv-ca-101' })) }, 'acc2');
+  assert.deepEqual([again.added, again.match], [0, { paid: 0, linked: 0, not_approved: 0, none: 0, ambiguous: 0 }]);
+});
+
+test('matching by hand, and undoing it sends the invoice back to its queue', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-20T01:00:00Z' });
+  const a = await f.save('entry', inv('INV-CA-201'), 'a');
+  await f.moveStage([a.id], 'sent_to_pd', {}, 'a');
+  await f.importCji3({ group: 'jda3', fileName: 'x.xlsx', sheets: file(line({ Reference: 'TT-0001' })) }, 'acc2'); // the bank's reference, not the invoice number
+  const [l] = await f.cji3Lines('jda3');
+  assert.equal(l.matchState, 'none');
+  await f.matchLine(l.id, a.id, 'acc2');
+  assert.deepEqual([(await f.data()).entries[0].status, (await f.cji3Lines())[0].matchState], ['paid', 'manual']);
+  await f.matchLine(l.id, '', 'acc2');
+  const back = (await f.data()).entries[0];
+  assert.deepEqual([back.stage, back.status, back.paidBy, (await f.cji3Lines())[0].invoiceId], ['sent_to_pd', 'approved', [], '']);
+  const other = await f.save('entry', inv('INV-1', { jdaId: 'j1', jdaName: 'JDA 1' }), 'a');
+  await assert.rejects(f.matchLine(l.id, other.id, 'acc2'), /not in JDA 3/);
+});

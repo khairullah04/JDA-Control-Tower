@@ -8,8 +8,8 @@
 //   - Each change answers with the records as they now are, so a page can update without reloading everything.
 import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
 import { toBps, fromBps, normRate } from './money.js';
-import { checkMove, applyMove, stageOf, STAGE_LABEL, MOVES } from './workflow.js';
-import { readCji3, planCji3, lineId, GROUPS } from './cji3.js';
+import { checkMove, applyMove, stageOf, routeOf, STAGE_LABEL, MOVES } from './workflow.js';
+import { readCji3, planCji3, lineId, GROUPS, candidatesFor } from './cji3.js';
 
 const COLL = { entry: 'financeEntries', sanctioned: 'financeSanctioned' };
 export class FinanceError extends Error {
@@ -263,13 +263,75 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
       await (dryRun ? step(store) : store.atomic(step));
     }
     const log = { at, by: actor, fileName: String(fileName).slice(0, 200), group, rows: read.lines.length + read.malformed.length, ...counts, malformed: read.malformed };
-    if (!dryRun) await store.atomic(async () => ({ writes: [{ coll: 'cji3Imports', id: importId, data: log }] }));
+    if (!dryRun) {
+      // the new and changed lines that are not yet matched are matched now
+      log.match = await matchCji3(changed.filter(l => !l.invoiceId).map(l => l.id), actor);
+      await store.atomic(async () => ({ writes: [{ coll: 'cji3Imports', id: importId, data: log }] }));
+    }
     return { importId: dryRun ? '' : importId, ...log, dryRun, lines: changed };
   }
+  // Match CJI3 lines to invoices (cji3.js candidatesFor). One clear match: the line names its invoice;
+  // an invoice that is To Be Paid or Sent to PD becomes Paid (its stage history says by which line);
+  // one already Paid gets the line added to its list; one not yet approved is linked but not moved, and
+  // flagged. No match or several: the line is left for a person to match. Returns how many of each.
+  async function matchCji3(lineIds, actor) {
+    const ids = new Set(lineIds), at = now();
+    const lines = (await store.list('cji3Lines')).filter(l => ids.has(l.id) && !l.invoiceId);
+    const invoices = await store.list(COLL.entry), counts = { paid: 0, linked: 0, not_approved: 0, none: 0, ambiguous: 0 };
+    const lineWrites = [], toPay = new Map(), addTo = new Map();
+    for (const l of lines) {
+      const found = candidatesFor(l, invoices);
+      let state = found.length === 1 ? 'one' : found.length ? 'ambiguous' : 'none', inv = found.length === 1 ? found[0] : null;
+      if (inv) {
+        const stage = stageOf(inv);
+        state = stage === 'paid' ? 'linked' : ['to_be_paid', 'sent_to_pd'].includes(stage) ? 'paid' : 'not_approved';
+        if (state === 'paid' && toPay.has(inv.id)) state = 'linked';                       // a second line of the same payment
+        if (state === 'paid') toPay.set(inv.id, [l.id]); else if (state === 'linked') addTo.set(inv.id, [...(addTo.get(inv.id) || []), l.id]);
+      }
+      counts[state]++;
+      lineWrites.push({ coll: 'cji3Lines', id: l.id, data: { ...l, invoiceId: inv?.id || '', matchState: state, candidateIds: state === 'ambiguous' ? found.map(e => e.id) : [], matchedBy: inv ? 'auto' : '', matchedAt: inv ? at : '', updatedAt: at } });
+    }
+    for (const [invoiceId, paidBy] of toPay) await moveStage([invoiceId], 'paid', { byCji3: true, paidBy, note: `CJI3 line ${paidBy.join(', ')}` }, actor);
+    for (const [invoiceId, more] of addTo) {
+      await store.atomic(async read => {
+        const inv = await read.get(COLL.entry, invoiceId);
+        if (!inv) return {};
+        // lines that pay the same invoice as one being made Paid in this round join its list too
+        const next = stamp({ ...inv, paidBy: [...new Set([...(inv.paidBy || []), ...more])] }, actor, at);
+        return { writes: [{ coll: COLL.entry, id: inv.id, data: next }] };
+      });
+    }
+    for (const part of slices(lineWrites, 200)) await store.atomic(async () => ({ writes: part }));
+    return counts;
+  }
+  // A person matches a line to an invoice (one of its candidates, or any invoice of its JDAs), or undoes a
+  // match. Undoing the line that made an invoice Paid sends the invoice back to the queue it came from.
+  async function matchLine(lineIdIn, invoiceId, actor) {
+    const l = await store.get('cji3Lines', lineIdIn), inv = invoiceId && await store.get(COLL.entry, invoiceId), at = now();
+    if (!l) throw new FinanceError('That CJI3 line no longer exists.', null, 404);
+    if (!invoiceId) {
+      if (!l.invoiceId) return { line: l };
+      const was = await store.get(COLL.entry, l.invoiceId), rest = (was?.paidBy || []).filter(id => id !== l.id);
+      if (was && stageOf(was) === 'paid' && !rest.length) await moveStage([was.id], routeOf(was) === 'direct' ? 'sent_to_pd' : 'to_be_paid', { byCji3: true, paidBy: [], note: `CJI3 line ${l.id} unmatched` }, actor);
+      else if (was) await store.atomic(async () => ({ writes: [{ coll: COLL.entry, id: was.id, data: stamp({ ...was, paidBy: rest }, actor, at) }] }));
+      const next = { ...l, invoiceId: '', matchState: 'none', candidateIds: [], matchedBy: '', matchedAt: '', updatedAt: at, updatedBy: actor };
+      await store.atomic(async () => ({ writes: [{ coll: 'cji3Lines', id: l.id, data: next }, line(actor, 'cji3', { ...next, ref: `CJI3 ${l.reference || l.wbs}` }, 'edit', { field: 'Matched invoice', old: was?.invoiceNo || l.invoiceId, new: '' })] }));
+      return { line: next };
+    }
+    if (!inv || inv.deletedAt) throw new FinanceError('That invoice no longer exists.', null, 404);
+    if (!candidatesFor({ ...l, reference: inv.invoiceNo, coObject: '' }, [inv]).length) throw new FinanceError(`Invoice ${inv.invoiceNo} is not in ${GROUPS[l.group].label}, or it is rejected.`);
+    const stage = stageOf(inv);
+    if (['to_be_paid', 'sent_to_pd'].includes(stage)) await moveStage([inv.id], 'paid', { byCji3: true, paidBy: [l.id], note: `CJI3 line ${l.id}, matched by hand` }, actor);
+    else await store.atomic(async read => { const cur = await read.get(COLL.entry, inv.id); return { writes: [{ coll: COLL.entry, id: inv.id, data: stamp({ ...cur, paidBy: [...new Set([...(cur.paidBy || []), l.id])] }, actor, at) }] }; });
+    const next = { ...l, invoiceId: inv.id, matchState: stage === 'paid' || ['to_be_paid', 'sent_to_pd'].includes(stage) ? 'manual' : 'not_approved', candidateIds: [], matchedBy: actor, matchedAt: at, updatedAt: at, updatedBy: actor };
+    await store.atomic(async () => ({ writes: [{ coll: 'cji3Lines', id: l.id, data: next }, line(actor, 'cji3', { ...next, ref: `CJI3 ${l.reference || l.wbs}` }, 'edit', { field: 'Matched invoice', old: '', new: inv.invoiceNo })] }));
+    return { line: next };
+  }
+
   const cji3Lines = async (group = '') => (await store.list('cji3Lines', group ? { where: ['group', group] } : {})).sort((a, b) => (b.postingDate || '').localeCompare(a.postingDate || '') || a.lineKey.localeCompare(b.lineKey));
   const cji3Imports = async () => (await store.list('cji3Imports', { latest: 200, by: 'at' })).sort((a, b) => b.at.localeCompare(a.at));
 
-  return { data, save, saveAll, moveStage, stageHistory, importCji3, cji3Lines, cji3Imports, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
+  return { data, save, saveAll, moveStage, stageHistory, importCji3, matchCji3, matchLine, cji3Lines, cji3Imports, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
 }
 
 // The simplest store: everything in memory. The tracker's demo mode and the tests use it; the

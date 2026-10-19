@@ -57,6 +57,10 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
     return finance.importCji3({ group: String(b.group || ''), fileName: String(b.fileName || ''), sheets }, actor(req), { dryRun: b.dryRun === true });
   }));
   router.get('/cji3/lines', run(req => finance.cji3Lines(String(req.query.group || ''))));
+  // Match a line to an invoice by hand (`invoiceId`), or undo its match (no `invoiceId`); match again
+  // every line of a file not yet matched (after new invoices have come in).
+  router.post('/cji3/match', run(req => finance.matchLine(String(req.body?.lineId || ''), String(req.body?.invoiceId || ''), actor(req))));
+  router.post('/cji3/rematch', run(async req => finance.matchCji3((await finance.cji3Lines(String(req.body?.group || ''))).filter(l => !l.invoiceId).map(l => l.id), actor(req))));
   router.get('/cji3/imports', run(() => finance.cji3Imports()));
   router.post('/sanctioned/batch', run(req => finance.saveAll('sanctioned', Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req))));
   router.post('/:kind', run(req => finance.save(kindOf(req), req.body || {}, actor(req))));

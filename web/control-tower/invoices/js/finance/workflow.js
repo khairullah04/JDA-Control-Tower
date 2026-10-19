@@ -61,7 +61,8 @@ export const movesFrom = (entry, { byCji3 = false } = {}) => {
   return MOVES.filter(m => m.from === stage && !!m.by === byCji3 && (!m.route || m.from !== 'paid' || m.route === (entry.route || routeOf(entry))));
 };
 // Which route an invoice took: as recorded, or (for one entered before the process) as its stage implies.
-export const routeOf = entry => entry?.route || (stageOf(entry) === 'sent_to_pd' ? 'direct' : ['with_pm', 'pending_lead', 'to_be_paid', 'rejected'].includes(stageOf(entry)) ? 'validation' : '');
+// (One paid before the process existed is taken as Route 2, so a wrong CJI3 match can be undone to To Be Paid.)
+export const routeOf = entry => entry?.route || (stageOf(entry) === 'sent_to_pd' ? 'direct' : ['with_pm', 'pending_lead', 'to_be_paid', 'rejected', 'paid'].includes(stageOf(entry)) ? 'validation' : '');
 
 // Whether `entry` may go to `to` this way, and if not, why. `byCji3` is a move made by matching a CJI3 line.
 export function checkMove(entry, to, { note = '', byCji3 = false } = {}) {
