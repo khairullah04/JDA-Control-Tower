@@ -35,6 +35,10 @@ export default function financeRoutes(finance, storage) {
     catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
   });
   router.post('/entries/status', run(req => finance.setStatus(ids(req), String(req.body?.status), actor(req))));
+  // The approval process: move invoices to a stage, with a note (a reason when rejecting). Paid is
+  // never set here: it comes from matching a CJI3 line.
+  router.post('/entries/stage', run(req => finance.moveStage(ids(req), String(req.body?.to || ''), { note: String(req.body?.note || '') }, actor(req))));
+  router.get('/stages', run(req => finance.stageHistory(String(req.query.entityId || ''))));
 
   router.post('/sanctioned/batch', run(req => finance.saveAll('sanctioned', Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req))));
   router.post('/:kind', run(req => finance.save(kindOf(req), req.body || {}, actor(req))));

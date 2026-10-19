@@ -71,3 +71,35 @@ test('invoices from before the process get their stage from their status, and ke
   assert.equal(routeOf({ status: 'approved' }), 'validation');
   assert.ok(MOVES.every(m => STAGES.includes(m.from) && STAGES.includes(m.to)));
 });
+
+/* ---------- Over the register: each move saved with its history and audit line ---------- */
+import { createFinance, memoryStore } from '../web/control-tower/invoices/js/finance/service.js';
+const entryInput = (over = {}) => ({ jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA', partner: 'IBM', invoiceNo: 'IN-1', documentDate: '2026-10-01', currency: 'MYR', amount: '1000', ...over });
+
+test('the register: moves are saved with who, when, from, to and note; refused ones are reported and left alone', async () => {
+  const f = createFinance(memoryStore(), { now: () => at });
+  const a = await f.save('entry', entryInput(), 'aina'), b = await f.save('entry', entryInput({ invoiceNo: 'IN-2' }), 'aina');
+  const first = await f.moveStage([a.id, b.id], 'with_pm', {}, 'aina');
+  assert.deepEqual([first.changed, first.refused], [2, []]);
+  const wrong = await f.moveStage([a.id, 'nope'], 'to_be_paid', {}, 'badrul');                          // skipping the Lead; an id that is not there
+  assert.deepEqual([wrong.changed, wrong.refused.map(r => r.id)], [0, [a.id, 'nope']]);
+  await f.moveStage([a.id], 'pending_lead', { note: 'Docs checked' }, 'pm1');
+  const noReason = await f.moveStage([a.id], 'rejected', {}, 'lead1');
+  assert.match(noReason.refused[0].why, /Say why/);
+  await f.moveStage([a.id], 'rejected', { note: 'Wrong project' }, 'lead1');
+  const { entries } = await f.data(), rec = entries.find(e => e.id === a.id);
+  assert.deepEqual([rec.stage, rec.status, rec.archivedAt, rec.route], ['rejected', 'rejected', at, 'validation']);
+  const history = await f.stageHistory(a.id);
+  assert.deepEqual(history.map(h => [h.from, h.to, h.by, h.note]), [['received', 'with_pm', 'aina', ''], ['with_pm', 'pending_lead', 'pm1', 'Docs checked'], ['pending_lead', 'rejected', 'lead1', 'Wrong project']]);
+  const log = await f.audit({ entityId: a.id });
+  assert.ok(log.some(l => l.action === 'stage' && l.new === 'Rejected (Wrong project)' && l.by === 'lead1'));
+});
+
+test('the register: the old status buttons still work, and the stage is then read from the status', async () => {
+  const f = createFinance(memoryStore(), { now: () => at });
+  const a = await f.save('entry', entryInput(), 'aina');
+  await f.moveStage([a.id], 'sent_to_pd', {}, 'aina');
+  await f.setStatus([a.id], 'pending', 'aina');
+  const rec = (await f.data()).entries[0];
+  assert.deepEqual([rec.status, 'stage' in rec, stageOf(rec)], ['pending', false, 'received']);
+});

@@ -16,6 +16,8 @@ export const saveSanctionedOver = inputs => f.saveAll('sanctioned', inputs, who(
 export const remove = (kind, ids) => f.remove(kind, ids, who());
 export const restore = (kind, ids) => f.restore(kind, ids, who());
 export const setStatus = (ids, status) => f.setStatus(ids, status, who());
+export const moveStage = (ids, to, note = '') => f.moveStage(ids, to, { note }, who());
+export const stageHistory = entityId => f.stageHistory(entityId);
 export const recalculate = (kind, ids, options) => f.recalculate(kind, ids, options, who());
 export const saveSettings = input => f.saveSettings(input, who());
 export const audit = query => f.audit(query);

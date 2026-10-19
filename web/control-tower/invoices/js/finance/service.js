@@ -8,6 +8,7 @@
 //   - Each change answers with the records as they now are, so a page can update without reloading everything.
 import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
 import { toBps, fromBps, normRate } from './money.js';
+import { checkMove, applyMove, stageOf, STAGE_LABEL } from './workflow.js';
 
 const COLL = { entry: 'financeEntries', sanctioned: 'financeSanctioned' };
 export class FinanceError extends Error {
@@ -104,13 +105,40 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     }, !deleted && kind === 'entry'); // restoring an invoice has to see that its number has not been used again
   }
 
+  // The approval process (workflow.js): move invoices to a stage. Each one is checked against the
+  // process on its own; one that may not move is reported and left as it is, the others move. Each
+  // move writes the invoice (its stage and the status that goes with it), a line in its stage
+  // history (who, when, from, to, note) and a line in the audit log. `byCji3` is a move made by a
+  // CJI3 line being matched (Paid) or unmatched; `paidBy` names those lines.
+  async function moveStage(ids, to, { note = '', byCji3 = false, paidBy } = {}, actor) {
+    const at = now(), refused = [], text = String(note || '').trim().slice(0, 1000);
+    const out = await each('entry', ids, 100, r => {
+      const why = checkMove(r, to, { note: text, byCji3 });
+      if (why) { refused.push({ id: r.id, ref: refOf('entry', r), why }); return null; }
+      const from = stageOf(r), next = stamp(applyMove(r, to, { at, by: actor }), actor, at);
+      if (paidBy !== undefined) next.paidBy = paidBy;
+      return { next, lines: [
+        { coll: 'financeStages', id: newId(), data: { at, by: actor || 'unknown', entityId: r.id, jdaId: r.jdaId || '', projectId: r.projectId || '', ref: refOf('entry', r), from, to, note: text, byCji3 } },
+        line(actor, 'entry', next, 'stage', { field: 'Stage', old: STAGE_LABEL[from], new: STAGE_LABEL[to] + (text ? ` (${text})` : '') })
+      ] };
+    });
+    const found = new Set(out.records.map(r => r.id).concat(refused.map(r => r.id)));
+    for (const id of new Set(ids)) if (!found.has(id)) refused.push({ id, ref: id, why: 'That invoice no longer exists.' });
+    return { ...out, refused };
+  }
+  // One invoice's moves through the process, oldest first.
+  async function stageHistory(entityId) {
+    return (await store.list('financeStages', { where: ['entityId', entityId] })).sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id));
+  }
+
   async function setStatus(ids, status, actor) {
     if (!STATUSES.includes(status)) throw new FinanceError('Unknown status.');
     const at = now();
     return each('entry', ids, 100, r => {
       if (r.deletedAt || r.status === status) return null;
       if (r.missing?.length && ['approved', 'paid'].includes(status)) throw new FinanceError(`${refOf('entry', r)} is incomplete (${r.missing.join('; ')}). Complete it before marking it ${STATUS_LABEL[status]}.`);
-      const next = stamp({ ...r, status }, actor, at);
+      const { stage, ...rest } = r; // set by hand: its stage is read from the status again (workflow.js stageOf)
+      const next = stamp({ ...rest, status, archivedAt: status === 'rejected' ? at : null }, actor, at);
       return { next, lines: [line(actor, 'entry', next, 'status', { field: 'Status', old: STATUS_LABEL[r.status], new: STATUS_LABEL[status] })] };
     });
   }
@@ -202,7 +230,7 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     return { imported: results.filter(r => r.added).length, results };
   }
 
-  return { data, save, saveAll, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
+  return { data, save, saveAll, moveStage, stageHistory, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
 }
 
 // The simplest store: everything in memory. The tracker's demo mode and the tests use it; the

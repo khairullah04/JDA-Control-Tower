@@ -12,6 +12,8 @@ export const saveSanctionedOver = inputs => post('/api/finance/sanctioned/batch'
 export const remove = (kind, ids) => post(`${path(kind)}/delete`, { ids });
 export const restore = (kind, ids) => post(`${path(kind)}/restore`, { ids });
 export const setStatus = (ids, status) => post('/api/finance/entries/status', { ids, status });
+export const moveStage = (ids, to, note = '') => post('/api/finance/entries/stage', { ids, to, note });
+export const stageHistory = entityId => call(`/api/finance/stages?entityId=${encodeURIComponent(entityId)}`);
 export const recalculate = (kind, ids, options) => post(`${path(kind)}/recalculate`, { ids, ...options });
 export const saveSettings = input => call('/api/finance/settings', 'PUT', input);
 // The newest lines of one record, one project or one JDA; with none of them, of everything.

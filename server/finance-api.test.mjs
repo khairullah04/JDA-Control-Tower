@@ -74,3 +74,14 @@ test('Excel: the register goes out as a workbook and reads back in', async () =>
   assert.deepEqual(preview.body.results.map(r => [r.ok, r.record.invoiceNo, r.record.currency, r.record.netMinor, r.record.grossMyrMinor, r.record.rate, r.record.status]), [[true, 'IN-1', 'USD', 10000, 50760, '4.7', 'paid']]);
   assert.equal((await call('/api/finance/read', { method: 'POST', body: { name: 'old.xls', fileBase64: '' } })).status, 400);
 });
+
+test('the approval process over HTTP: moves, refusals, and Paid is not a button', async () => {
+  const made = await call('/api/finance/entries', { method: 'POST', body: { ...invoice, invoiceNo: 'IN-STAGE' } });
+  const id = made.body.id;
+  const ok = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'sent_to_pd' }, as: 'acc1' });
+  assert.deepEqual([ok.status, ok.body.changed, ok.body.records[0].status], [200, 1, 'approved']);
+  const paid = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'paid' } });
+  assert.match(paid.body.refused[0].why, /cannot be moved to Paid by hand/);
+  const history = await call(`/api/finance/stages?entityId=${id}`);
+  assert.deepEqual(history.body.map(h => [h.from, h.to, h.by]), [['received', 'sent_to_pd', 'acc1']]);
+});

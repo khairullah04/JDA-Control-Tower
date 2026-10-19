@@ -73,8 +73,8 @@ logged (who, when, note).
 ## Approval workflow
 
 - [x] Stage graph and stage → status mapping as pure functions (`finance/workflow.js`), shared by browser and server.
-- [ ] Server: `POST /api/finance/entries/stage` — move invoices along the graph (refuses moves not on it), with note; writes `financeStages` lines; archive on Reject, restore from archive.
-- [ ] Existing invoices get a stage from their status on first read (pending → received, approved → to_be_paid, paid → paid, rejected → rejected); nothing rewritten until moved.
+- [x] Server: `POST /api/finance/entries/stage` — move invoices along the graph (refuses moves not on it), with note; writes `financeStages` lines; archive on Reject, restore from archive.
+- [x] Existing invoices get a stage from their status on first read (pending → received, approved → to_be_paid, paid → paid, rejected → rejected); nothing rewritten until moved.
 - [ ] Intake queue (Accountant 1): Received invoices, choose Route 1 or Route 2.
 - [ ] PM queue: Route 2 invoices to validate (supporting documents: links on the invoice).
 - [ ] Project Lead queue: Pending Lead approval — Approve or Reject (reason required).

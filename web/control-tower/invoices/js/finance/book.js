@@ -21,6 +21,7 @@ export function withBook(api) {
     remove: (kind, ids) => keeping(kind, api.remove(kind, ids), out => out.records),
     restore: (kind, ids) => keeping(kind, api.restore(kind, ids), out => out.records),
     setStatus: (ids, status) => keeping('entry', api.setStatus(ids, status), out => out.records),
+    moveStage: (ids, to, note) => keeping('entry', api.moveStage(ids, to, note), out => out.records),
     recalculate: (kind, ids, options) => keeping(kind, api.recalculate(kind, ids, options), out => out.records),
     saveSettings: input => api.saveSettings(input).then(settings => { if (book) book.settings = settings; return settings; }, stale),
     importRecords: (kind, inputs, options = {}) => keeping(kind, api.importRecords(kind, inputs, options), out => options.dryRun ? [] : out.results.filter(r => r.added).map(r => r.record))
