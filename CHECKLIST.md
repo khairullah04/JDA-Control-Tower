@@ -19,7 +19,7 @@ payment evidence is the CJI3 export.
 
 ## To confirm before building the part concerned
 
-- [ ] **C1 — Dedup key for CJI3 lines.** The export has no SAP document number or line item (22 columns,
+- [x] **C1 — Dedup key for CJI3 lines.** *Confirmed 2026-10-19; built in `finance/cji3.js`.* The export has no SAP document number or line item (22 columns,
   see `cji3 parame.xlsx`). Proposed key, from the columns it does have:
   `WBS Element + Reference + Posting Date + Document Date + Document Type + Cost Element + Transaction Currency + Value TranCurr`.
   Two genuinely identical lines in one file are kept apart by their order among identical lines
@@ -86,12 +86,12 @@ logged (who, when, note).
 ## CJI3 import
 
 - [ ] Read the two files: the user says which one (JDA 3 / JDA 1 + 2); a line whose WBS points to the other file's JDA is flagged.
-- [ ] Column reading copes with the real headers, including `Forex Confidential - For PETRONAS Staff Only…` and `Val/COArea Crcy` with or without its suffix.
-- [ ] Dedup key and occurrence (C1); add, skip, update.
+- [x] Column reading copes with the real headers, including `Forex Confidential - For PETRONAS Staff Only…` and `Val/COArea Crcy` with or without its suffix.
+- [x] Dedup key and occurrence (C1); add, skip, update.
 - [ ] WBS mapping (C3): Unmapped lines listed and assignable; remembered.
-- [ ] Malformed rows (no amount, bad date, no WBS) reported by line number, not imported; missing required columns refuse the file with the list of what is missing.
-- [ ] Import log (`cji3Imports`) with added / skipped / updated / unmapped / malformed, and a page listing past imports.
-- [ ] Preview before saving (dry run), as the current import does.
+- [x] Malformed rows (no amount, bad date, no WBS) reported by line number, not imported; missing required columns refuse the file with the list of what is missing.
+- [ ] Import log (`cji3Imports`) with added / skipped / updated / unmapped / malformed, and a page listing past imports. *Log stored (`/api/finance/cji3/imports`); the page comes with the upload page.*
+- [ ] Preview before saving (dry run), as the current import does. *Server side done (`dryRun`); the page comes with the upload page.*
 
 ## Payment tables
 
@@ -106,11 +106,11 @@ logged (who, when, note).
 
 ## Testing
 
-- [ ] CJI3 importer: duplicate re-upload adds nothing.
-- [ ] CJI3 importer: overlapping files add only the new lines; changed non-key fields update.
-- [ ] CJI3 importer: identical lines within one file are kept as separate lines.
-- [ ] CJI3 importer: malformed rows reported and skipped.
-- [ ] CJI3 importer: missing columns refuse the file.
+- [x] CJI3 importer: duplicate re-upload adds nothing.
+- [x] CJI3 importer: overlapping files add only the new lines; changed non-key fields update.
+- [x] CJI3 importer: identical lines within one file are kept as separate lines.
+- [x] CJI3 importer: malformed rows reported and skipped.
+- [x] CJI3 importer: missing columns refuse the file.
 - [ ] CJI3 importer: unmapped WBS kept as Unmapped; mapping applied on the next import.
 - [ ] Matching: one match → Paid; none / several → manual list.
 - [x] State machine: every allowed move; every refused move; Reject archives and Restore returns; stage → status keeps the Payment Table figures as before. (`server/workflow.test.mjs`)

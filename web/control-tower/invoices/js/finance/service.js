@@ -9,6 +9,7 @@
 import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
 import { toBps, fromBps, normRate } from './money.js';
 import { checkMove, applyMove, stageOf, STAGE_LABEL, MOVES } from './workflow.js';
+import { readCji3, planCji3, lineId, GROUPS } from './cji3.js';
 
 const COLL = { entry: 'financeEntries', sanctioned: 'financeSanctioned' };
 export class FinanceError extends Error {
@@ -231,7 +232,44 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     return { imported: results.filter(r => r.added).length, results };
   }
 
-  return { data, save, saveAll, moveStage, stageHistory, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
+  /* ---------- CJI3 lines (cji3.js): the payment evidence, uploaded again and again ---------- */
+  // One upload of one of the two files (`group`: 'jda3' or 'jda12'). Lines are added, skipped or
+  // updated by their key; a line's record id is made from its key, so it can never be stored twice.
+  // A file missing a required column is refused whole; rows that cannot be read are reported and left
+  // out. Every upload is logged (cji3Imports), and every update to a stored line is in the audit log.
+  async function importCji3({ group, fileName = '', sheets }, actor, { dryRun = false } = {}) {
+    if (!GROUPS[group]) throw new FinanceError('Which file is this: JDA 3, or JDA 1 + JDA 2?');
+    const read = readCji3(sheets);
+    if (read.missing.length) throw new FinanceError(`This is not a CJI3 file the tracker can read: it has no ${read.missing.join(', ')} column${read.missing.length > 1 ? 's' : ''}.`, read.missing);
+    if (!read.lines.length && !read.malformed.length) throw new FinanceError('The file has no lines under its headings.');
+    const at = now(), importId = newId(), counts = { added: 0, skipped: 0, updated: 0 }, changed = [];
+    for (const part of slices(read.lines, 150)) {
+      const step = async r => {
+        const stored = (await Promise.all(part.map(l => r.get('cji3Lines', lineId(l.lineKey))))).filter(Boolean);
+        const plan = planCji3(stored, part), writes = [];
+        counts.added += plan.add.length; counts.skipped += plan.skip.length; counts.updated += plan.update.length;
+        for (const l of plan.add) {
+          const rec = { ...l, id: lineId(l.lineKey), group, fileName, importId, createdAt: at, createdBy: actor, updatedAt: at, updatedBy: actor, invoiceId: '', matchedBy: '' };
+          writes.push({ coll: 'cji3Lines', id: rec.id, data: rec });
+          changed.push(rec);
+        }
+        for (const u of plan.update) {
+          const was = stored.find(s => s.id === u.id), rec = { ...was, ...u.line, id: was.id, group, invoiceId: was.invoiceId, matchedBy: was.matchedBy, createdAt: was.createdAt, createdBy: was.createdBy, updatedAt: at, updatedBy: actor, lastImportId: importId };
+          writes.push({ coll: 'cji3Lines', id: rec.id, data: rec }, ...u.changes.map(c => line(actor, 'cji3', { ...rec, ref: `CJI3 ${rec.reference || rec.wbs}` }, 'import', c)));
+          changed.push(rec);
+        }
+        return { writes: dryRun ? [] : writes };
+      };
+      await (dryRun ? step(store) : store.atomic(step));
+    }
+    const log = { at, by: actor, fileName: String(fileName).slice(0, 200), group, rows: read.lines.length + read.malformed.length, ...counts, malformed: read.malformed };
+    if (!dryRun) await store.atomic(async () => ({ writes: [{ coll: 'cji3Imports', id: importId, data: log }] }));
+    return { importId: dryRun ? '' : importId, ...log, dryRun, lines: changed };
+  }
+  const cji3Lines = async (group = '') => (await store.list('cji3Lines', group ? { where: ['group', group] } : {})).sort((a, b) => (b.postingDate || '').localeCompare(a.postingDate || '') || a.lineKey.localeCompare(b.lineKey));
+  const cji3Imports = async () => (await store.list('cji3Imports', { latest: 200, by: 'at' })).sort((a, b) => b.at.localeCompare(a.at));
+
+  return { data, save, saveAll, moveStage, stageHistory, importCji3, cji3Lines, cji3Imports, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
 }
 
 // The simplest store: everything in memory. The tracker's demo mode and the tests use it; the

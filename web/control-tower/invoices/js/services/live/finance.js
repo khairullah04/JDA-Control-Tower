@@ -20,6 +20,18 @@ export const saveSettings = input => call('/api/finance/settings', 'PUT', input)
 export const audit = (about = {}) => call(`/api/finance/audit?${new URLSearchParams(Object.entries(about).filter(([, v]) => v))}`);
 export const forex = (currency, date = '') => call(`/api/finance/forex?currency=${encodeURIComponent(currency)}&date=${encodeURIComponent(date)}`);
 export const importRecords = (kind, inputs, options = {}) => post(`${path(kind)}/import`, { inputs, ...options });
+// CJI3 lines: one of the two files uploaded (`group`: 'jda3' or 'jda12'), read by the server; `dryRun` previews.
+export async function importCji3(group, file, { dryRun = false } = {}) {
+  const fileBase64 = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = () => reject(new Error('That file could not be read.'));
+    reader.readAsDataURL(file);
+  });
+  return post('/api/finance/cji3/import', { group, fileName: file.name, fileBase64, dryRun });
+}
+export const cji3Lines = (group = '') => call(`/api/finance/cji3/lines?group=${encodeURIComponent(group)}`);
+export const cji3Imports = () => call('/api/finance/cji3/imports');
 export const workbook = sheets => post('/api/finance/workbook', { sheets }); // -> the .xlsx file, as a Blob
 
 // A chosen .xlsx or .csv file -> [{ name, rows }]. CSV is read here; Excel is read by the server.

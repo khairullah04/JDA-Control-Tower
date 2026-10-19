@@ -30,4 +30,9 @@ export async function readFile(file) {
   if (!/\.csv$/i.test(file.name)) throw new Error('Demo mode reads CSV files only. Excel files are read by the server.');
   return [{ name: file.name, rows: parseCsv(await file.text()) }];
 }
+export async function importCji3(group, file, { dryRun = false } = {}) {
+  return f.importCji3({ group, fileName: file.name, sheets: await readFile(file) }, who(), { dryRun });
+}
+export const cji3Lines = (group = '') => f.cji3Lines(group);
+export const cji3Imports = () => f.cji3Imports();
 export const workbook = null; // Excel files are written by the server

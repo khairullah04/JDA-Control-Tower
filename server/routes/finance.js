@@ -50,6 +50,14 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   router.post('/entries/stage', run(req => finance.moveStage(ids(req), String(req.body?.to || ''), { note: String(req.body?.note || ''), may: may(req) }, actor(req))));
   router.get('/stages', run(req => finance.stageHistory(String(req.query.entityId || ''))));
 
+  // CJI3 lines: upload one of the two files (the server reads the .xlsx or .csv), with a preview first
+  // (`dryRun`); the lines stored; the log of past uploads.
+  router.post('/cji3/import', run(async req => {
+    const b = req.body || {}, sheets = b.fileBase64 ? await readSheets(String(b.fileName), Buffer.from(String(b.fileBase64), 'base64')) : b.sheets;
+    return finance.importCji3({ group: String(b.group || ''), fileName: String(b.fileName || ''), sheets }, actor(req), { dryRun: b.dryRun === true });
+  }));
+  router.get('/cji3/lines', run(req => finance.cji3Lines(String(req.query.group || ''))));
+  router.get('/cji3/imports', run(() => finance.cji3Imports()));
   router.post('/sanctioned/batch', run(req => finance.saveAll('sanctioned', Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req))));
   router.post('/:kind', run(req => finance.save(kindOf(req), req.body || {}, actor(req))));
   router.post('/:kind/delete', run(req => finance.remove(kindOf(req), ids(req), actor(req))));
