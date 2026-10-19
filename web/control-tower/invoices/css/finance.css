@@ -171,3 +171,10 @@ tr.bad td{color:var(--bad)}
 .ap-table .danger{color:var(--bad);border-color:var(--bad-tint)}
 .ap-confirm textarea{width:100%;font:inherit}
 #ap-msg:empty{display:none}
+
+/* CJI3 payments (ui/cji3-lines.js) */
+.cj-upload .row{align-items:center;gap:10px;flex-wrap:wrap}
+.cj-preview{margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.cj-table tr.cj-open td{background:rgba(163,58,48,.04)}
+#cj-msg:empty{display:none}
+p.ok{color:var(--ok);font-weight:600}

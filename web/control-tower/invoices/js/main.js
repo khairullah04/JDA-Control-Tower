@@ -4,6 +4,7 @@ import { renderJda } from './ui/jda.js';
 import { renderCji3 } from './ui/cji3.js';
 import { renderPaymentsPage } from './ui/payments.js';
 import { renderApprovals } from './ui/approvals.js';
+import { renderCji3Lines } from './ui/cji3-lines.js';
 import { initCopilot, refreshCopilot } from './ui/copilot.js';
 import { $ } from './ui/dom.js';
 import { show } from './ui/render.js';
@@ -30,6 +31,7 @@ async function route() {
     if (ct) $('#jdaNavSlot').replaceChildren(jdaNav(ct, 'invoices', { tabs: true }));
     return;
   }
+  if (kind === 'cji3-lines') { $('#page').classList.add('wide'); await show(() => renderCji3Lines(id || 'jda12')); refreshCopilot(); return; }
   if (kind === 'approvals') { $('#page').classList.add('wide'); await show(() => renderApprovals(id || 'intake', sub || '')); refreshCopilot(); return; }
   if (!['project', 'jda', 'cji3', 'payments'].includes(kind) || ((kind === 'project' || kind === 'jda') && !id)) return location.replace('/control-tower/');
   $('#page').classList.toggle('wide', kind === 'cji3' || kind === 'payments'); // the two wide tables get the whole window

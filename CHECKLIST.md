@@ -26,9 +26,9 @@ payment evidence is the CJI3 export.
   (1st, 2nd…): re-importing a file that holds the same line twice adds nothing; a later file holding it
   three times adds one. A line whose key matches but whose Remarks, Forex, Val/COArea Crcy, Value in
   Obj. Crcy or Document Header Text differ is **updated** (and logged), not duplicated.
-- [ ] **C2 — Route 1 after "Sent to PD".** Proposed: it joins Accountant 2's **To Be Paid** queue (it is
+- [x] **C2 — Route 1 after "Sent to PD".** *Confirmed 2026-10-19; built (`QUEUES.pay` in `finance/workflow.js`).* Proposed: it joins Accountant 2's **To Be Paid** queue (it is
   waiting for payment like an approved invoice) and becomes Paid when CJI3 shows it.
-- [ ] **C3 — WBS → JDA/project list.** Proposed: a **WBS mapping** table in the app (Settings). A CJI3 line
+- [ ] **C3 — WBS → JDA/project list.** *The owner is thinking about it (2026-10-19); nothing built for it yet.* Proposed: a **WBS mapping** table in the app (Settings). A CJI3 line
   whose WBS is not in it is kept as **Unmapped** and listed for someone to assign once; the assignment is
   remembered for every later file. An initial list from the owner, if one exists, can be imported.
 
@@ -85,18 +85,18 @@ logged (who, when, note).
 
 ## CJI3 import
 
-- [ ] Read the two files: the user says which one (JDA 3 / JDA 1 + 2); a line whose WBS points to the other file's JDA is flagged.
+- [x] Read the two files: the user says which one (JDA 1 + 2 / JDA 3), by the tab they upload in. *(Flagging a line whose WBS belongs to the other file waits for C3, the WBS list.)*
 - [x] Column reading copes with the real headers, including `Forex Confidential - For PETRONAS Staff Only…` and `Val/COArea Crcy` with or without its suffix.
 - [x] Dedup key and occurrence (C1); add, skip, update.
 - [ ] WBS mapping (C3): Unmapped lines listed and assignable; remembered.
 - [x] Malformed rows (no amount, bad date, no WBS) reported by line number, not imported; missing required columns refuse the file with the list of what is missing.
-- [ ] Import log (`cji3Imports`) with added / skipped / updated / unmapped / malformed, and a page listing past imports. *Log stored (`/api/finance/cji3/imports`); the page comes with the upload page.*
-- [ ] Preview before saving (dry run), as the current import does. *Server side done (`dryRun`); the page comes with the upload page.*
+- [x] Import log (`cji3Imports`) with added / skipped / updated / unmapped / malformed, and a page listing past imports. *CJI3 payments page (`#/cji3-lines`), Uploads table.*
+- [x] Preview before saving (dry run), as the current import does. *Preview, then Import.*
 
 ## Payment tables
 
-- [x] Match CJI3 lines to invoices: same JDA and project, and Reference = invoice number (ignoring case and spaces); one clear match marks the invoice Paid (`stage: paid`, logged). Several or none: listed for a person to match by hand. *Server side done (`matchCji3`, `matchLine`, `/api/finance/cji3/match`, `/rematch`); a line matching an invoice not yet approved is linked and flagged, not moved. The page comes with the upload page.*
-- [ ] "Paid in CJI3, no invoice" list (lines that match nothing).
+- [x] Match CJI3 lines to invoices: same JDA and project, and Reference = invoice number (ignoring case and spaces); one clear match marks the invoice Paid (`stage: paid`, logged). Several or none: listed for a person to match by hand. *Server side done (`matchCji3`, `matchLine`, `/api/finance/cji3/match`, `/rematch`); a line matching an invoice not yet approved is linked and flagged, not moved. Lines page: Match… / Undo match / Match again.*
+- [x] "Paid in CJI3, no invoice" list (lines that match nothing). *Filter "Not matched" on the CJI3 payments page.*
 - [ ] Two views and two .xlsx exports: **JDA 1 + JDA 2** together, and **JDA 3**.
 - [ ] Payment tables per JDA and per project from these, with the existing parameters (tax, forex, status, sanctioned checks) unchanged.
 

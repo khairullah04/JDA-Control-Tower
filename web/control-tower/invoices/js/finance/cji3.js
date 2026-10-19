@@ -28,7 +28,7 @@ export const UPDATABLE = COLUMNS.map(([k]) => k).filter(k => !REQUIRED.includes(
 export const LABEL = Object.fromEntries([...COLUMNS.map(([k, label]) => [k, label]), ['valueTranMinor', 'Value TranCurr'], ['valueObjMinor', 'Value in Obj. Crcy'], ['valueCoAreaMinor', 'Val/COArea Crcy']]);
 
 // The two files, and the JDAs each one is about (by name, as the Invoice Tracker names its JDAs).
-export const GROUPS = { jda3: { label: 'JDA 3', jdas: ['jda3'] }, jda12: { label: 'JDA 1 + JDA 2', jdas: ['jda1', 'jda2'] } };
+export const GROUPS = { jda12: { label: 'JDA 1 + JDA 2', jdas: ['jda1', 'jda2'] }, jda3: { label: 'JDA 3', jdas: ['jda3'] } };
 export const jdaKey = name => String(name || '').toLowerCase().replace(/\s+/g, '');
 export const inGroup = (group, jdaName) => !!GROUPS[group]?.jdas.includes(jdaKey(jdaName));
 
