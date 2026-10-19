@@ -75,12 +75,12 @@ logged (who, when, note).
 - [x] Stage graph and stage → status mapping as pure functions (`finance/workflow.js`), shared by browser and server.
 - [x] Server: `POST /api/finance/entries/stage` — move invoices along the graph (refuses moves not on it), with note; writes `financeStages` lines; archive on Reject, restore from archive.
 - [x] Existing invoices get a stage from their status on first read (pending → received, approved → to_be_paid, paid → paid, rejected → rejected); nothing rewritten until moved.
-- [ ] Intake queue (Accountant 1): Received invoices, choose Route 1 or Route 2.
-- [ ] PM queue: Route 2 invoices to validate (supporting documents: links on the invoice).
-- [ ] Project Lead queue: Pending Lead approval — Approve or Reject (reason required).
-- [ ] To Be Paid queue (Accountant 2): Approved and Sent to PD invoices, oldest due date first.
-- [ ] Archive view: rejected invoices, with Restore.
-- [ ] Every move: a confirmation step with an optional note (a reason when rejecting); the history shown on the invoice.
+- [x] Intake queue (Accountant 1): Received invoices, choose Route 1 or Route 2.
+- [x] PM queue: Route 2 invoices to validate (supporting documents: the invoice's file link for now; a list of extra document links is not built yet).
+- [x] Project Lead queue: Pending Lead approval — Approve or Reject (reason required).
+- [x] To Be Paid queue (Accountant 2): Approved and Sent to PD invoices, oldest due date first.
+- [x] Archive view: rejected invoices, with Restore.
+- [x] Every move: a confirmation step with an optional note (a reason when rejecting); the history shown on the invoice.
 - [ ] Roles hook for later: `ROLE_*` lists in `server/.env`; empty means anyone signed in (today's case).
 
 ## CJI3 import

@@ -34,6 +34,7 @@ export function mountCtSidebar({ wrap, bar, current = '' }) {
       <p class="side-label">Public site</p>
       ${link('/control-tower/site', 'site', 'Edit public site', '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}
       <p class="side-label">Invoice Tracker</p>
+      ${link('/control-tower/invoices/#/approvals', 'approvals', 'Approvals', '<path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>')}
       ${link('/control-tower/invoices/#/cji3', 'cji3', 'CJI3 register', ICON.cji3)}
       ${link('/control-tower/invoices/#/payments', 'payments', 'Payment tables', ICON.pay)}
     </nav>
