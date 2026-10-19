@@ -178,3 +178,4 @@ tr.bad td{color:var(--bad)}
 .cj-table tr.cj-open td{background:rgba(163,58,48,.04)}
 #cj-msg:empty{display:none}
 p.ok{color:var(--ok);font-weight:600}
+.scope-sep{width:1px;align-self:stretch;margin:0 4px;background:var(--border)}

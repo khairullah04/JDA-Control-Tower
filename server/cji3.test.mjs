@@ -157,3 +157,17 @@ test('matching by hand, and undoing it sends the invoice back to its queue', asy
   const other = await f.save('entry', inv('INV-1', { jdaId: 'j1', jdaName: 'JDA 1' }), 'a');
   await assert.rejects(f.matchLine(l.id, other.id, 'acc2'), /not in JDA 3/);
 });
+
+test("a CJI3 file's Payment Table (JDA 1 + JDA 2) is exactly JDA 1's rows and JDA 2's rows, by the same rules", async () => {
+  const { paymentTable, tableTotals } = await import('../web/control-tower/invoices/js/finance/core.js');
+  const { inGroup } = await import('../web/control-tower/invoices/js/finance/cji3.js');
+  const rec = (jda, project, month, gross, status) => ({ jdaId: jda, jdaName: jda === 'j1' ? 'JDA 1' : jda === 'j2' ? 'JDA 2' : 'JDA 3', projectId: project, projectCode: project, partner: 'IBM', month, netMyrMinor: gross, grossMyrMinor: gross, status });
+  const sanctioned = [rec('j1', 'AA', '2026-09', 100000), rec('j2', 'BA', '2026-09', 50000), rec('j3', 'CA', '2026-09', 70000)];
+  const entries = [rec('j1', 'AA', '2026-09', 108000, 'paid'), rec('j2', 'BA', '2026-09', 20000, 'approved'), rec('j3', 'CA', '2026-09', 70000, 'paid')];
+  const group = r => inGroup('jda12', r.jdaName), only = id => r => r.jdaId === id;
+  const combined = paymentTable(sanctioned.filter(group), entries.filter(group));
+  const apart = [...paymentTable(sanctioned.filter(only('j1')), entries.filter(only('j1'))), ...paymentTable(sanctioned.filter(only('j2')), entries.filter(only('j2')))];
+  assert.deepEqual(combined.map(r => [r.id, r.actualMinor, r.varianceMinor, r.flag]).sort(), apart.map(r => [r.id, r.actualMinor, r.varianceMinor, r.flag]).sort());
+  assert.deepEqual(tableTotals(combined), { sanctionedMinor: 150000, invoicedMinor: 128000, actualMinor: 108000, remainingMinor: 42000 });
+  assert.ok(combined.every(r => r.jdaId !== 'j3'));
+});

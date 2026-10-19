@@ -97,8 +97,8 @@ logged (who, when, note).
 
 - [x] Match CJI3 lines to invoices: same JDA and project, and Reference = invoice number (ignoring case and spaces); one clear match marks the invoice Paid (`stage: paid`, logged). Several or none: listed for a person to match by hand. *Server side done (`matchCji3`, `matchLine`, `/api/finance/cji3/match`, `/rematch`); a line matching an invoice not yet approved is linked and flagged, not moved. Lines page: Match… / Undo match / Match again.*
 - [x] "Paid in CJI3, no invoice" list (lines that match nothing). *Filter "Not matched" on the CJI3 payments page.*
-- [ ] Two views and two .xlsx exports: **JDA 1 + JDA 2** together, and **JDA 3**.
-- [ ] Payment tables per JDA and per project from these, with the existing parameters (tax, forex, status, sanctioned checks) unchanged.
+- [x] Two views and two .xlsx exports: **JDA 1 + JDA 2** together, and **JDA 3**. *Payment Tables tabs "JDA 1 + JDA 2 (CJI3 file)" and "JDA 3 (CJI3 file)"; Export Excel writes the combined table, then a sheet per JDA and per project. CJI3 lines export per file on CJI3 payments.*
+- [x] Payment tables per JDA and per project from these, with the existing parameters (tax, forex, status, sanctioned checks) unchanged.
 
 ## Projections
 
@@ -114,7 +114,7 @@ logged (who, when, note).
 - [ ] CJI3 importer: unmapped WBS kept as Unmapped; mapping applied on the next import.
 - [x] Matching: one match → Paid; none / several → manual list.
 - [x] State machine: every allowed move; every refused move; Reject archives and Restore returns; stage → status keeps the Payment Table figures as before. (`server/workflow.test.mjs`)
-- [ ] Existing tests still pass.
+- [x] Existing tests still pass. *(170 of 170.)*
 
 ## Docs
 

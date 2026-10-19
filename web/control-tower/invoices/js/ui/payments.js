@@ -9,16 +9,18 @@ import { paymentTable, tableTotals, rowId, isMonth, BASE, FLAG_LABEL } from '../
 import { paymentSheet, ptOriginal, rowRemarks } from '../finance/sheets.js';
 import { state, CONTEXT_ROWS, firstRows } from './state.js';
 import { startRender } from './render.js';
-import { loadCtx, storageNotice, scopeBar, wireScope, summaryCells, monthLabel, statusBadge, openRecord, openAudit, exportButtons, exportSheet, act } from './finance-ui.js';
+import { loadCtx, storageNotice, scopeBar, wireScope, summaryCells, monthLabel, statusBadge, openRecord, openAudit, exportButtons, exportSheet, exportBook, act } from './finance-ui.js';
 import { openImport } from './finance-io.js';
+import { GROUPS, inGroup } from '../finance/cji3.js';
 
 const open = new Set(); // rows left open stay open when the page redraws after an edit
 
 // `projectId` narrows the table to one project (the project page); without it, the whole JDA.
-export function renderPayments(root, ctx, { jda, projectId = '' }) {
-  const mine = r => r.jdaId === jda.id && (!projectId || r.projectId === projectId);
+// `jdaIds` (the JDAs of one CJI3 file: JDA 1 + JDA 2, or JDA 3) shows them together in one table, by the same rules.
+export function renderPayments(root, ctx, { jda, projectId = '', jdaIds = null }) {
+  const mine = r => (jdaIds ? jdaIds.includes(r.jdaId) : r.jdaId === jda.id) && (!projectId || r.projectId === projectId);
   const rows = paymentTable(ctx.fin.sanctioned.filter(mine), ctx.fin.entries.filter(mine)), t = tableTotals(rows);
-  const preset = { jdaId: jda.id, projectId }, gone = ctx.fin.sanctioned.filter(s => mine(s) && s.deletedAt);
+  const preset = { jdaId: jdaIds ? '' : jda.id, projectId }, gone = ctx.fin.sanctioned.filter(s => mine(s) && s.deletedAt);
   const amount = (minor, currency = BASE) => `<span class="mono">${esc(fmt(minor, currency))}</span>`;
   const lines = (list, cell) => list.map(i => `<div class="pt-line${i.status === 'paid' ? '' : ' unpaid'}">${cell(i)}</div>`).join('') || '<span class="pt-none">—</span>';
   // An amount in its own currency: the code small beside the figure, and the whole of it quiet when it only repeats the MYR column.
@@ -86,11 +88,12 @@ export function renderPayments(root, ctx, { jda, projectId = '' }) {
         <td class="legend">deleted by ${esc(s.deletedBy)} on ${esc(String(s.deletedAt).slice(0, 10))}</td><td class="actions"><button type="button" class="ghost btn-sm" data-restore-s="${esc(s.id)}">Restore</button></td></tr>`).join('')}</table></details>` : ''}`;
 
   const msg = $('#pt-msg', root), byKey = key => rows.find(r => r.key === key);
-  const ofRow = key => { const r = byKey(key); return { jdaId: jda.id, projectId: r.projectId, partner: r.partner, month: r.month }; };
+  const ofRow = key => { const r = byKey(key); return { jdaId: r.jdaId, projectId: r.projectId, partner: r.partner, month: r.month }; };
   const find = (list, id) => list.find(x => x.id === id);
   $('#pt-add', root).onclick = () => openRecord('sanctioned', ctx, { preset });
-  $('#pt-import', root).onclick = () => openImport('sanctioned', ctx, jda.id);
-  root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => exportSheet(`Payment table ${jda.name}${projectId ? ' ' + rows[0]?.projectCode : ''}`, paymentSheet(rows), b.dataset.export).catch(e => { msg.textContent = e.message; }));
+  $('#pt-import', root).onclick = () => openImport('sanctioned', ctx, jdaIds ? '' : jda.id);
+  root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => (jdaIds ? exportGroup(ctx, jda.name, jdaIds, b.dataset.export)
+    : exportSheet(`Payment table ${jda.name}${projectId ? ' ' + rows[0]?.projectCode : ''}`, paymentSheet(rows), b.dataset.export)).catch(e => { msg.textContent = e.message; }));
 
   const table = $('.pt-table', root);
   // Total, Variance and Status are pinned to the right edge. Each sits clear of the ones after it, whatever width their figures need.
@@ -116,8 +119,38 @@ export function renderPayments(root, ctx, { jda, projectId = '' }) {
   table.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.pt-row')) { e.preventDefault(); toggle(e.target); } };
 }
 
+// One CJI3 file's JDAs together (#/payments/group/<jda12|jda3>): one Payment Table over all of them, by the
+// same rules, and an Excel workbook with that table, then each JDA's and each project's.
+export async function renderPaymentsGroup(groupId = 'jda12') {
+  const group = GROUPS[groupId] ? groupId : 'jda12';
+  const r0 = startRender('Loading the Payment Table…', () => renderPaymentsGroup(group)), { page } = r0;
+  const ctx = await loadCtx(r0);
+  const jdas = ctx.jdas.filter(j => inGroup(group, j.name));
+  r0.current();
+  page.innerHTML = `
+    <div class="section-head"><h2>Payment table</h2>
+      <div class="row"><a class="ghost" href="#/cji3-lines/${group}">CJI3 payments · ${esc(GROUPS[group].label)}</a></div></div>
+    ${scopeBar(ctx, '#/payments', '', '', false, group)}
+    ${storageNotice(ctx)}
+    ${jdas.length ? '<div class="section" id="payments"></div>' : `<p class="msg">No JDA in the Invoice Tracker is named ${esc(GROUPS[group].label)}.</p>`}`;
+  if (jdas.length) renderPayments($('#payments'), ctx, { jda: { id: '', name: GROUPS[group].label }, jdaIds: jdas.map(j => j.id) });
+  state.page = 'payments';
+  state.context = () => `Payment table for ${GROUPS[group].label} together (${jdas.map(j => j.name).join(', ')}).`;
+}
+async function exportGroup(ctx, label, jdaIds, as) {
+  const of = test => paymentSheet(paymentTable(ctx.fin.sanctioned.filter(test), ctx.fin.entries.filter(test)));
+  if (as !== 'xlsx') return exportSheet(`Payment table ${label}`, of(r => jdaIds.includes(r.jdaId)), as);
+  const sheets = [{ name: label, rows: of(r => jdaIds.includes(r.jdaId)) }];
+  for (const j of ctx.jdas.filter(x => jdaIds.includes(x.id))) {
+    sheets.push({ name: j.name, rows: of(r => r.jdaId === j.id) });
+    for (const p of ctx.projects.filter(x => x.jdaId === j.id)) sheets.push({ name: `${j.name} ${p.name}`, rows: of(r => r.projectId === p.id) });
+  }
+  return exportBook(`Payment tables ${label}`, sheets);
+}
+
 // The Payment Table on a page of its own (#/payments/<jda>[/<project>]): the full width of the window, one JDA at a time.
 export async function renderPaymentsPage(jdaId = '', projectId = '') {
+  if (jdaId === 'group') return renderPaymentsGroup(projectId);
   const r0 = startRender('Loading the Payment Table…', () => renderPaymentsPage(jdaId, projectId)), { page } = r0;
   const ctx = await loadCtx(r0);
   const jda = ctx.jdas.find(j => j.id === jdaId) || ctx.jdas[0];

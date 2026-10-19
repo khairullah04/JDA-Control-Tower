@@ -6,6 +6,7 @@ import * as finance from '../services/finance.js';
 import { money, fmt, toMinor, normRate, toBps, fromBps } from '../finance/money.js';
 import { amounts, paymentTable, tableTotals, monthsBetween, spreadOverMonths, MAX_SPAN, BASE, STATUSES, STATUS_LABEL, SAP_FIELDS } from '../finance/core.js';
 import { toCsv } from '../finance/sheets.js';
+import { GROUPS } from '../finance/cji3.js';
 import { localToday } from '../../../../shared/lib/dates.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -35,9 +36,11 @@ export const partnersIn = fin => [...new Set([...fin.entries, ...fin.sanctioned]
 
 // The Payment Table and the CJI3 register each have a page of their own, as wide as the window.
 // At the top of both: a tab per JDA and, inside a JDA, a project filter. `base` is '#/payments' or '#/cji3'.
-export const scopeBar = (ctx, base, jdaId, projectId, all = false) => `<div class="scope-bar">
+// On the Payment Tables, two more: each CJI3 file's JDAs together (JDA 1 + JDA 2, JDA 3); `group` is the one open.
+export const scopeBar = (ctx, base, jdaId, projectId, all = false, group = '') => `<div class="scope-bar">
     ${all ? `<a class="ghost${jdaId ? '' : ' on'}" href="${base}">All JDAs</a>` : ''}
     ${ctx.jdas.map(j => `<a class="ghost${j.id === jdaId ? ' on' : ''}" href="${base}/${esc(j.id)}">${esc(j.name)}</a>`).join('')}
+    ${base === '#/payments' ? `<span class="scope-sep" aria-hidden="true"></span>${Object.entries(GROUPS).map(([id, g]) => `<a class="ghost${id === group ? ' on' : ''}" href="#/payments/group/${id}" title="${esc(g.label)} together, as in its CJI3 file">${esc(g.label)} (CJI3 file)</a>`).join('')}` : ''}
     ${jdaId ? `<select data-scope aria-label="Project">${options(ctx.projects.filter(p => p.jdaId === jdaId).map(p => [p.id, p.name]), projectId, 'All projects')}</select>` : ''}</div>`;
 export function wireScope(base, jdaId) {
   const select = $('[data-scope]');
@@ -82,6 +85,11 @@ function download(name, blob) {
 }
 export const exportButtons = () => `<button type="button" class="ghost btn-sm" data-export="csv">Export CSV</button>` +
   (finance.workbook ? '<button type="button" class="ghost btn-sm" data-export="xlsx">Export Excel</button>' : '');
+// Several sheets in one Excel workbook (Excel only: the server writes it).
+export async function exportBook(name, sheets) {
+  if (!finance.workbook) throw new Error('Excel files are written by the server, which demo mode does not use. Export CSV instead.');
+  download(`${name}.xlsx`, await finance.workbook(sheets));
+}
 export async function exportSheet(name, rows, as) {
   if (as === 'xlsx') download(`${name}.xlsx`, await finance.workbook([{ name, rows }]));
   else download(`${name}.csv`, new Blob(['﻿' + toCsv(rows)], { type: 'text/csv;charset=utf-8' }));
