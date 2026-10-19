@@ -119,4 +119,4 @@ logged (who, when, note).
 ## Docs
 
 - [x] `docs/server-and-invoices.md`: the approval process, the queues, CJI3 import and the dedup rule, matching.
-- [ ] `BRANCH_DEMO.md`: run `main` and this branch side by side (git worktree, two ports, separate data).
+- [x] `BRANCH_DEMO.md`: run `main` and this branch side by side (git worktree, two ports, separate data). *Steps run once in a scratch folder (ports 8091/8092): both copies start, only the branch has Approvals, the branch's data stays in its own folder.*
