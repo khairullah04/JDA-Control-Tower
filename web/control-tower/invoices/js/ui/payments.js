@@ -202,7 +202,7 @@ export async function renderPaymentsPage(jdaId = '', projectId = '') {
   r0.current();
   page.innerHTML = `
     <div class="section-head"><h2>Payment table</h2>
-      <div class="row"><a class="ghost" href="#/jda/${esc(jda.id)}">← ${esc(jda.name)}</a><a class="ghost" href="#/cji3/${esc(jda.id)}${project ? '/' + esc(project.id) : ''}">Invoices (CJI3)</a></div></div>
+      <div class="row"><a class="ghost" href="#/cji3/${esc(jda.id)}${project ? '/' + esc(project.id) : ''}">Invoices (CJI3)</a></div></div>
     ${scopeBar(ctx, '#/payments', jda.id, project?.id || '')}
     ${storageNotice(ctx)}
     <div class="section" id="payments"></div>`;

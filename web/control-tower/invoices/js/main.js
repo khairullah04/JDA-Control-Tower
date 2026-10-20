@@ -42,8 +42,10 @@ async function route() {
   // breadcrumb, its other pages and the JDA tabs.
   if (['jda', 'cji3', 'payments'].includes(kind) && id) {
     const tracked = (await listJdas()).find(j => j.id === id), ct = tracked && JDAS.find(j => sameName(j.name, tracked.name));
-    if (ct) $('#jdaNavSlot').replaceChildren(jdaNav(ct, 'invoices', { tabs: true }));
+    // the JDA tabs here only on the JDA's own page: the registers have their own row of them under the title
+    if (ct) $('#jdaNavSlot').replaceChildren(jdaNav(ct, 'invoices', { tabs: kind === 'jda' }));
   }
+  $('#jdaNavSlot').classList.toggle('wide', $('#page').classList.contains('wide')); // as wide as the page under it
 }
 const sameName = (a, b) => jdaNameKey(a) === jdaNameKey(b);
 
