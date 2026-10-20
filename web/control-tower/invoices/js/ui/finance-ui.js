@@ -41,7 +41,7 @@ export const scopeBar = (ctx, base, jdaId, projectId, all = false, group = '') =
     ${all ? `<a class="ghost${jdaId ? '' : ' on'}" href="${base}">All JDAs</a>` : ''}
     ${ctx.jdas.map(j => `<a class="ghost${j.id === jdaId ? ' on' : ''}" href="${base}/${esc(j.id)}">${esc(j.name)}</a>`).join('')}
     ${base === '#/payments' ? `<span class="scope-sep" aria-hidden="true"></span>${Object.entries(GROUPS).map(([id, g]) => `<a class="ghost${id === group ? ' on' : ''}" href="#/payments/group/${id}" title="${esc(g.label)} together, as in its CJI3 file">${esc(g.label)} (CJI3 file)</a>`).join('')}` : ''}
-    ${jdaId ? `<select data-scope aria-label="Project">${options(ctx.projects.filter(p => p.jdaId === jdaId).map(p => [p.id, p.name]), projectId, 'All projects')}</select>` : ''}</div>`;
+  </div>`; // a project is chosen with the Project column's filter (column-filter.js), not here
 export function wireScope(base, jdaId) {
   const select = $('[data-scope]');
   if (select) select.onchange = () => { location.hash = `${base}/${jdaId}${select.value ? '/' + select.value : ''}`; };
