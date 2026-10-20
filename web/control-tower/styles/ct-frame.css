@@ -130,3 +130,6 @@
 .ct-tools-status{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d4efec;font-size:14px}
 .ct-tools-status:empty{display:none}
 @media (max-width:640px){.ct-tools-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.ct-tools-status{max-width:120px}}
+
+/* text for screen readers only (the tracker has no rule of its own for it) */
+.visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
