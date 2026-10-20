@@ -12,14 +12,46 @@ import { startRender } from './render.js';
 import { loadCtx, storageNotice, scopeBar, wireScope, summaryCells, monthLabel, statusBadge, openRecord, openAudit, exportButtons, exportSheet, exportBook, act } from './finance-ui.js';
 import { openImport } from './finance-io.js';
 import { GROUPS, inGroup } from '../finance/cji3.js';
+import { openColumnFilter, filterHeading } from './column-filter.js';
+
+// Every column of the Payment Table can be sorted and filtered from its heading, as in Excel. What a
+// column lists: `text(row)` (a list for the invoice columns: a row passes when any of its invoices
+// does); `sort(row)` orders it. Kept per table shown, and while the page redraws after an edit.
+const views = {};
+const pt = r => ptOriginal(r), has = r => r.sanctioned.length > 0;
+const COLUMNS = [
+  { key: 'id', label: 'ID', text: r => r.id, sort: r => r.id },
+  { key: 'month', label: 'Month', title: 'Month (PT)', kind: 'date', text: r => monthLabel(r.month), sort: r => r.month },
+  { key: 'partner', label: 'Partner', text: r => r.partner, sort: r => r.partner },
+  { key: 'project', label: 'Project', text: r => r.projectCode, sort: r => r.projectCode },
+  { key: 'ptOrig', label: 'Original', title: 'PT Amount (Original Currency)', cls: 'num edge', kind: 'number', text: r => pt(r) ? money(pt(r).minor, pt(r).currency) : has(r) ? 'several' : '', sort: r => pt(r)?.minor ?? 0 },
+  { key: 'ptMyr', label: 'MYR', title: 'PT Amount (MYR)', cls: 'num', kind: 'number', text: r => has(r) ? fmt(r.ptMyrMinor) : '', sort: r => r.ptMyrMinor },
+  { key: 'ptTax', label: 'w TAX', title: 'PT Amount with tax (MYR)', cls: 'num', kind: 'number', text: r => has(r) ? fmt(r.withTaxMinor) : '', sort: r => r.withTaxMinor },
+  { key: 'invoice', label: 'Invoice', cls: 'edge', text: r => r.invoices.map(i => i.invoiceNo || '(no number)'), sort: r => r.invoices[0]?.invoiceNo || '' },
+  { key: 'invOrig', label: 'Original', title: 'CJI3 (Original Currency)', cls: 'num', kind: 'number', text: r => r.invoices.map(i => money(i.netMinor, i.currency)), sort: r => r.invoices.reduce((t, i) => t + (i.netMinor || 0), 0) },
+  { key: 'invMyr', label: 'MYR', title: 'CJI3 (MYR)', cls: 'num', kind: 'number', text: r => r.invoices.map(i => fmt(i.netMyrMinor)), sort: r => r.invoices.reduce((t, i) => t + (i.netMyrMinor || 0), 0) },
+  { key: 'invTax', label: 'w TAX', title: 'CJI3 with tax (MYR)', cls: 'num', kind: 'number', text: r => r.invoices.map(i => fmt(i.grossMyrMinor)), sort: r => r.invoices.reduce((t, i) => t + (i.grossMyrMinor || 0), 0) },
+  { key: 'total', label: 'Total', title: 'Paid invoices, with tax (MYR)', cls: 'num pin total', kind: 'number', text: r => fmt(r.actualMinor), sort: r => r.actualMinor },
+  { key: 'variance', label: 'Variance', title: 'Total (paid) − w TAX', cls: 'num pin var', kind: 'number', text: r => fmt(r.varianceMinor), sort: r => r.varianceMinor },
+  { key: 'status', label: 'Status', cls: 'pin status', text: r => has(r) ? FLAG_LABEL[r.flag] : 'No sanctioned amount', sort: r => has(r) ? FLAG_LABEL[r.flag] : 'No sanctioned amount' },
+  { key: 'remarks', label: 'Remarks', text: r => rowRemarks(r), sort: r => rowRemarks(r) }
+];
+const listOf = (c, r) => { const v = c.text(r); return Array.isArray(v) ? (v.length ? v : ['']) : [v]; };
 
 const open = new Set(); // rows left open stay open when the page redraws after an edit
 
 // `projectId` narrows the table to one project (the project page); without it, the whole JDA.
 // `jdaIds` (the JDAs of one CJI3 file: JDA 1 + JDA 2, or JDA 3) shows them together in one table, by the same rules.
-export function renderPayments(root, ctx, { jda, projectId = '', jdaIds = null }) {
+export function renderPayments(root, ctx, opts) {
+  const { jda, projectId = '', jdaIds = null } = opts;
   const mine = r => (jdaIds ? jdaIds.includes(r.jdaId) : r.jdaId === jda.id) && (!projectId || r.projectId === projectId);
-  const rows = paymentTable(ctx.fin.sanctioned.filter(mine), ctx.fin.entries.filter(mine)), t = tableTotals(rows);
+  const allRows = paymentTable(ctx.fin.sanctioned.filter(mine), ctx.fin.entries.filter(mine)), all = tableTotals(allRows);
+  // The column filters and sort of this table (the summary cards above stay the whole table's).
+  const view = views[`${jdaIds ? jdaIds.join('+') : jda.id}|${projectId}`] ||= { cols: {}, sort: '', dir: 1 };
+  const passing = (skip = '') => allRows.filter(r => Object.entries(view.cols).every(([k, allowed]) => k === skip || listOf(COLUMNS.find(c => c.key === k), r).some(v => allowed.has(v))));
+  const sortCol = COLUMNS.find(c => c.key === view.sort);
+  const rows = sortCol ? passing().sort((a, b) => { const x = sortCol.sort(a), y = sortCol.sort(b); return view.dir * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true })); }) : passing();
+  const t = tableTotals(rows), filtered = Object.keys(view.cols).length > 0;
   const preset = { jdaId: jdaIds ? '' : jda.id, projectId }, gone = ctx.fin.sanctioned.filter(s => mine(s) && s.deletedAt);
   const amount = (minor, currency = BASE) => `<span class="mono">${esc(fmt(minor, currency))}</span>`;
   const lines = (list, cell) => list.map(i => `<div class="pt-line${i.status === 'paid' ? '' : ' unpaid'}">${cell(i)}</div>`).join('') || '<span class="pt-none">—</span>';
@@ -36,16 +68,15 @@ export function renderPayments(root, ctx, { jda, projectId = '', jdaIds = null }
         <button type="button" class="ghost btn-sm" id="pt-import">Import</button>
         ${exportButtons()}
       </div></div>
-    ${summaryCells(t)}
+    ${summaryCells(all)}
+    ${filtered || view.sort ? `<p class="legend pt-filtered">${filtered ? `Showing ${rows.length} of ${allRows.length} rows; the totals at the foot of the table are of the rows shown.` : ''}
+      <button type="button" class="ghost btn-sm" id="pt-clear-cols">${filtered ? 'Clear all filters' : 'Clear sort'}</button></p>` : ''}
     <p class="msg" id="pt-msg"></p>
     <div class="pt-scroll pt-sheet"><table class="pt-table">
       <thead>
       <tr class="pt-groups"><th colspan="4"></th><th colspan="3" class="grp pt">Sanctioned <small>Payment Table</small></th><th colspan="4" class="grp cji3">Invoiced <small>CJI3</small></th>
         <th colspan="3" class="grp pin result">Result <small>paid against sanctioned</small></th><th></th></tr>
-      <tr class="pt-cols"><th>ID</th><th title="Month (PT)">Month</th><th>Partner</th><th>Project</th>
-        <th class="num edge" title="PT Amount (Original Currency)">Original</th><th class="num" title="PT Amount (MYR)">MYR</th><th class="num" title="PT Amount with tax (MYR)">w TAX</th>
-        <th class="edge">Invoice</th><th class="num" title="CJI3 (Original Currency)">Original</th><th class="num" title="CJI3 (MYR)">MYR</th><th class="num" title="CJI3 with tax (MYR)">w TAX</th>
-        <th class="num pin total" title="Paid invoices, with tax (MYR)">Total</th><th class="num pin var" title="Total (paid) − w TAX">Variance</th><th class="pin status">Status</th><th>Remarks</th></tr>
+      <tr class="pt-cols">${COLUMNS.map(c => `<th class="${c.cls || ''}"${c.title ? ` title="${esc(c.title)}"` : ''}>${filterHeading(c.key, c.label, { sorted: view.sort === c.key ? view.dir : 0, filtered: !!view.cols[c.key] })}</th>`).join('')}</tr>
       </thead><tbody>
       ${rows.map(r => {
         const pt = ptOriginal(r), has = r.sanctioned.length > 0;
@@ -75,7 +106,7 @@ export function renderPayments(root, ctx, { jda, projectId = '', jdaIds = null }
               <p class="legend">Total is the paid invoices only: ${money(r.actualMinor)} of ${money(r.invoicedMinor)} invoiced.</p>
               <button type="button" class="ghost btn-sm" data-add-e="${esc(r.key)}">+ Add invoice to this row</button></div>
           </div></td></tr>`;
-      }).join('') || '<tr><td colspan="15" class="pt-empty">Nothing here yet. Add a sanctioned amount, or enter an invoice in the CJI3 register (Invoices (CJI3), above).</td></tr>'}
+      }).join('') || (filtered ? '<tr><td colspan="15" class="pt-empty">No rows match these filters.</td></tr>' : '<tr><td colspan="15" class="pt-empty">Nothing here yet. Add a sanctioned amount, or enter an invoice in the CJI3 register (Invoices (CJI3), above).</td></tr>')}
       </tbody>
       ${rows.length ? `<tfoot><tr class="pt-foot ${varianceOf(totalVarianceMinor)}"><td colspan="4">${rows.length} ${rows.length === 1 ? 'row' : 'rows'}</td>
         <td class="edge"></td><td></td><td class="num strong">${amount(t.sanctionedMinor)}</td>
@@ -95,6 +126,17 @@ export function renderPayments(root, ctx, { jda, projectId = '', jdaIds = null }
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => (jdaIds ? exportGroup(ctx, jda.name, jdaIds, b.dataset.export)
     : exportSheet(`Payment table ${jda.name}${projectId ? ' ' + rows[0]?.projectCode : ''}`, paymentSheet(rows), b.dataset.export)).catch(e => { msg.textContent = e.message; }));
 
+  // A heading opens its sort-and-filter window (column-filter.js), listing what the other filters leave.
+  const again = () => renderPayments(root, ctx, opts);
+  if ($('#pt-clear-cols', root)) $('#pt-clear-cols', root).onclick = () => { view.cols = {}; view.sort = ''; again(); };
+  const openCol = btn => {
+    const c = COLUMNS.find(x => x.key === btn.dataset.col), seen = new Map();
+    for (const r of passing(c.key)) { const many = listOf(c, r), list = Array.isArray(c.text(r)) ? r.invoices : null; many.forEach((v, n) => { if (!seen.has(v)) seen.set(v, list ? (c.kind === 'number' ? (list[n]?.grossMyrMinor ?? 0) : v) : c.sort(r)); }); }
+    const values = [...seen].sort(([, a], [, b]) => typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), undefined, { numeric: true })).map(([v]) => ({ value: v, label: v }));
+    openColumnFilter({ anchor: btn, label: c.title || c.label, kind: c.kind || 'text', values, allowed: view.cols[c.key] || null,
+      onSort: dir => { view.sort = c.key; view.dir = dir; again(); },
+      onApply: allowed => { if (allowed) view.cols[c.key] = allowed; else delete view.cols[c.key]; again(); root.querySelector(`[data-col="${c.key}"]`)?.focus(); } });
+  };
   const table = $('.pt-table', root);
   // Total, Variance and Status are pinned to the right edge. Each sits clear of the ones after it, whatever width their figures need.
   const width = cls => $(`th.pin.${cls}`, table).offsetWidth;
@@ -107,6 +149,7 @@ export function renderPayments(root, ctx, { jda, projectId = '', jdaIds = null }
   };
   table.onclick = e => {
     const b = e.target.closest('button'), d = b?.dataset;
+    if (d?.col) return openCol(b);
     if (!b) { const tr = e.target.closest('.pt-row'); if (tr) toggle(tr); return; }
     if (d.editS) openRecord('sanctioned', ctx, { record: find(ctx.fin.sanctioned, d.editS) });
     if (d.editE) openRecord('entry', ctx, { record: find(ctx.fin.entries, d.editE) });
