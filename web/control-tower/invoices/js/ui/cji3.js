@@ -9,16 +9,23 @@ import { config } from '../config/index.js';
 import { money, fmt, fromBps } from '../finance/money.js';
 import { BASE, STATUSES, STATUS_LABEL } from '../finance/core.js';
 import { entrySheet } from '../finance/sheets.js';
-import { loadCtx, storageNotice, scopeBar, wireScope, partnersIn, monthLabel, statusBadge, options, dialog, act, openRecord, openAudit, exportButtons, exportSheet, today } from './finance-ui.js';
+import { loadCtx, storageNotice, scopeBar, wireScope, monthLabel, statusBadge, options, dialog, act, openRecord, openAudit, exportButtons, exportSheet, today } from './finance-ui.js';
 import { openImport, bringOverOldRecords } from './finance-io.js';
+import { openColumnFilter, filterHeading } from './column-filter.js';
 
 const views = {}; // filters, sort order and selection, kept per place the register is shown
-const viewFor = key => views[key] ||= { q: '', jda: '', month: '', status: '', partner: '', deleted: false, sort: 'documentDate', dir: -1, selected: new Set() };
+const viewFor = key => views[key] ||= { q: '', cols: {}, deleted: false, sort: 'documentDate', dir: -1, selected: new Set() };
+// What a cell shows, as the column's filter lists it. Money columns list their figure; dates and months as written.
+const NUMERIC = new Set(['netMinor', 'rate', 'netMyrMinor', 'taxMyrMinor', 'grossMyrMinor']);
+const cellText = (e, k) => k === 'month' ? (e.month ? monthLabel(e.month) : '') : k === 'status' ? STATUS_LABEL[e.status] || e.status || ''
+  : k === 'netMinor' ? (e.netMinor == null ? '' : money(e.netMinor, e.currency)) : k === 'rate' ? (e.currency === BASE ? '' : String(e.rate || ''))
+  : NUMERIC.has(k) ? (e[k] == null ? '' : fmt(e[k])) : k === 'invoiceNo' ? e.invoiceNo || '' : String(e[k] ?? '');
+const sortValue = (e, k) => k === 'rate' ? Number(e.rate) || 0 : e[k] ?? '';
+const kindOf = k => NUMERIC.has(k) ? 'number' : ['documentDate', 'dueDate', 'month'].includes(k) ? 'date' : 'text';
 
 export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = false, title = 'All invoices' } = {}) {
   const view = viewFor(`${jdaId}|${projectId}`), { settings } = ctx.fin;
   const scope = ctx.fin.entries.filter(e => (!jdaId || e.jdaId === jdaId) && (!projectId || e.projectId === projectId));
-  const months = [...new Set(scope.map(e => e.month).filter(Boolean))].sort().reverse();
   const COLS = [['invoiceNo', 'Invoice #'], ['documentDate', 'Invoice date'], ['month', 'Month'], ...(jdaId ? [] : [['jdaName', 'JDA']]), ['projectCode', 'Project'], ['partner', 'Partner'],
     ['netMinor', 'Original', 'num'], ['rate', 'Rate', 'num'], ['netMyrMinor', 'MYR', 'num'], ['taxMyrMinor', 'Tax', 'num'], ['grossMyrMinor', 'Taxed MYR', 'num'], ['status', 'Status'], ['dueDate', 'Due']];
 
@@ -33,10 +40,8 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
       </div></div>
     <div class="toolbar reg-filters">
       <input type="search" id="reg-q" placeholder="Search invoice number, partner, vendor, description" value="${esc(view.q)}">
-      ${jdaId ? '' : `<select data-filter="jda">${options(ctx.jdas.map(j => [j.id, j.name]), view.jda, 'All JDAs')}</select>`}
-      <select data-filter="month">${options(months.map(m => [m, monthLabel(m)]), view.month, 'All months')}</select>
-      <select data-filter="status">${options(STATUSES.map(s => [s, STATUS_LABEL[s]]), view.status, 'All statuses')}</select>
-      <select data-filter="partner">${options(partnersIn(ctx.fin).map(p => [p, p]), view.partner, 'All partners')}</select>
+      <span class="legend cf-hint">Click a column's heading to sort or filter it.</span>
+      <button type="button" class="ghost btn-sm" id="reg-clear-cols" ${Object.keys(view.cols).length ? '' : 'hidden'}>Clear all column filters</button>
       <label class="check"><input type="checkbox" id="reg-deleted" ${view.deleted ? 'checked' : ''}> Show deleted</label>
     </div>
     <p class="msg" id="reg-msg"></p>
@@ -44,11 +49,12 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
     <div class="pt-scroll" id="reg-table"></div>`;
 
   const msg = $('#reg-msg', root), text = e => [e.invoiceNo, e.partner, e.vendor, e.description, e.remarks, e.projectCode].join(' ').toLowerCase();
-  const shown = () => scope
-    .filter(e => !!e.deletedAt === view.deleted && (!view.jda || e.jdaId === view.jda) && (!view.month || e.month === view.month) && (!view.status || e.status === view.status)
-      && (!view.partner || e.partner === view.partner) && (!view.q || text(e).includes(view.q.toLowerCase())))
+  // Rows left by the search, "Show deleted" and every column filter except `skip` (a column's own list shows what the others leave).
+  const passing = (skip = '') => scope.filter(e => !!e.deletedAt === view.deleted && (!view.q || text(e).includes(view.q.toLowerCase()))
+    && Object.entries(view.cols).every(([k, allowed]) => k === skip || allowed.has(cellText(e, k))));
+  const shown = () => passing()
     .sort((a, b) => {
-      const x = a[view.sort] ?? '', y = b[view.sort] ?? '';
+      const x = sortValue(a, view.sort), y = sortValue(b, view.sort);
       return view.dir * (view.sort === 'rate' ? Number(x) - Number(y) : typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }));
     });
 
@@ -57,7 +63,7 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
     for (const id of view.selected) if (!ids.has(id)) view.selected.delete(id);
     $('#reg-table', root).innerHTML = `<table class="reg-table">
       <tr><th><input type="checkbox" id="reg-all" aria-label="Select all" ${list.length && list.every(e => view.selected.has(e.id)) ? 'checked' : ''}></th>
-        ${COLS.map(([k, label, cls]) => `<th class="${cls || ''}"><button type="button" class="sort${view.sort === k ? ' on' : ''}" data-sort="${k}">${esc(label)}${view.sort === k ? (view.dir > 0 ? ' ▲' : ' ▼') : ''}</button></th>`).join('')}<th></th></tr>
+        ${COLS.map(([k, label, cls]) => `<th class="${cls || ''}">${filterHeading(k, label, { sorted: view.sort === k ? view.dir : 0, filtered: !!view.cols[k] })}</th>`).join('')}<th></th></tr>
       ${list.map(e => `<tr class="${e.deletedAt ? 'gone' : ''}">
         <td><input type="checkbox" data-pick="${esc(e.id)}" aria-label="Select ${esc(e.invoiceNo)}" ${view.selected.has(e.id) ? 'checked' : ''}></td>
         <td title="${esc(e.invoiceNo)}"><b>${esc(e.invoiceNo || '(no number)')}</b>${e.missing?.length ? ` <span class="st rejected" title="${esc(e.missing.join('\n'))}">Incomplete</span>` : ''}
@@ -87,9 +93,19 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
 
   $('#reg-q', root).oninput = e => { view.q = e.target.value; draw(); };
   $('#reg-deleted', root).onchange = e => { view.deleted = e.target.checked; view.selected.clear(); draw(); };
-  root.querySelectorAll('[data-filter]').forEach(s => s.onchange = () => { view[s.dataset.filter] = s.value; draw(); });
-  $('#reg-add', root).onclick = () => openRecord('entry', ctx, { preset: { jdaId: jdaId || view.jda, projectId } });
-  $('#reg-import', root).onclick = () => openImport('entry', ctx, jdaId || view.jda);
+  $('#reg-clear-cols', root).onclick = e => { view.cols = {}; e.target.hidden = true; draw(); };
+  // A column's heading: its sort-and-filter window (column-filter.js), listing the values the other filters leave.
+  const openCol = btn => {
+    const k = btn.dataset.col, label = COLS.find(c => c[0] === k)[1], seen = new Map();
+    for (const e of passing(k)) { const t = cellText(e, k); if (!seen.has(t)) seen.set(t, sortValue(e, k)); }
+    const values = [...seen].sort(([, a], [, b]) => typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), undefined, { numeric: true }))
+      .map(([t]) => ({ value: t, label: t }));
+    openColumnFilter({ anchor: btn, label, kind: kindOf(k), values, allowed: view.cols[k] || null,
+      onSort: dir => { view.sort = k; view.dir = dir; draw(); },
+      onApply: allowed => { if (allowed) view.cols[k] = allowed; else delete view.cols[k]; $('#reg-clear-cols', root).hidden = !Object.keys(view.cols).length; draw(); root.querySelector(`[data-col="${k}"]`)?.focus(); } });
+  };
+  $('#reg-add', root).onclick = () => openRecord('entry', ctx, { preset: { jdaId, projectId } });
+  $('#reg-import', root).onclick = () => openImport('entry', ctx, jdaId);
   root.querySelectorAll('[data-export]').forEach(b => b.onclick = () => exportSheet('CJI3', entrySheet(shown()), b.dataset.export).catch(e => { msg.textContent = e.message; }));
   if (full) {
     $('#reg-audit', root).onclick = () => openAudit('Audit log: every change to invoices, sanctioned amounts and settings');
@@ -106,7 +122,7 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
   root.onclick = e => {
     const d = e.target.closest('button')?.dataset;
     if (!d) return;
-    if (d.sort) { view.dir = view.sort === d.sort ? -view.dir : 1; view.sort = d.sort; draw(); }
+    if (d.col) openCol(e.target.closest('button'));
     if (d.edit) openRecord('entry', ctx, { record: find(d.edit) });
     if (d.history) openAudit(`History of invoice ${find(d.history)?.invoiceNo || ''}`, d.history);
     if (d.delete) removeThem([d.delete]);
