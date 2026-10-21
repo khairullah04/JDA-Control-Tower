@@ -30,3 +30,4 @@
 .cf-foot{display:flex;justify-content:flex-end;gap:8px;margin:10px 12px 0}
 .cf-foot button{min-width:76px}
 .cf-search input,.cf-search input:focus{border:0;box-shadow:none;border-radius:0;min-height:0;width:auto}
+.cj-amounts{display:block;margin:4px 0}

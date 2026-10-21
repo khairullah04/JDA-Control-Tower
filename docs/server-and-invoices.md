@@ -135,6 +135,10 @@ JDA 3) and is uploaded again and again as payments are made one at a time.
   ("Forex Confidential - For PETRONAS Staff Only…") is read as Forex.
 - **Log**: every upload (file, who, when, rows, added, skipped, updated, not readable, matched) is kept
   in `cji3Imports` and listed under Uploads.
+- **Amounts are checked**: a line's Val/COArea Crcy (MYR, tax included) is compared with the invoice's
+  taxed MYR, all of the invoice's lines together. Within RM 1 or 0.5%: Paid. Less: **Part payment**, Paid
+  when the rest arrives. More, or a line with no MYR amount: linked and flagged (**Amount to check**);
+  **Confirm invoice Paid** is the person's check. The lines table shows both amounts.
 - **Matching**: each new line's Reference is compared with the invoice numbers of its file's JDAs
   (ignoring case and spaces; CO Object Name narrows a number that bills several projects). One
   match that is To Be Paid or Sent to PD → the invoice becomes **Paid**, with the line recorded on it;

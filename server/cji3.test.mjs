@@ -130,7 +130,7 @@ test('matching: To Be Paid and Sent to PD become Paid; not approved is linked, n
   const out = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(
     line({ Reference: 'inv-ca-101' }), line({ Reference: 'INV-CA-102' }), line({ Reference: 'INV-CA-103' }),
     line({ Reference: 'INV-CA-104', 'CO Object Name': '' }), line({ Reference: 'INV-CA-104', 'CO Object Name': 'CB', 'Value TranCurr': '500' }), line({ Reference: 'NOPE-1' })) }, 'acc2');
-  assert.deepEqual(out.match, { paid: 2, linked: 0, not_approved: 2, none: 1, ambiguous: 1 }); // not approved: INV-CA-103, and INV-CA-104 for CB
+  assert.deepEqual(out.match, { paid: 2, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 2, none: 1, ambiguous: 1 }); // not approved: INV-CA-103, and INV-CA-104 for CB
   const { entries } = await f.data(), get = id => entries.find(e => e.id === id);
   assert.deepEqual([get(approved.id).status, get(direct.id).status, get(fresh.id).status, get(twinB.id).status], ['paid', 'paid', 'pending', 'pending']);
   const lines = await f.cji3Lines('jda3'), byRef = (r, co) => lines.find(l => l.reference === r && (co === undefined || l.coObject === co));
@@ -139,7 +139,7 @@ test('matching: To Be Paid and Sent to PD become Paid; not approved is linked, n
   assert.ok((await f.stageHistory(approved.id)).some(h => h.to === 'paid' && h.byCji3));
   // the same file again: nothing new, nothing matched twice
   const again = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(line({ Reference: 'inv-ca-101' })) }, 'acc2');
-  assert.deepEqual([again.added, again.match], [0, { paid: 0, linked: 0, not_approved: 0, none: 0, ambiguous: 0 }]);
+  assert.deepEqual([again.added, again.match], [0, { paid: 0, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, none: 0, ambiguous: 0 }]);
 });
 
 test('matching by hand, and undoing it sends the invoice back to its queue', async () => {
@@ -170,4 +170,27 @@ test("a CJI3 file's Payment Table (JDA 1 + JDA 2) is exactly JDA 1's rows and JD
   assert.deepEqual(combined.map(r => [r.id, r.actualMinor, r.varianceMinor, r.flag]).sort(), apart.map(r => [r.id, r.actualMinor, r.varianceMinor, r.flag]).sort());
   assert.deepEqual(tableTotals(combined), { sanctionedMinor: 150000, invoicedMinor: 128000, actualMinor: 108000, remainingMinor: 42000 });
   assert.ok(combined.every(r => r.jdaId !== 'j3'));
+});
+
+test('matching checks the amount: equal pays, a part payment waits for the rest, too much is left for a person', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-20T01:00:00Z' });
+  const approve = async no => { const e = await f.save('entry', inv(no), 'a'); await f.moveStage([e.id], 'sent_to_pd', {}, 'a'); return e.id; }; // RM 1,000 + 8% = RM 1,080.00
+  const [even, part, over] = [await approve('INV-A'), await approve('INV-B'), await approve('INV-C')];
+  const up = (...rows) => f.importCji3({ group: 'jda3', fileName: 'x.xlsx', sheets: file(...rows) }, 'acc2');
+  const first = await up(line({ Reference: 'INV-A', 'Val/COArea Crcy': '1,080.50' }),                // 50 sen out: within RM 1
+    line({ Reference: 'INV-B', 'Value TranCurr': '500', 'Val/COArea Crcy': '540.00' }),               // half
+    line({ Reference: 'INV-C', 'Value TranCurr': '2000', 'Val/COArea Crcy': '2,160.00' }));            // twice
+  assert.deepEqual([first.match.paid, first.match.part_paid, first.match.amount_differs], [1, 1, 1]);
+  const status = async () => Object.fromEntries((await f.data()).entries.map(e => [e.invoiceNo, e.status]));
+  assert.deepEqual(await status(), { 'INV-A': 'paid', 'INV-B': 'approved', 'INV-C': 'approved' });
+  await up(line({ Reference: 'INV-B', 'Value TranCurr': '500', 'Val/COArea Crcy': '540.00', 'Posting Date': '10/01/2026' })); // the rest
+  assert.equal((await status())['INV-B'], 'paid');
+  const b = (await f.data()).entries.find(e => e.invoiceNo === 'INV-B');
+  assert.equal(b.paidBy.length, 2);
+  assert.ok((await f.cji3Lines()).filter(l => l.invoiceId === part).every(l => l.matchState === 'paid'));
+  // a person checks the over-amount line and confirms the invoice is paid
+  const overLine = (await f.cji3Lines()).find(l => l.invoiceId === over);
+  await f.matchLine(overLine.id, over, 'acc2');
+  assert.equal((await status())['INV-C'], 'paid');
+  assert.equal(even.length > 0, true);
 });

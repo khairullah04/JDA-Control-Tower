@@ -116,6 +116,19 @@ export function candidatesFor(l, invoices) {
   const project = same.filter(e => jdaKey(e.projectCode) === jdaKey(l.coObject));
   return project.length ? project : same;
 }
-export const MATCH_LABEL = { paid: 'Matched: invoice Paid', linked: 'Matched (invoice already Paid)', not_approved: 'Matched, but the invoice is not approved yet', none: 'No invoice with this Reference', ambiguous: 'Several invoices could match', manual: 'Matched by hand' };
+// A line's amount in MYR, tax included (Val/COArea Crcy), as the invoice's taxed MYR is; or its own amount
+// when it is in MYR; otherwise none (it cannot be compared).
+export const lineMyr = l => l.valueCoAreaMinor ?? (l.currency === 'MYR' ? l.valueTranMinor : null) ?? null;
+// What the lines add up to against the invoice: 'equal' within RM 1 or 0.5% (rounding, bank charges),
+// 'less' (part paid so far), 'more', or 'unknown' when a line has no amount.
+export const TOLERANCE = minor => Math.max(100, Math.round(Math.abs(minor) * 0.005));
+export function paidAgainst(invoiceMinor, linesMinor) {
+  if (!Number.isFinite(linesMinor) || !Number.isFinite(invoiceMinor)) return 'unknown';
+  const d = linesMinor - invoiceMinor;
+  return Math.abs(d) <= TOLERANCE(invoiceMinor) ? 'equal' : d < 0 ? 'less' : 'more';
+}
+export const MATCH_LABEL = { paid: 'Matched: invoice Paid', linked: 'Matched (invoice already Paid)', part_paid: 'Part payment: the invoice is Paid when the rest arrives',
+  amount_differs: 'Matched, but the amount does not agree: check it', not_approved: 'Matched, but the invoice is not approved yet', none: 'No invoice with this Reference',
+  ambiguous: 'Several invoices could match', manual: 'Matched by hand' };
 
 const show = (k, l) => /Minor$/.test(k) ? (l[k] == null ? '' : fmt(l[k])) : text(l[k]);
