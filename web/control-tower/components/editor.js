@@ -12,7 +12,7 @@ const $ = id => document.getElementById(id);
 const newSolution = () => ({ title: '', tier: 'Tier 1', art: null, tags: [], blocks: starterBlocks() });
 const NEW_PRESS = { text: '', more: '', url: '', linkText: 'Read the full release →', img: '' };
 
-export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, reset, progress, showProgress, saveProgress, statusLabel, taskStatuses, today, openTask }){
+export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScreen, iconFor, artKeys, draft, sectionOrder, show, save, progress, showProgress, saveProgress, statusLabel, taskStatuses, today, openTask }){
   const master = mode === 'master', prog = mode === 'progress';
   let d = draft, p = progress, savedTasks = [];
   if (prog) {
@@ -319,10 +319,11 @@ export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScre
       title: sol.title, tier: sol.tier, tierClass: sol.tier === 'Tier 1' ? 'tier1' : 'edge',
       iconHtml: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${iconFor(sol.art)}</svg>`,
       blocks: sol.blocks,
+      // The detail page goes into the Master Page's draft: it is published with the rest by Save changes,
+      // never on its own (so half-done edits elsewhere on the page are not published with it).
       async save(title, blocks){
         sol.title = title; sol.blocks = blocks;
-        dirty.master = true;
-        await saveAll();
+        touched();
       },
       close(){
         show(d);
@@ -624,13 +625,6 @@ export function startEditor({ mode, jda, api, leave, logoFor, blocksOf, showScre
   $('editorSaveBtn').onclick = () => saveAll().catch(() => {}); // the failure is already on screen
   const blockEditor = master ? setupBlockEditor() : null;
 
-  // Two clicks: the first only asks.
-  if (master) $('editorResetBtn').onclick = async () => {
-    const btn = $('editorResetBtn');
-    if (!btn.dataset.armed){ btn.dataset.armed = '1'; btn.textContent = 'Click again to remove everything saved from this editor'; return; }
-    try { await reset(); dirty.master = false; location.reload(); }
-    catch (e){ $('editorSaveStatus').textContent = `Not reset: ${e.message}`; }
-  };
 
   /* ---------- Leaving ---------- */
   window.addEventListener('beforeunload', e => { if (dirty.master || dirty.progress) e.preventDefault(); });

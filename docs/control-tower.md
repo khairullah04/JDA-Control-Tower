@@ -90,17 +90,18 @@ signed in). In edit mode:
 - **Edit detail page** on a solution card opens a full-page block editor for that solution's detail
   page: Header, Sub Header, Sub Sub Header, Body, or a Box row. Add a block between any two, drag the
   grip to reorder (SortableJS, kept in `web/shared/vendor`) or use the up/down buttons; change a
-  block's type, duplicate or delete it; format text with bold, italic, underline, lists and links. Its
-  Save publishes straight away, with any other unsaved Master Page edits. Detail pages saved in the
+  block's type, duplicate or delete it; format text with bold, italic, underline, lists and links.
+  **Keep these changes** puts the detail page into the Master Page's draft: it goes public with the rest
+  when you press Save changes, never on its own. Detail pages saved in the
   older shape load as blocks, and the first save over one keeps the old version as `overviewBackup`;
 - **Update from Google Drive** at the top reads the JDA's Master File folder into the page as an
   unsaved draft, and **Open Master File folder** opens that folder in Drive;
-- **Save changes** in the bottom bar publishes; **Leave the editor** goes back to the page as saved;
-- **Reset to the built-in content** removes what was saved, so the page shows what is written in
-  `web/control-tower/config/jda-content.js` again.
+- **Save changes** in the bottom bar publishes; **Discard changes** goes back to the page as saved.
+  (There is no button to wipe a saved Master Page: the server keeps the last 20 versions of each report,
+  in `jdaReports/<jda>/versions`, if one ever has to be put back.)
 
 Once saved from edit mode, the saved version is what shows: later changes to that JDA's entry in
-`jda-content.js` do not appear until it is reset. The architecture diagram of the old private Master
+`jda-content.js` do not appear (the saved version wins). The architecture diagram of the old private Master
 Page is gone.
 
 **Overall progress** and **Weekly progress** are edited on their own pages: **Edit page** in the
