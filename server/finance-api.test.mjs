@@ -109,3 +109,13 @@ test('the approval roles: an empty list is open to anyone; a filled one only to 
     assert.equal(ok.changed, 1);
   } finally { srv.close(); }
 });
+
+test('segregation of duties: whoever validated an invoice as PM cannot approve it as Lead', async () => {
+  const { id } = (await call('/api/finance/entries', { method: 'POST', body: { ...invoice, invoiceNo: 'IN-SOD' } })).body;
+  await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'with_pm' }, as: 'acc1' });
+  await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'pending_lead' }, as: 'farid' });
+  const own = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'to_be_paid' }, as: 'farid' });
+  assert.match(own.body.refused[0].why, /someone else has to approve/);
+  const other = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'to_be_paid' }, as: 'rahman' });
+  assert.equal(other.body.changed, 1);
+});

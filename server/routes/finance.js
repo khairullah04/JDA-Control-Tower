@@ -47,9 +47,15 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   const noHandStatus = input => { const { status, stage, route, archivedAt, paidBy, ...rest } = input || {}; return rest; };
   // The approval process: move invoices to a stage, with a note (a reason when rejecting). Paid is
   // never set here: it comes from matching a CJI3 line.
-  const may = req => move => {
-    const role = move && roleFor(move), list = roles[role] || [];
-    return !role || !list.length || list.includes(String(req.user?.email || '').toLowerCase()) ? '' : `Only the ${ROLES[role]} may do this (${move.action}).`;
+  // Who may make a move: the role's people (when its list is filled in), and never the same person at both
+  // ends of the money path: whoever validated an invoice as PM cannot also approve it as Project Lead.
+  // (Not checked with sign-in off, on one's own computer, where everyone is the same "local" user.)
+  const may = req => (move, record) => {
+    const role = move && roleFor(move), list = roles[role] || [], me = String(req.user?.email || '').toLowerCase();
+    if (role && list.length && !list.includes(me)) return `Only the ${ROLES[role]} may do this (${move.action}).`;
+    if (move?.from === 'pending_lead' && move.to === 'to_be_paid' && me !== 'local@sign-in-off' && record?.stageBy && record.stageBy === actor(req))
+      return 'You validated this invoice, so someone else has to approve it.';
+    return '';
   };
   router.post('/entries/stage', run(req => finance.moveStage(ids(req), String(req.body?.to || ''), { note: String(req.body?.note || ''), may: may(req) }, actor(req))));
   router.get('/stages', run(req => finance.stageHistory(String(req.query.entityId || ''))));

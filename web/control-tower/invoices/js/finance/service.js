@@ -115,7 +115,7 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
   async function moveStage(ids, to, { note = '', byCji3 = false, paidBy, may = () => '' } = {}, actor) {
     const at = now(), refused = [], text = String(note || '').trim().slice(0, 1000);
     const out = await each('entry', ids, 100, r => {
-      const why = checkMove(r, to, { note: text, byCji3 }) || may(MOVES.find(m => m.from === stageOf(r) && m.to === to));
+      const why = checkMove(r, to, { note: text, byCji3 }) || may(MOVES.find(m => m.from === stageOf(r) && m.to === to), r);
       if (why) { refused.push({ id: r.id, ref: refOf('entry', r), why }); return null; }
       const from = stageOf(r), next = stamp(applyMove(r, to, { at, by: actor }), actor, at);
       if (paidBy !== undefined) next.paidBy = paidBy;
