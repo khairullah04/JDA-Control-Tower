@@ -9,18 +9,24 @@ service cloud.firestore {
         && request.auth.token.email in get(/databases/$(database)/documents/access/allowlist).data.emails;
     }
 
-    // People on the list read and write the tracker's JDAs, projects and activity log directly.
-    // Closed to every browser, whoever is signed in:
-    //   finance...  invoices, sanctioned amounts and their audit log
-    //   access      the access list itself
-    //   jdaReports  the portal's report documents (their own rule is below)
-    //   site        the text of the two landing pages, saved by the server from edit mode
-    // Only the server touches those, with its service-account key, which these rules do not apply to.
-    // That is what makes the sign-in, the validation and the audit log binding.
-    match /{collection}/{document=**} {
-      allow read, write: if onAccessList()
-        && !collection.matches('finance.*') && !(collection in ['access', 'jdaReports', 'site']);
-    }
+    // Closed by default: a collection not named below is refused to every browser, whoever is signed in.
+    // So invoices and sanctioned amounts (finance...), their stage history, the CJI3 payment lines and
+    // uploads (cji3Lines, cji3Imports), the access list and the landing pages' text (site) are written
+    // only by the server, with its service-account key, which these rules do not apply to. That is what
+    // makes the sign-in, the validation and the audit log binding. A new collection stays closed until
+    // it is added here on purpose (server/firestore-rules.test.mjs checks this list).
+
+    // The Invoice Tracker's JDAs and projects, and the marker of their first-time set-up.
+    match /jdas/{doc} { allow read, write: if onAccessList(); }
+    match /projects/{doc} { allow read, write: if onAccessList(); }
+    match /meta/{doc} { allow read, write: if onAccessList(); }
+    // The tracker's change log: read, and added to; a line is never changed or removed.
+    match /activity/{doc} { allow read, create: if onAccessList(); }
+    // The invoice Drive sync (run in the browser): which Drive files it has read. Added to, never changed.
+    match /processedFiles/{doc} { allow read, create: if onAccessList(); }
+    // The old tracker's invoices and WBS items: read once, to bring them into the register.
+    match /invoices/{doc} { allow read: if onAccessList(); }
+    match /scope/{doc} { allow read: if onAccessList(); }
 
     // The JDA report documents (JDA 1 and 2; JDA 3's is in its own project) are private: only people
     // signed in and on the access list read them, and no browser writes them. Saves go through the
