@@ -8,7 +8,7 @@ import { openForm } from './modal.js';
 import { runSync } from './sync.js';
 import { renderTimeline } from './timeline.js';
 import { renderLog, LOG_LINES } from './log.js';
-import { loadCtx, forget, storageNotice, auditLine, financeSummary } from './finance-ui.js';
+import { loadCtx, forget, storageNotice, auditLine, financeSummary, costKpis } from './finance-ui.js';
 import { startRender } from './render.js';
 
 export async function renderJda(id) {
@@ -38,13 +38,7 @@ export async function renderJda(id) {
       </div></div>
     ${storageNotice(ctx)}
 
-    <div class="kpis">
-      <div class="kpi"><small>Total budget</small><b>${rm(totals.budget)}</b></div>
-      <div class="kpi ${totals.overPlan ? 'bad' : 'good'}"><small>Paid (MYR)</small><b>${rm(totals.actual)}</b></div>
-      <div class="kpi"><small>Budget used</small><b>${totals.budget ? pct(totals.budgetUsedPct) : '—'}</b></div>
-      <div class="kpi ${totals.forecast > totals.budget ? 'bad' : 'good'}" title="${esc(FORECAST_NOTE)}"><small>Forecast at completion</small><b>${rm(totals.forecast)}</b></div>
-      <div class="kpi ${totals.counts.pending ? 'bad' : ''}"><small>Invoices pending</small><b>${totals.counts.pending}</b></div>
-    </div>
+    ${costKpis(sanctioned, entries, { budgetMinor: totals.budget, forecastMinor: totals.forecast, forecastBad: totals.forecast > totals.budget, waiting: totals.counts.pending })}
 
     <div class="section" id="timeline"></div>
 

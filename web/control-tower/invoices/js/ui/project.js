@@ -8,7 +8,7 @@ import { state, CONTEXT_ROWS, firstRows } from './state.js';
 import { openForm } from './modal.js';
 import { renderTimeline } from './timeline.js';
 import { renderLog, LOG_LINES } from './log.js';
-import { loadCtx, forget, storageNotice, auditLine, financeSummary } from './finance-ui.js';
+import { loadCtx, forget, storageNotice, auditLine, financeSummary, costKpis } from './finance-ui.js';
 import { startRender } from './render.js';
 
 export async function renderProject(id) {
@@ -35,13 +35,7 @@ export async function renderProject(id) {
       ${r.overPlan ? `<b>${rm(r.variance)} over</b> the sanctioned amount.` : `${rm(-r.variance)} under the sanctioned amount.`}
     </div>
 
-    <div class="kpis">
-      <div class="kpi"><small>Total budget</small><b>${rm(r.budget)}</b></div>
-      <div class="kpi ${r.overPlan ? 'bad' : 'good'}"><small>Paid (MYR)</small><b>${rm(r.actual)}</b></div>
-      <div class="kpi"><small>Budget used</small><b>${pct(r.budgetUsedPct)}</b></div>
-      <div class="kpi ${r.forecastOverBudget ? 'bad' : 'good'}" title="${esc(FORECAST_NOTE)}"><small>Forecast at completion</small><b>${rm(r.forecast)}</b></div>
-      <div class="kpi ${r.counts.pending ? 'bad' : ''}"><small>Invoices pending</small><b>${r.counts.pending}</b></div>
-    </div>
+    ${costKpis(sanctioned, entries, { budgetMinor: r.budget, forecastMinor: r.forecast, forecastBad: r.forecastOverBudget, waiting: r.counts.pending })}
 
     <div class="section" id="timeline"></div>
     ${jda ? financeSummary(sanctioned, entries, `${esc(jda.id)}/${esc(id)}`) : ''}

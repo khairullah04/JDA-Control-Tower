@@ -47,6 +47,19 @@ export function wireScope(base, jdaId) {
   if (select) select.onchange = () => { location.hash = `${base}/${jdaId}${select.value ? '/' + select.value : ''}`; };
 }
 // The summary cells: sanctioned, invoiced, paid, and what is left.
+// Cost, by the one rule the whole system uses (the Control Tower's ring too): paid ÷ sanctioned, both with
+// tax, from the Payment Table. Budget and forecast are shown after it, as secondary figures.
+export function costKpis(sanctioned, entries, { budgetMinor = 0, forecastMinor = 0, forecastBad = false, waiting = 0 } = {}) {
+  const t = tableTotals(paymentTable(sanctioned, entries)), pct = t.sanctionedMinor > 0 ? Math.round(t.actualMinor / t.sanctionedMinor * 100) : null;
+  const rm = m => money(m).replace(/\.\d\d$/, '');
+  return `<div class="kpis">
+      <div class="kpi"><small>Sanctioned (w TAX)</small><b>${rm(t.sanctionedMinor)}</b></div>
+      <div class="kpi ${t.actualMinor > t.sanctionedMinor ? 'bad' : 'good'}"><small>Paid (MYR)</small><b>${rm(t.actualMinor)}</b></div>
+      <div class="kpi"><small>Paid of sanctioned</small><b>${pct === null ? '—' : `${pct}%`}</b></div>
+      <div class="kpi"><small>Waiting for approval</small><b>${waiting}</b></div>
+      <div class="kpi quiet" title="${esc(`Budget ${rm(budgetMinor)}`)}"><small>Forecast at completion</small><b class="${forecastBad ? 'over' : ''}">${rm(forecastMinor)}</b><small>of budget ${rm(budgetMinor)}</small></div>
+    </div>`;
+}
 export const summaryCells = t => `<div class="pt-summary">
       <div><small>Total sanctioned (w TAX)</small><b>${money(t.sanctionedMinor)}</b></div>
       <div><small>Total invoiced amount</small><b>${money(t.invoicedMinor)}</b></div>
