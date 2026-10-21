@@ -40,7 +40,10 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
     try { res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(await writeWorkbook(req.body?.sheets || [])); }
     catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
   });
-  router.post('/entries/status', run(req => finance.setStatus(ids(req), String(req.body?.status), actor(req))));
+  // An invoice's status follows its stage (workflow.js): it moves only through Approvals, and Paid only
+  // when a CJI3 line is matched. Nothing sets it by hand: the old status menu is gone.
+  router.post('/entries/status', (req, res) => res.status(410).json({ error: "An invoice's status changes through Approvals, and it becomes Paid only when a CJI3 line is matched." }));
+  const noHandStatus = input => { const { status, stage, route, archivedAt, paidBy, ...rest } = input || {}; return rest; };
   // The approval process: move invoices to a stage, with a note (a reason when rejecting). Paid is
   // never set here: it comes from matching a CJI3 line.
   const may = req => move => {
@@ -63,10 +66,14 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   router.post('/cji3/rematch', run(async req => finance.matchCji3((await finance.cji3Lines(String(req.body?.group || ''))).filter(l => !l.invoiceId).map(l => l.id), actor(req))));
   router.get('/cji3/imports', run(() => finance.cji3Imports()));
   router.post('/sanctioned/batch', run(req => finance.saveAll('sanctioned', Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req))));
-  router.post('/:kind', run(req => finance.save(kindOf(req), req.body || {}, actor(req))));
+  // A new invoice starts at Received (Pending); an edit keeps the status and stage it has.
+  router.post('/:kind', run(req => finance.save(kindOf(req), kindOf(req) === 'entry' ? noHandStatus(req.body) : req.body || {}, actor(req))));
   router.post('/:kind/delete', run(req => finance.remove(kindOf(req), ids(req), actor(req))));
   router.post('/:kind/restore', run(req => finance.restore(kindOf(req), ids(req), actor(req))));
   router.post('/:kind/recalculate', run(req => finance.recalculate(kindOf(req), ids(req), req.body || {}, actor(req))));
-  router.post('/:kind/import', run(req => finance.importRecords(kindOf(req), Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req), { dryRun: req.body?.dryRun === true, duplicates: req.body?.duplicates === 'add' ? 'add' : 'skip' })));
+  // Imported invoices start at Received, whatever the sheet says; only records brought over once from the
+  // old tracker (source 'migrated') keep the status they had there.
+  const imported = req => (Array.isArray(req.body?.inputs) ? req.body.inputs : []).map(i => kindOf(req) === 'entry' && i?.source !== 'migrated' ? { ...noHandStatus(i), status: 'pending' } : i);
+  router.post('/:kind/import', run(req => finance.importRecords(kindOf(req), imported(req), actor(req), { dryRun: req.body?.dryRun === true, duplicates: req.body?.duplicates === 'add' ? 'add' : 'skip' })));
   return router;
 }

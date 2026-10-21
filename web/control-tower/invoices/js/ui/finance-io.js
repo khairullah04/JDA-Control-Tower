@@ -23,7 +23,7 @@ export function openImport(kind, ctx, jdaId = '') {
     <p class="legend">An Excel workbook (.xlsx) or a CSV file whose header row has: ${esc(k.columns)}. An export from this page imports back as it is. ${entry ? 'An invoice already in the register is left out, so importing a file twice adds nothing.' : ''}</p>
     <div class="rec-grid">
       <label>JDA the rows belong to<select name="jdaId" required>${options(ctx.jdas.map(j => [j.id, j.name]), jdaId, 'Choose…')}</select></label>
-      ${entry ? `<label>Status for rows that do not state one<select name="status" required>${options(STATUSES.map(s => [s, STATUS_LABEL[s]]), '', 'Choose…')}</select></label>` : ''}
+      ${entry ? '<p class="legend">Imported invoices start at Received, in Approvals > Intake, whatever the sheet says about their status.</p>' : ''}
       <label>File<input name="file" type="file" accept=".xlsx,.csv" required></label>
     </div>
     <div id="import-preview"></div>
@@ -41,7 +41,7 @@ export function openImport(kind, ctx, jdaId = '') {
   async function preview() {
     fresh = []; repeats = []; go.disabled = true; out.innerHTML = ''; msg.textContent = '';
     const file = el.file.files[0], jda = ctx.jdas.find(j => j.id === el.jdaId.value);
-    if (!file || !jda || (entry && !el.status.value)) return;
+    if (!file || !jda) return;
     out.innerHTML = '<p class="legend">Reading the file…</p>';
     try {
       const rows = tableIn(await finance.readFile(file), k.headers);
@@ -53,7 +53,8 @@ export function openImport(kind, ctx, jdaId = '') {
         ${end.after ? `<p class="msg">Reading stopped at the blank line ${end.blankLine}: ${end.after} line(s) below it were not read. If they belong to this table, remove the blank line from the file and choose it again.</p>` : ''}
         ${sample ? `<label class="${dates.sure ? '' : 'msg'}">${dates.sure ? 'Dates in this file are read' : `The dates in this file could be read either way (${esc(sample)}). Check that they are read`}
           <select id="import-order"><option value="mdy" ${as === 'mdy' ? 'selected' : ''}>month first: ${esc(sample)} is ${said('mdy')}</option><option value="dmy" ${as === 'dmy' ? 'selected' : ''}>day first: ${esc(sample)} is ${said('dmy')}</option></select></label>` : ''}`;
-      const read = k.read(rows, { jda, projects: ctx.projects.filter(p => p.jdaId === jda.id), status: entry ? el.status.value : '', ...(entry && { order: as }) });
+      const read = k.read(rows, { jda, projects: ctx.projects.filter(p => p.jdaId === jda.id), status: 'pending', ...(entry && { order: as }) });
+      if (entry) read.forEach(r => { if (r.input && r.input.source !== 'migrated') r.input.status = 'pending'; }); // as the server will
       const usable = read.filter(r => !r.error), checked = (await finance.importRecords(kind, usable.map(r => r.input), { dryRun: true })).results;
       const lines = read.map(r => r.error ? { line: r.line, ok: false, errors: [r.error], record: r.input } : { line: r.line, input: r.input, ...checked[usable.indexOf(r)] });
       fresh = lines.filter(l => l.ok && !l.duplicate).map(l => l.input); repeats = lines.filter(l => l.ok && l.duplicate).map(l => l.input);

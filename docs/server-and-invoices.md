@@ -109,7 +109,9 @@ Received ─┬─ Route 1: Direct ─────► Sent to PD ─────
 - **The Payment Tables do not change**: they read the invoice's `status` (pending / approved / paid /
   rejected), which is worked out from its stage (Received, With PM, Pending Lead → pending; Sent to PD,
   To Be Paid → approved; Paid → paid; Rejected → rejected). Invoices entered before the process get
-  their stage from their status; the old status menu in the CJI3 register still works and resets it.
+  their stage from their status. **There is no way to set a status by hand**: the register shows it
+  read-only (linked to the invoice's Approvals queue), the invoice form has no status field, imported
+  invoices always start at Received, and the server refuses all of these.
 - **Roles**: `ROLE_ACCOUNTANT1`, `ROLE_PM`, `ROLE_LEAD`, `ROLE_ACCOUNTANT2` in `server/.env`
   (comma-separated emails) limit each queue's moves to those people. Left empty (as now), anyone
   signed in may make any move.

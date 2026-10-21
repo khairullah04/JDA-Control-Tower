@@ -12,6 +12,7 @@ import { entrySheet } from '../finance/sheets.js';
 import { loadCtx, storageNotice, scopeBar, wireScope, monthLabel, statusBadge, options, dialog, act, openRecord, openAudit, exportButtons, exportSheet, today } from './finance-ui.js';
 import { openImport, bringOverOldRecords } from './finance-io.js';
 import { openColumnFilter, filterHeading } from './column-filter.js';
+import { stageOf, queueOf, STAGE_LABEL } from '../finance/workflow.js';
 
 const views = {}; // filters, sort order and selection, kept per place the register is shown
 const viewFor = key => views[key] ||= { q: '', cols: {}, deleted: false, sort: 'documentDate', dir: -1, selected: new Set() };
@@ -72,7 +73,7 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
         <td class="num mono">${esc(money(e.netMinor, e.currency))}</td>
         <td class="num mono" title="${esc([e.rateSource, e.rateDate].filter(Boolean).join(', '))}">${e.currency === BASE ? '—' : esc(e.rate || '')}${e.rateOverridden ? ' <span class="flag over">overridden</span>' : ''}</td>
         <td class="num mono">${esc(fmt(e.netMyrMinor))}</td><td class="num mono" title="Tax rate ${esc(fromBps(e.taxRateBps ?? 0))}%">${esc(fmt(e.taxMyrMinor))}</td><td class="num mono"><b>${esc(fmt(e.grossMyrMinor))}</b></td>
-        <td>${e.deletedAt ? statusBadge(e.status) : `<select class="st-select ${esc(e.status)}" data-status="${esc(e.id)}" aria-label="Payment status">${options(STATUSES.map(s => [s, STATUS_LABEL[s]]), e.status)}</select>`}</td>
+        <td><a class="st-link" href="#/approvals/${esc(queueOf(e).id)}" title="${esc(STAGE_LABEL[stageOf(e)])}: change it in Approvals">${statusBadge(e.status)}</a></td>
         <td class="${e.dueDate && e.status !== 'paid' && e.dueDate < today() ? 'overdue' : ''}">${esc(e.dueDate || '')}</td>
         <td class="actions">${e.deletedAt ? `<button type="button" class="ghost btn-sm" data-restore="${esc(e.id)}">Restore</button>` : `<button type="button" class="ghost btn-sm" data-edit="${esc(e.id)}">Edit</button>`}
           <button type="button" class="ghost btn-sm" data-history="${esc(e.id)}">History</button>${e.deletedAt ? '' : `<button type="button" class="ghost btn-sm" data-delete="${esc(e.id)}">Delete</button>`}</td></tr>`).join('')
@@ -82,7 +83,6 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
     </table>`;
     $('#reg-bulk', root).innerHTML = view.selected.size ? `<div class="reg-bulk"><b>${view.selected.size} selected</b>
       ${view.deleted ? '<button type="button" class="ghost btn-sm" data-bulk="restore">Restore</button>' : `
-        <select id="bulk-status">${options(STATUSES.map(s => [s, STATUS_LABEL[s]]), 'paid')}</select><button type="button" class="ghost btn-sm" data-bulk="status">Set status</button>
         <button type="button" class="ghost btn-sm" data-bulk="recalculate">Recalculate…</button><button type="button" class="ghost btn-sm" data-bulk="delete">Delete</button>`}</div>` : '';
   }
   draw();
@@ -117,7 +117,6 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
     const t = e.target;
     if (t.id === 'reg-all') { shown().forEach(x => t.checked ? view.selected.add(x.id) : view.selected.delete(x.id)); draw(); }
     if (t.dataset.pick) { t.checked ? view.selected.add(t.dataset.pick) : view.selected.delete(t.dataset.pick); draw(); }
-    if (t.dataset.status) { const was = find(t.dataset.status)?.status; act(ctx, msg, () => finance.setStatus([t.dataset.status], t.value), () => { t.value = was; }); } // refused: back to the status it really has
   };
   root.onclick = e => {
     const d = e.target.closest('button')?.dataset;
@@ -127,7 +126,6 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
     if (d.history) openAudit(`History of invoice ${find(d.history)?.invoiceNo || ''}`, d.history);
     if (d.delete) removeThem([d.delete]);
     if (d.restore) act(ctx, msg, () => finance.restore('entry', [d.restore]));
-    if (d.bulk === 'status') act(ctx, msg, () => finance.setStatus(picked(), $('#bulk-status', root).value));
     if (d.bulk === 'delete') removeThem(picked());
     if (d.bulk === 'restore') act(ctx, msg, () => finance.restore('entry', picked()));
     if (d.bulk === 'recalculate') openRecalculate(ctx, picked().map(find));

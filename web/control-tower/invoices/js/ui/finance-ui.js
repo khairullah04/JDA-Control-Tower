@@ -131,7 +131,6 @@ export function openRecord(kind, ctx, { record = null, preset = {} } = {}) {
     <div class="rec-grid">
       ${entry ? input('vendor', 'Vendor name on the invoice (optional)', v('vendor') === v('partner') ? '' : v('vendor'))
         + input('postingDate', 'Posting date (optional)', v('postingDate'), 'type="date"') + input('dueDate', 'Due date (optional)', v('dueDate'), 'type="date"')
-        + `<label>Payment status<select name="status">${options(STATUSES.map(s => [s, STATUS_LABEL[s]]), v('status') || 'pending')}</select></label>`
         + input('fileUrl', 'Link to the invoice file (optional)', v('fileUrl'), 'type="url" placeholder="https://…"') : ''}
       ${input('description', 'Description (optional)', v('description'))}
       ${input('remarks', 'Remarks (optional)', v('remarks'))}
@@ -215,7 +214,8 @@ export function openRecord(kind, ctx, { record = null, preset = {} } = {}) {
       ...(foreign && { rate: get('rate'), rateDate: get('rateDate'), rateSource: get('rateSource') || 'Entered by hand', rateOverridden: overridden }),
       ...(entry && {
         invoiceNo: get('invoiceNo'), documentDate: get('documentDate'), vendor: get('vendor'), postingDate: get('postingDate'), dueDate: get('dueDate'),
-        status: get('status'), fileUrl: get('fileUrl'), sap: Object.fromEntries(SAP_FIELDS.map(([k]) => [k, get('sap.' + k)]))
+        fileUrl: get('fileUrl'), // no status: it follows the invoice's stage (Approvals, and Paid from a CJI3 match)
+        sap: Object.fromEntries(SAP_FIELDS.map(([k]) => [k, get('sap.' + k)]))
       })
     };
     btn.disabled = true; msg.textContent = 'Saving…';
