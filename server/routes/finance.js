@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { publicMessage } from '../errors.js';
 import { bnmRate } from '../forex.js';
 import { readSheets, writeWorkbook } from '../finance-xlsx.js';
 import { isDate } from '../../web/control-tower/invoices/js/finance/core.js';
@@ -20,7 +21,7 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   const ids = req => Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
   const run = fn => async (req, res) => {
     try { res.json(await fn(req)); }
-    catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: e.message }); }
+    catch (e) { res.status(e.status || 500).json({ error: publicMessage(e) }); }
   };
 
   router.get('/data', run(async () => ({ ...(await finance.data()), storage })));
@@ -38,7 +39,7 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   router.post('/read', run(async req => ({ sheets: await readSheets(String(req.body?.name), Buffer.from(String(req.body?.fileBase64 || ''), 'base64')) })));
   router.post('/workbook', async (req, res) => {
     try { res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(await writeWorkbook(req.body?.sheets || [])); }
-    catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
+    catch (e) { res.status(500).json({ error: publicMessage(e, 'The Excel file could not be written. Try again.') }); }
   });
   // An invoice's status follows its stage (workflow.js): it moves only through Approvals, and Paid only
   // when a CJI3 line is matched. Nothing sets it by hand: the old status menu is gone.

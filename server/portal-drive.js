@@ -1,4 +1,5 @@
 import mammoth from 'mammoth';
+import { userError } from './errors.js';
 import { cellText } from './cells.js';
 import ExcelJS from 'exceljs';
 import { drive, ALL } from './drive.js';
@@ -26,7 +27,7 @@ const MAX_TEXT = 400_000;             // characters per extracted text file
 export async function portalRootId() {
   if (process.env.PORTAL_DRIVE_ROOT_FOLDER_ID) return process.env.PORTAL_DRIVE_ROOT_FOLDER_ID;
   const invoices = process.env.DRIVE_ROOT_FOLDER_ID;
-  if (!invoices) throw new Error('The JDA Control Tower Drive folder is not set up yet (PORTAL_DRIVE_ROOT_FOLDER_ID in server/.env). Contact your administrator.');
+  if (!invoices) throw userError('The JDA Control Tower Drive folder is not set up yet (PORTAL_DRIVE_ROOT_FOLDER_ID in server/.env). Contact your administrator.');
   const inside = (await children(invoices)).find(f => f.mimeType === FOLDER && norm(f.name) === 'jdaportal');
   return inside ? inside.id : invoices;
 }
@@ -63,9 +64,9 @@ async function jdaFolder(jda) {
 // The link the Editor Page opens so files can be dropped into this JDA's Master File folder.
 export async function masterFolderUrl(jda) {
   const folder = await jdaFolder(jda);
-  if (!folder) throw new Error(`No folder named "${jda.name}" in the JDA Control Tower's Drive folder.`);
+  if (!folder) throw userError(`No folder named "${jda.name}" in the JDA Control Tower's Drive folder.`);
   const master = (await children(folder.id)).find(f => f.mimeType === FOLDER && kindOfFolder(f.name) === 'master');
-  if (!master) throw new Error(`No "Master File" folder inside "${folder.name}" in Drive. Create it, then try again.`);
+  if (!master) throw userError(`No "Master File" folder inside "${folder.name}" in Drive. Create it, then try again.`);
   return `https://drive.google.com/drive/folders/${master.id}`;
 }
 
@@ -109,10 +110,10 @@ async function workbookText(buffer) {
 // One Drive file -> the content blocks Claude reads. A file that can't be read is never silently
 // dropped or cut short: it throws, and the caller lists it as skipped with the reason.
 export async function fileBlocks(f) {
-  if (Number(f.size || 0) > MAX_BYTES) throw new Error('larger than 20 MB');
+  if (Number(f.size || 0) > MAX_BYTES) throw userError('larger than 20 MB');
   const exportAs = GOOGLE_EXPORT[f.mimeType];
   const type = exportAs || f.mimeType;
-  if (![...IMAGES, ...TEXTS, 'application/pdf', DOCX, XLSX].includes(type)) throw new Error('unsupported file type (use PDF, Word, Excel, Google Docs/Sheets/Slides, an image, or plain text)');
+  if (![...IMAGES, ...TEXTS, 'application/pdf', DOCX, XLSX].includes(type)) throw userError('unsupported file type (use PDF, Word, Excel, Google Docs/Sheets/Slides, an image, or plain text)');
   const res = exportAs
     ? await drive.files.export({ fileId: f.id, mimeType: exportAs }, { responseType: 'arraybuffer' })
     : await drive.files.get({ fileId: f.id, alt: 'media', ...ALL }, { responseType: 'arraybuffer' });
@@ -126,7 +127,7 @@ export async function fileBlocks(f) {
   if (type === DOCX) text = (await mammoth.extractRawText({ buffer })).value;
   else if (type === XLSX) text = await workbookText(buffer);
   else text = buffer.toString('utf8');
-  if (text.length > MAX_TEXT) throw new Error('too much text to process in one go; split it into smaller files');
-  if (!text.trim()) throw new Error('no readable text found');
+  if (text.length > MAX_TEXT) throw userError('too much text to process in one go; split it into smaller files');
+  if (!text.trim()) throw userError('no readable text found');
   return [{ type: 'text', text: `${label.text}\n${text}` }];
 }
