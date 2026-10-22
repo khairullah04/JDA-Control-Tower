@@ -167,3 +167,15 @@ logged (who, when, note).
 - [x] Email HTML builder: escapes user text, correct totals, hyperlinks by label / "Document n".
 - [x] `.eml` headers.
 - [x] Selection logic (count, total, select all).
+
+# The Microsoft List replaces Approvals (owner, 2026-10-22)
+
+The List and its approval-request email are the approval process; the Approvals queue page goes. Nobody
+approves inside the system: emailed invoices wait as Pending Lead approval, and a CJI3 payment line is the
+proof of approval and marks them Paid.
+
+- [ ] Sidebar "Approvals" opens the List view (pull, tick, Generate Email), with a JDA picker.
+- [ ] The List stays under the graphs on each JDA's tracker page too.
+- [ ] Remove the queue page (Intake, PM validation, Lead approval, To Be Paid, Paid, archive) and the links to it.
+- [ ] CJI3 marks an invoice Paid from any open stage (no "not approved yet" hold); undoing the match returns it to the stage it was in.
+- [ ] Tests and docs updated.
