@@ -37,4 +37,14 @@ export const cji3Lines = (group = '') => f.cji3Lines(group);
 export const cji3Imports = () => f.cji3Imports();
 export const matchLine = (lineId, invoiceId = '') => f.matchLine(lineId, invoiceId, who());
 export const rematch = async group => f.matchCji3((await f.cji3Lines(group)).filter(l => !l.invoiceId).map(l => l.id), who());
+// The Microsoft List in demo mode: an export (CSV) only; no Graph, no Outlook drafts.
+export const listState = async () => ({ ...(await f.listState()), graph: false, mail: false });
+export async function listRows(file) {
+  if (!file) throw new Error('Demo mode reads an export of the List (CSV). Choose the file.');
+  const { rowsFromSheet } = await import('../../finance/list-source.js');
+  return rowsFromSheet(await readFile(file));
+}
+export const saveListPull = pull => f.saveListPull(pull, who());
+export const sendListToLead = req => f.sendListToLead(req, who());
+export const listDraft = async () => { throw new Error('Outlook drafts are not available in demo mode.'); };
 export const workbook = null; // Excel files are written by the server

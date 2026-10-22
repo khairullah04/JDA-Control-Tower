@@ -7,7 +7,7 @@
 //   - Nothing is ever removed: a delete only marks the record, so it can be restored.
 //   - Each change answers with the records as they now are, so a page can update without reloading everything.
 import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
-import { toBps, fromBps, normRate } from './money.js';
+import { toBps, fromBps, normRate, fmt } from './money.js';
 import { checkMove, applyMove, stageOf, routeOf, STAGE_LABEL, MOVES } from './workflow.js';
 import { readCji3, planCji3, lineId, GROUPS, candidatesFor, lineMyr, paidAgainst } from './cji3.js';
 
@@ -331,10 +331,64 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     return { line: next };
   }
 
+  /* ---------- The Microsoft List: invoices before approval (list-source.js, email.js) ---------- */
+  // The last pull of the List (from Graph, or an export of it) and the column mapping confirmed for it.
+  const LIST_EMPTY = { mapping: {}, items: [], pulledAt: '', pulledBy: '', source: '', fileName: '' };
+  const listState = async () => ({ ...LIST_EMPTY, ...(await store.get('financeMeta', 'list') || {}) });
+  async function saveListPull({ items, mapping, source = 'file', fileName = '' }, actor) {
+    if (!Array.isArray(items) || items.length > 5000) throw new FinanceError('Nothing to keep from the List, or more than 5,000 rows.');
+    const clean = items.map(i => ({ key: String(i.key || '').slice(0, 200), listId: String(i.listId || '').slice(0, 100), invoiceNo: String(i.invoiceNo || '').slice(0, 200),
+      partner: String(i.partner || '').slice(0, 200), amountMinor: Number.isSafeInteger(i.amountMinor) ? i.amountMinor : null, amountText: String(i.amountText || '').slice(0, 60),
+      currency: String(i.currency || '').slice(0, 3).toUpperCase(), description: String(i.description || '').slice(0, 1000), jda: String(i.jda || '').slice(0, 100),
+      proofs: (Array.isArray(i.proofs) ? i.proofs : []).filter(p => /^https?:\/\//i.test(p?.url || '')).slice(0, 20).map(p => ({ label: String(p.label || '').slice(0, 200), url: String(p.url).slice(0, 2000) })),
+      missing: (Array.isArray(i.missing) ? i.missing : []).map(String).slice(0, 10) })).filter(i => i.key);
+    const next = { mapping: Object.fromEntries(Object.entries(mapping || {}).map(([k, v]) => [k, String(v || '').slice(0, 200)])), items: clean, pulledAt: now(), pulledBy: actor, source, fileName: String(fileName).slice(0, 200) };
+    return store.atomic(async () => ({ result: next, writes: [{ coll: 'financeMeta', id: 'list', data: next }] }));
+  }
+  // The PM chose these invoices and emailed them to the Project Lead (Route 2): each becomes an invoice
+  // in the register if it is not one yet (a draft: what the List does not say, such as the project and
+  // dates, is listed on it to be completed), and moves to Pending Lead approval, through "With PM" when it
+  // was only received. The email is logged with who sent it, when, and which invoices.
+  async function sendListToLead({ jdaId, jdaName, keys = [], subject = '' }, actor, { may } = {}) {
+    const { items } = await listState(), want = new Set(keys), chosen = items.filter(i => want.has(i.key));
+    if (!jdaId || !chosen.length) throw new FinanceError('Choose at least one invoice from the List.');
+    const s = await settings(), at = now(), key = v => String(v || '').toUpperCase().replace(/\s+/g, '');
+    const sent = [], skipped = [];
+    let created = 0;
+    for (const item of chosen) {
+      const entries = await store.list(COLL.entry, { where: ['jdaId', jdaId] });
+      let rec = entries.find(e => !e.deletedAt && (e.listItemId === item.key || (item.invoiceNo && key(e.invoiceNo) === key(item.invoiceNo))));
+      if (!rec) {
+        const { record } = build('entry', { jdaId, jdaName, invoiceNo: item.invoiceNo, partner: item.partner, vendor: item.partner, currency: item.currency,
+          amount: item.amountMinor != null ? fmt(item.amountMinor, item.currency || 'MYR', true) : '', taxRate: '0', description: item.description,
+          remarks: 'From the Microsoft List', fileUrl: item.proofs[0]?.url || '', status: 'pending', draft: true, source: 'list' }, null, s);
+        rec = fresh({ ...record, listItemId: item.key, proofs: item.proofs }, { source: 'list' }, actor, at);
+        await store.atomic(async () => ({ writes: [{ coll: COLL.entry, id: rec.id, data: rec }, line(actor, 'entry', rec, 'import', { new: 'From the Microsoft List' })] }));
+        created++;
+      } else if (JSON.stringify(rec.proofs || []) !== JSON.stringify(item.proofs)) {
+        rec = stamp({ ...rec, proofs: item.proofs, listItemId: rec.listItemId || item.key }, actor, at);
+        await store.atomic(async () => ({ writes: [{ coll: COLL.entry, id: rec.id, data: rec }] }));
+      }
+      const stage = stageOf(rec), ref = rec.invoiceNo || item.invoiceNo || '(no number)';
+      if (!['received', 'with_pm'].includes(stage)) { skipped.push({ invoiceNo: ref, why: `already ${STAGE_LABEL[stage]}` }); continue; }
+      if (stage === 'received') {
+        const out = await moveStage([rec.id], 'with_pm', { note: 'Taken from the Microsoft List by the PM' }, actor);
+        if (out.refused.length) { skipped.push({ invoiceNo: ref, why: out.refused[0].why }); continue; }
+      }
+      const out = await moveStage([rec.id], 'pending_lead', { note: `Emailed to the Project Lead${subject ? `: ${subject}` : ''}`, may }, actor);
+      if (out.refused.length) skipped.push({ invoiceNo: ref, why: out.refused[0].why });
+      else sent.push({ key: item.key, invoiceNo: ref, id: rec.id });
+    }
+    const log = { at, by: actor, jdaId, jdaName: String(jdaName || ''), subject: String(subject).slice(0, 300), invoices: sent, skipped };
+    await store.atomic(async () => ({ writes: [{ coll: 'listEmails', id: newId(), data: log }] }));
+    return { sent, skipped, created };
+  }
+  const listEmails = async (jdaId = '') => (await store.list('listEmails', jdaId ? { where: ['jdaId', jdaId] } : {})).sort((a, b) => b.at.localeCompare(a.at));
+
   const cji3Lines = async (group = '') => (await store.list('cji3Lines', group ? { where: ['group', group] } : {})).sort((a, b) => (b.postingDate || '').localeCompare(a.postingDate || '') || a.lineKey.localeCompare(b.lineKey));
   const cji3Imports = async () => (await store.list('cji3Imports', { latest: 200, by: 'at' })).sort((a, b) => b.at.localeCompare(a.at));
 
-  return { data, save, saveAll, moveStage, stageHistory, importCji3, matchCji3, matchLine, cji3Lines, cji3Imports, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
+  return { data, save, saveAll, moveStage, stageHistory, importCji3, matchCji3, matchLine, cji3Lines, cji3Imports, listState, saveListPull, sendListToLead, listEmails, remove: (kind, ids, actor) => mark(kind, ids, actor, true), restore: (kind, ids, actor) => mark(kind, ids, actor, false), setStatus, recalculate, saveSettings, audit, importRecords };
 }
 
 // The simplest store: everything in memory. The tracker's demo mode and the tests use it; the

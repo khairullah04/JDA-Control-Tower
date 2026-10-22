@@ -26,8 +26,8 @@ export function emailHtml({ jdaName, items, recipient = '', sender = '' }) {
     .map((h, i) => `<th align="${i === 4 ? 'right' : 'left'}" style="${FONT};font-size:13px;font-weight:bold;color:#ffffff;background-color:#013d39;padding:9px 10px;border:1px solid #013d39">${h}</th>`).join('');
   const rows = items.map((i, n) => {
     const zebra = n % 2 ? 'background-color:#f2f7f7;' : 'background-color:#ffffff;';
-    return `<tr><td ${cell(zebra)}>${n + 1}</td><td ${cell(zebra + 'font-weight:bold;')}>${escHtml(i.invoiceNo)}</td><td ${cell(zebra)}>${escHtml(i.partner)}</td>
-      <td ${cell(zebra)}>${escHtml(i.description)}</td><td align="right" ${cell(zebra + 'text-align:right;white-space:nowrap;')}>${amount(i.amountMinor, i.currency)}</td><td ${cell(zebra)}>${links(i.proofs || [])}</td></tr>`;
+    return `<tr><td ${cell(zebra)}>${n + 1}</td><td ${cell(zebra + 'font-weight:bold;')}>${escHtml(i.invoiceNo) || '—'}</td><td ${cell(zebra)}>${escHtml(i.partner) || '—'}</td>
+      <td ${cell(zebra)}>${escHtml(i.description) || '—'}</td><td align="right" ${cell(zebra + 'text-align:right;white-space:nowrap;')}>${amount(i.amountMinor, i.currency)}</td><td ${cell(zebra)}>${links(i.proofs || [])}</td></tr>`;
   }).join('\n');
   const total = [...totals].map(([c, m]) => amount(m, c)).join('<br>') || '—';
   return `<!DOCTYPE html>

@@ -28,6 +28,7 @@ export function withBook(api) {
     importCji3: (group, file, options = {}) => api.importCji3(group, file, options).then(out => { if (!options.dryRun) book = null; return out; }),
     matchLine: (lineId, invoiceId) => api.matchLine(lineId, invoiceId).then(out => { book = null; return out; }),
     rematch: group => api.rematch(group).then(out => { book = null; return out; }),
+    sendListToLead: req => api.sendListToLead(req).then(out => { book = null; return out; }), // invoices made or moved: read again
     importRecords: (kind, inputs, options = {}) => keeping(kind, api.importRecords(kind, inputs, options), out => options.dryRun ? [] : out.results.filter(r => r.added).map(r => r.record))
   };
 }

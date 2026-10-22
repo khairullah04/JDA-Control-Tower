@@ -81,3 +81,32 @@ test('the subject, the .eml (an unsent draft for Outlook) and the mailto link', 
   assert.match(mt, /^mailto:\?subject=/);
   assert.ok(!/body=/.test(mt));
 });
+
+/* ---------- Sending to the Project Lead: into the register, to Pending Lead, logged ---------- */
+import { createFinance, memoryStore } from '../web/control-tower/invoices/js/finance/service.js';
+import { stageOf } from '../web/control-tower/invoices/js/finance/workflow.js';
+
+test('emailing List invoices to the Lead: new ones become register invoices, all move to Pending Lead, the email is logged', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-22T02:00:00Z' });
+  const { headers, rows } = rowsFromSheet(sheet(['1', 'INV-L1', 'IBM', '1,000.00', 'MYR', 'Sept', 'JDA 1', 'TS | https://a.com/ts', ''],
+    ['2', 'INV-L2', 'IBM', '500', 'USD', 'Oct', 'JDA 1', '', ''], ['3', 'INV-OLD', 'IBM', '10', 'MYR', 'x', 'JDA 1', '', '']));
+  const mapping = suggestMapping(headers);
+  await f.saveListPull({ items: itemsFrom(rows, mapping), mapping, fileName: 'list.xlsx' }, 'farid');
+  assert.deepEqual([(await f.listState()).items.length, (await f.listState()).pulledBy], [3, 'farid']);
+  // INV-OLD is already in the register and already approved: it is not sent again
+  const old = await f.save('entry', { jdaId: 'j1', jdaName: 'JDA 1', projectId: 'p1', projectCode: 'AA', partner: 'IBM', invoiceNo: 'INV-OLD', documentDate: '2026-09-01', currency: 'MYR', amount: '10' }, 'a');
+  await f.moveStage([old.id], 'sent_to_pd', {}, 'a');
+  const out = await f.sendListToLead({ jdaId: 'j1', jdaName: 'JDA 1', keys: ['1', '2', '3'], subject: '[JDA 1] Invoice Approval Request – 3 invoices – 22/10/2026' }, 'farid');
+  assert.deepEqual([out.sent.map(s => s.invoiceNo), out.skipped, out.created], [['INV-L1', 'INV-L2'], [{ invoiceNo: 'INV-OLD', why: 'already Sent to PD' }], 2]);
+  const { entries } = await f.data(), l1 = entries.find(e => e.invoiceNo === 'INV-L1');
+  assert.deepEqual([stageOf(l1), l1.status, l1.listItemId, l1.proofs, l1.grossMyrMinor, l1.missing.length > 0], ['pending_lead', 'pending', '1', [{ label: 'TS', url: 'https://a.com/ts' }], 100000, true]);
+  const history = await f.stageHistory(l1.id);
+  assert.deepEqual(history.map(h => [h.from, h.to, h.by]), [['received', 'with_pm', 'farid'], ['with_pm', 'pending_lead', 'farid']]);
+  assert.match(history[1].note, /Emailed to the Project Lead: \[JDA 1\]/);
+  const [log] = await f.listEmails('j1');
+  assert.deepEqual([log.by, log.invoices.map(i => i.invoiceNo), log.skipped.length], ['farid', ['INV-L1', 'INV-L2'], 1]);
+  // sending again moves nothing and creates nothing
+  const again = await f.sendListToLead({ jdaId: 'j1', jdaName: 'JDA 1', keys: ['1'] }, 'farid');
+  assert.deepEqual([again.sent.length, again.created, again.skipped[0].why], [0, 0, 'already Pending Lead approval']);
+  await assert.rejects(f.sendListToLead({ jdaId: 'j1', keys: [] }, 'farid'), /Choose at least one/);
+});
