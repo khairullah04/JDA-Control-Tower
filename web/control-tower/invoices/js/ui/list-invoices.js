@@ -1,18 +1,18 @@
 // A JDA's invoices from the Microsoft List (before approval), under its graphs on the tracker's JDA page.
-// The PM pulls the List (from Microsoft, or an export of it), ticks invoices, and generates the
+// The PM pulls the List (from Microsoft with their own sign-in, or an export of it; the columns are
+// found automatically), ticks invoices, and generates the
 // approval-request email to the Project Lead. Generating it sends them: they move to Pending Lead
 // approval in Approvals (finance/service.js sendListToLead). Proof links come from the List itself.
 import { $, esc } from './dom.js';
 import * as finance from '../services/finance.js';
 import { money } from '../finance/money.js';
-import { LIST_FIELDS, suggestMapping, unmappedNeeded, itemsFrom, inJda, selectionTotals } from '../finance/list-source.js';
+import { LIST_FIELDS, autoMapping, notFound, itemsFrom, inJda, selectionTotals } from '../finance/list-source.js';
 import { emailHtml, emlFile, subjectFor, mailtoLink } from '../finance/email.js';
 import { stageOf, STAGE_LABEL } from '../finance/workflow.js';
 import { recipientsFor, SIGN_OFF } from '../config/email-recipients.js';
 import { dialog } from './finance-ui.js';
 
 const picked = {}; // per JDA: the ticked invoices, kept while the page redraws
-const rowsRead = {}; // per JDA: the rows last read from the List, to change the column mapping without reading again
 const when = iso => iso ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
 export async function renderListInvoices(root, ctx, jda) {
@@ -26,17 +26,24 @@ export async function renderListInvoices(root, ctx, jda) {
   const key = v => String(v || '').toUpperCase().replace(/\s+/g, '');
   const inRegister = i => ctx.fin.entries.find(e => !e.deletedAt && e.jdaId === jda.id && (e.listItemId === i.key || (i.invoiceNo && key(e.invoiceNo) === key(i.invoiceNo))));
 
+  const ms = state.ms || {}, canPull = state.graph || ms.signedIn;
   const draw = () => {
     const t = selectionTotals(items, sel), all = items.length > 0 && items.every(i => sel.has(i.key));
     root.innerHTML = `
       <div class="section-head"><h3>Invoices from the Microsoft List</h3>
         <div class="row">
-          ${state.graph ? '<button type="button" class="primary btn-sm" id="li-pull">Pull from the List</button>' : ''}
-          <label class="ghost btn-sm li-file">${state.graph ? 'Import an export instead' : 'Import the List (export)'}<input type="file" accept=".xlsx,.csv" id="li-file" hidden></label>
-          ${state.items.length ? '<button type="button" class="ghost btn-sm" id="li-map">Columns…</button>' : ''}
+          ${canPull ? '<button type="button" class="primary btn-sm" id="li-pull">Pull from the List</button>' : ''}
+          <label class="ghost btn-sm li-file">${canPull ? 'Import an export instead' : 'Import the List (export)'}<input type="file" accept=".xlsx,.csv" id="li-file" hidden></label>
         </div></div>
+      ${state.graph || state.demo ? '' : `<div class="li-connect">${ms.signedIn
+        ? `<span>Signed in to Microsoft as <b>${esc(ms.account || 'you')}</b> · <button type="button" class="link" id="li-signout">Sign out</button></span>
+           <label>List link <input type="url" id="li-url" placeholder="https://….sharepoint.com/sites/…/Lists/…" value="${esc(state.listUrl)}"></label>`
+        : ms.pending
+          ? `<span>Open <a href="${esc(ms.pending.url)}" target="_blank" rel="noopener">${esc(ms.pending.url.replace(/^https:\/\//, ''))}</a> and enter the code <b class="mono li-code">${esc(ms.pending.code)}</b>, then sign in with your work account. Waiting…</span>`
+          : '<span>To pull the List straight from Microsoft, sign in with your work account (no IT setup).</span> <button type="button" class="ghost btn-sm" id="li-signin">Sign in to Microsoft</button>'}</div>`}
       <p class="legend">${state.pulledAt ? `Pulled ${esc(when(state.pulledAt))} by ${esc(state.pulledBy)}${state.fileName ? ` from ${esc(state.fileName)}` : state.source === 'graph' ? ' from Microsoft' : ''} · ${items.length} invoice${items.length === 1 ? '' : 's'} for ${esc(jda.name)}`
-        : state.graph ? 'Pull the List to see the invoices waiting for approval.' : 'Not connected to Microsoft: export the List (to Excel or CSV) and import the file here.'}</p>
+        : canPull ? 'Pull the List to see the invoices waiting for approval.' : 'Export the List (to Excel or CSV) and import the file here, or sign in to Microsoft above.'}</p>
+      ${state.pulledAt ? `<p class="legend li-cols">Columns found: ${LIST_FIELDS.filter(f => f.key !== 'id' && state.mapping[f.key]).map(f => `${esc(f.label)} ← <b>${esc(state.mapping[f.key])}</b>`).join(' · ') || 'none'}${notFound(state.mapping).length ? ` · <span class="li-missing">Not in the List: ${esc(notFound(state.mapping).join(', '))}</span>` : ''}</p>` : ''}
       <p class="msg" id="li-msg"></p>
       ${items.length ? `
       <div class="li-bar"><span><b>${t.count}</b> selected${t.count ? ` · Total ${t.byCurrency.map(c => `<b class="mono">${esc(money(c.minor, c.currency))}</b>`).join(' + ') || '—'}` : ''}</span>
@@ -59,50 +66,37 @@ export async function renderListInvoices(root, ctx, jda) {
   const wire = () => {
     $('#li-file', root).onchange = e => e.target.files[0] && pull(e.target.files[0]);
     if ($('#li-pull', root)) $('#li-pull', root).onclick = () => pull(null);
-    if ($('#li-map', root)) $('#li-map', root).onclick = () => remap();
+    if ($('#li-signin', root)) $('#li-signin', root).onclick = () => signIn();
+    if ($('#li-signout', root)) $('#li-signout', root).onclick = async () => { await finance.msSignOut(); renderListInvoices(root, ctx, jda); };
     if ($('#li-all', root)) $('#li-all', root).onchange = e => { items.forEach(i => e.target.checked ? sel.add(i.key) : sel.delete(i.key)); draw(); };
     root.querySelectorAll('[data-pick]').forEach(c => c.onchange = () => { c.checked ? sel.add(c.dataset.pick) : sel.delete(c.dataset.pick); draw(); });
     if ($('#li-email', root)) $('#li-email', root).onclick = () => generate();
   };
 
-  // Rows from the List or a file -> the column mapping (asked when it is new or no longer fits) -> kept.
-  let lastRows = rowsRead[jda.id] || null;
-  async function pull(file) {
-    msg('Reading the List…');
-    try {
-      const got = await finance.listRows(file);
-      if (!got.rows.length) throw new Error('No invoices found under the column headings.');
-      lastRows = rowsRead[jda.id] = { ...got, source: file ? 'file' : 'graph', fileName: file?.name || '' };
-      const mapping = suggestMapping(got.headers, state.mapping), fits = Object.keys(state.mapping || {}).length && LIST_FIELDS.every(f => state.mapping[f.key] === mapping[f.key]) && !unmappedNeeded(mapping).length;
-      if (fits) await keep(mapping); else askMapping(got.headers, mapping);
-    } catch (e) { msg(e.message); }
-  }
-  async function keep(mapping) {
-    const pulled = await finance.saveListPull({ items: itemsFrom(lastRows.rows, mapping), mapping, source: lastRows.source, fileName: lastRows.fileName });
-    state = { ...state, ...pulled };
+  // Sign-in by a device code: Microsoft shows the code's page; this waits until the person has signed in.
+  async function signIn() {
+    try { await finance.msSignIn(); } catch (e) { return msg(e.message); }
     renderListInvoices(root, ctx, jda);
   }
-  function remap() {
-    if (!lastRows) return msg('Import the List again to change which column is which.');
-    askMapping(lastRows.headers, suggestMapping(lastRows.headers, state.mapping));
-  }
-  function askMapping(headers, mapping) {
-    const d = dialog(`<form><h3>Which column is which?</h3>
-      <p class="legend">Proposed from the column names in the List: check each one. This is remembered for the next time.</p>
-      <div class="rec-grid">${LIST_FIELDS.map(f => `<label>${esc(f.label)}${f.need ? ' *' : ''}<select name="${f.key}">
-        <option value="">${f.need ? 'Choose…' : '— not in the List —'}</option>${headers.map(h => `<option ${mapping[f.key] === h ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select></label>`).join('')}</div>
-      <p class="legend">JDA: when the List has no JDA column, every row shows on every JDA's page. Supporting documents: a link column, or a text column with one link per line.</p>
-      <p class="msg" id="map-msg"></p>
-      <div class="row"><button type="button" class="ghost" id="cancel">Cancel</button><button class="primary">Use these columns</button></div></form>`, true);
-    $('#cancel', d).onclick = () => { d.close(); msg(''); };
-    $('form', d).onsubmit = async e => {
-      e.preventDefault();
-      const chosen = Object.fromEntries(LIST_FIELDS.map(f => [f.key, e.target.elements[f.key].value]));
-      const need = unmappedNeeded(chosen);
-      if (need.length) { $('#map-msg', d).textContent = `Choose the column for: ${need.join(', ')}.`; return; }
-      d.close();
-      try { await keep(chosen); } catch (err) { msg(err.message); }
-    };
+  if (ms.pending) (async function wait() { // look again every few seconds; redraw once signed in (or the code expired)
+    await new Promise(r => setTimeout(r, 4000));
+    if (!root.isConnected) return;
+    const now = await finance.listState().catch(() => null);
+    if (now && !now.ms?.pending) renderListInvoices(root, ctx, jda); else wait();
+  })();
+
+  // Rows from the List or a file -> the columns, found automatically -> kept.
+  async function pull(file) {
+    const listUrl = file ? '' : ($('#li-url', root)?.value || state.listUrl || '').trim();
+    msg('Reading the List…');
+    try {
+      const got = await finance.listRows(file, listUrl);
+      if (!got.rows.length) throw new Error('No invoices found under the column headings.');
+      const mapping = autoMapping(got.headers, got.rows);
+      const pulled = await finance.saveListPull({ items: itemsFrom(got.rows, mapping), mapping, source: file ? 'file' : 'graph', fileName: file?.name || '', listUrl });
+      state = { ...state, ...pulled };
+      renderListInvoices(root, ctx, jda);
+    } catch (e) { msg(e.message); }
   }
 
   // Generate Email: what the List lacks is said first, invoice by invoice; then the preview; then a draft.

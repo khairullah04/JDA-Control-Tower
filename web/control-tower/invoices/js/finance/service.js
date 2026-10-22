@@ -333,16 +333,17 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
 
   /* ---------- The Microsoft List: invoices before approval (list-source.js, email.js) ---------- */
   // The last pull of the List (from Graph, or an export of it) and the column mapping confirmed for it.
-  const LIST_EMPTY = { mapping: {}, items: [], pulledAt: '', pulledBy: '', source: '', fileName: '' };
+  const LIST_EMPTY = { mapping: {}, items: [], pulledAt: '', pulledBy: '', source: '', fileName: '', listUrl: '' };
   const listState = async () => ({ ...LIST_EMPTY, ...(await store.get('financeMeta', 'list') || {}) });
-  async function saveListPull({ items, mapping, source = 'file', fileName = '' }, actor) {
+  async function saveListPull({ items, mapping, source = 'file', fileName = '', listUrl = '' }, actor) {
     if (!Array.isArray(items) || items.length > 5000) throw new FinanceError('Nothing to keep from the List, or more than 5,000 rows.');
     const clean = items.map(i => ({ key: String(i.key || '').slice(0, 200), listId: String(i.listId || '').slice(0, 100), invoiceNo: String(i.invoiceNo || '').slice(0, 200),
       partner: String(i.partner || '').slice(0, 200), amountMinor: Number.isSafeInteger(i.amountMinor) ? i.amountMinor : null, amountText: String(i.amountText || '').slice(0, 60),
       currency: String(i.currency || '').slice(0, 3).toUpperCase(), description: String(i.description || '').slice(0, 1000), jda: String(i.jda || '').slice(0, 100),
       proofs: (Array.isArray(i.proofs) ? i.proofs : []).filter(p => /^https?:\/\//i.test(p?.url || '')).slice(0, 20).map(p => ({ label: String(p.label || '').slice(0, 200), url: String(p.url).slice(0, 2000) })),
       missing: (Array.isArray(i.missing) ? i.missing : []).map(String).slice(0, 10) })).filter(i => i.key);
-    const next = { mapping: Object.fromEntries(Object.entries(mapping || {}).map(([k, v]) => [k, String(v || '').slice(0, 200)])), items: clean, pulledAt: now(), pulledBy: actor, source, fileName: String(fileName).slice(0, 200) };
+    const next = { mapping: Object.fromEntries(Object.entries(mapping || {}).map(([k, v]) => [k, String(v || '').slice(0, 200)])), items: clean, pulledAt: now(), pulledBy: actor, source, fileName: String(fileName).slice(0, 200),
+      listUrl: /^https:\/\/[^/]+\.sharepoint\.com\//i.test(listUrl) ? String(listUrl).slice(0, 1000) : (await listState()).listUrl };
     return store.atomic(async () => ({ result: next, writes: [{ coll: 'financeMeta', id: 'list', data: next }] }));
   }
   // The PM chose these invoices and emailed them to the Project Lead (Route 2): each becomes an invoice

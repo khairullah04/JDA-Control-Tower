@@ -9,3 +9,4 @@ portal-passkeys.json
 .site-content.json.tmp
 .roles-pending/
 .roles-previous/
+.ms-tokens.json

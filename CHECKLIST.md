@@ -125,7 +125,7 @@ logged (who, when, note).
 
 ## To confirm before building (asked 2026-10-22)
 
-- [ ] **L1 — The List's column names** *(on hold: the mapping is chosen in the page when the List is first imported, so nothing is guessed; Graph needs IT to register an app)*, and whether a Graph app registration (and admin consent) is possible in the company tenant.
+- [x] **L1 — The List's column names**, and whether a Graph app registration is possible. *Settled 2026-10-22 (owner): columns are detected automatically, never mapped by hand; the List is read without IT, by the person's own Microsoft sign-in (device code). An app registration stays optional.*
 - [x] **L2 — Where proof links are stored**: written back to the List (needs write permission), or in our own database keyed by invoice number (the default when Graph is not available). *Answered 2026-10-22: in the Microsoft List itself; the page only reads and shows them (no adding links in the app).*
 - [x] **L3 — Recipients**: default To / CC per JDA (Project Lead), and the sign-off name. *Answered: blank for now (`invoices/js/config/email-recipients.js`).*
 - [x] **L4 — Currency**: one currency (MYR), or mixed currencies with the forex conversion shown. *Answered: mixed, each invoice in its own currency, totals per currency, no conversion.*
@@ -137,7 +137,8 @@ logged (who, when, note).
 - [x] `GraphListSource`: MSAL client credentials, `GET /sites/{site-id}/lists/{list-id}/items?expand=fields` with paging; settings `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_SITE_ID`, `MS_LIST_ID` in `server/.env`.
 - [x] `FileListSource`: a CSV / XLSX export of the List, uploaded on the page.
 - [x] Fallback to the file source when Graph is not configured; the page works the same with either.
-- [x] Column-mapping config: List field → invoiceNo, partner, amount, currency, description, JDA (from L1, not guessed).
+- [x] ~~Column-mapping config~~ → automatic column detection (owner, 2026-10-22): by name, then by content; the page shows which column was used and what was not found.
+- [x] Without IT: device-code sign-in per person (Microsoft's public client, delegated `Sites.Read.All`, `Mail.ReadWrite`), the List read from its pasted link, tokens refreshed and kept in `server/.ms-tokens.json` (gitignored, mode 600); sign out.
 - [x] `server/.env.example` placeholders; no secrets committed.
 
 ## Per-JDA invoice list
@@ -153,14 +154,15 @@ logged (who, when, note).
 - [x] Subject: `[JDA X] Invoice Approval Request – N invoices – DD/MM/YYYY`.
 - [x] Preview modal before generating.
 - [x] Delivery a) `.eml` download: `X-Unsent: 1`, `Content-Type: text/html; charset=utf-8`, To/CC from config.
-- [x] Delivery b) with Graph `Mail.ReadWrite`: `POST /me/messages` draft, open its `webLink`.
+- [x] Delivery b) with Graph `Mail.ReadWrite`: `POST /me/messages` draft (the signed-in person's mailbox), open its `webLink`.
 - [x] Delivery c) "Copy formatted email" (clipboard `text/html`) + `mailto:` with subject and recipients only (never the body).
 
 ## Approval workflow
 - [x] Generating the email moves the selected invoices to Pending Lead Approval (per L6) and logs who, when and which invoices.
 
 ## Tests
-- [x] Column mapping.
+- [x] Automatic column detection.
+- [x] Sign-in and List link (Microsoft faked): device code, refresh, paging, display names, drafts, sign-out.
 - [x] URL validation.
 - [x] Email HTML builder: escapes user text, correct totals, hyperlinks by label / "Document n".
 - [x] `.eml` headers.

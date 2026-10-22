@@ -1,8 +1,7 @@
 // The invoices waiting for approval, as they stand in the company's Microsoft List (before approval;
 // CJI3 is the evidence after payment). They arrive as rows of { column name: value }, from either
 // source (server/ms-graph.js reads the List itself; an export of it, .xlsx or .csv, is read the same way),
-// and become items by a column mapping the person confirms once: List column -> our field. Nothing is
-// guessed silently: suggestMapping only proposes, from the column names, and the mapping dialog says so.
+// and become items by a column mapping worked out automatically (autoMapping).
 // Pure functions, shared by the browser and the server.
 import { toMinor } from './money.js';
 
@@ -34,20 +33,48 @@ export function rowsFromSheet(sheets) {
   return { headers: [], rows: [] };
 }
 
-// A proposed mapping: what was confirmed before, for the columns still there; otherwise a column whose
-// name is one of a field's usual names. The person checks it before it is used.
-export function suggestMapping(headers, saved = {}) {
-  const map = {}, taken = new Set();
+// Which List column is which, worked out automatically (nobody maps columns by hand). First by the
+// column's name (exact usual names, then names containing a telling word), then, for what is still
+// unfound, by what the column holds: web links (supporting documents), 3-letter codes (currency),
+// "JDA n" (JDA), numbers (amount). A field still not found is simply missing on every row, and the
+// "missing information" list says so before an email goes.
+const NAME_HINTS = {
+  invoiceNo: /^(title)$|invoice.*(no|num|number|ref|id)$|^inv(no|num|number)$|^invoice$|^ref(erence)?(no)?$/,
+  partner: /vendor|partner|supplier|company|payee|contractor/,
+  amount: /amount|value|total|sum|price|cost|payable/,
+  currency: /^cur|currency|ccy/,
+  description: /desc|detail|remark|note|purpose|scope|service|particular/,
+  jda: /jda|agreement/,
+  proofs: /support|proof|document|attach|link|evidence|url/,
+  id: /^(id|itemid|listitemid)$/
+};
+const CURRENCIES = new Set(['MYR', 'USD', 'SGD', 'EUR', 'GBP', 'JPY', 'AUD', 'CNY', 'IDR', 'THB', 'INR', 'CHF', 'CAD', 'HKD', 'NOK', 'AED', 'SAR', 'QAR', 'KRW', 'BND']);
+export function autoMapping(headers, rows = []) {
+  const map = Object.fromEntries(LIST_FIELDS.map(f => [f.key, ''])), taken = new Set();
+  const give = (k, h) => { map[k] = h; taken.add(h); };
+  for (const f of LIST_FIELDS) { const h = headers.find(x => !taken.has(x) && f.like.includes(norm(x))); if (h) give(f.key, h); }       // exact usual names
   for (const f of LIST_FIELDS) {
-    if (saved[f.key] && headers.includes(saved[f.key])) { map[f.key] = saved[f.key]; taken.add(saved[f.key]); continue; }
-    if (saved[f.key] === '') { map[f.key] = ''; continue; } // confirmed as "not in the List"
-    const hit = headers.find(h => !taken.has(h) && f.like.includes(norm(h)));
-    map[f.key] = hit || '';
-    if (hit) taken.add(hit);
+    if (map[f.key]) continue;
+    const h = headers.find(x => !taken.has(x) && NAME_HINTS[f.key].test(norm(x)) && !(f.key === 'amount' && NAME_HINTS.currency.test(norm(x))));
+    if (h) give(f.key, h);
+  }
+  const sample = h => rows.slice(0, 50).map(r => r[h]).filter(v => v != null && String(typeof v === 'object' ? v.Url || '' : v).trim());
+  const share = (h, test) => { const v = sample(h); return v.length ? v.filter(test).length / v.length : 0; };
+  const byContent = [
+    ['proofs', v => (typeof v === 'object' && v.Url) || /https?:\/\//i.test(String(v))],
+    ['currency', v => CURRENCIES.has(String(v).trim().toUpperCase())],
+    ['jda', v => /^jda\s*\d+$/i.test(String(v).trim())],
+    ['amount', v => /^[A-Z]{0,3}\s*\(?-?[\d,]+(\.\d+)?\)?$/i.test(String(v).trim()) && /\d{2,}/.test(String(v))]
+  ];
+  for (const [k, test] of byContent) {
+    if (map[k]) continue;
+    const h = headers.find(x => !taken.has(x) && share(x, test) >= 0.6);
+    if (h) give(k, h);
   }
   return map;
 }
-export const unmappedNeeded = mapping => LIST_FIELDS.filter(f => f.need && !mapping[f.key]).map(f => f.label);
+// The fields not found (for the note on the page).
+export const notFound = mapping => LIST_FIELDS.filter(f => f.key !== 'id' && !mapping[f.key]).map(f => f.label);
 
 // Proof links as the List holds them: a Hyperlink column ({ Url, Description }, or "url, description"
 // in an export), or a text column with one link per line ("label | url", "[label](url)" or a bare url).

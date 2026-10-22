@@ -3,22 +3,24 @@
 // (web addresses only), what is missing, the selection, the HTML (escaped, totals, links by label) and the .eml.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { rowsFromSheet, suggestMapping, unmappedNeeded, itemsFrom, parseProofs, isWebLink, inJda, selectionTotals } from '../web/control-tower/invoices/js/finance/list-source.js';
+import { rowsFromSheet, autoMapping, notFound, itemsFrom, parseProofs, isWebLink, inJda, selectionTotals } from '../web/control-tower/invoices/js/finance/list-source.js';
 import { emailHtml, emlFile, subjectFor, mailtoLink, escHtml } from '../web/control-tower/invoices/js/finance/email.js';
 
 const HEAD = ['ID', 'Invoice Number', 'Vendor', 'Invoice Amount', 'Currency', 'Description', 'JDA', 'Supporting Documents', 'Created By'];
 const sheet = (...rows) => [{ name: 'Sheet1', rows: [['Invoices (List export)'], HEAD, ...rows] }];
 
-test('column mapping: proposed from the names, a confirmed one kept, "not in the List" kept, required ones checked', () => {
+test('columns are found automatically: by name, then by what a column holds; nothing is asked', () => {
   const { headers, rows } = rowsFromSheet(sheet(['7', 'INV-1', 'IBM', '1,000.00', 'USD', 'Sept', 'JDA 1', '', 'aina']));
   assert.deepEqual([headers.length, rows.length, rows[0]['Invoice Number']], [9, 1, 'INV-1']);
-  const m = suggestMapping(headers);
-  assert.deepEqual(m, { invoiceNo: 'Invoice Number', partner: 'Vendor', amount: 'Invoice Amount', currency: 'Currency', description: 'Description', jda: 'JDA', proofs: 'Supporting Documents', id: 'ID' });
-  const odd = suggestMapping(['Ref', 'Supplier Co', 'Sum'], {});
-  assert.deepEqual(unmappedNeeded(odd), ['Invoice No.', 'Partner', 'Amount']);                  // nothing guessed for unusual names
-  assert.equal(suggestMapping(['Ref', 'Sum'], { invoiceNo: 'Ref', amount: 'Sum' }).invoiceNo, 'Ref'); // the confirmed mapping wins
-  assert.equal(suggestMapping(['Currency'], { currency: '' }).currency, '');                       // confirmed as not in the List
-  assert.equal(suggestMapping(['Gone'], { invoiceNo: 'Old column' }).invoiceNo, '');               // a column no longer there is not used
+  assert.deepEqual(autoMapping(headers, rows), { invoiceNo: 'Invoice Number', partner: 'Vendor', amount: 'Invoice Amount', currency: 'Currency', description: 'Description', jda: 'JDA', proofs: 'Supporting Documents', id: 'ID' });
+  // other wordings: names containing a telling word
+  assert.deepEqual(autoMapping(['Title', 'Supplier Name', 'Total Payable (incl. tax)', 'Curr.', 'Scope of work', 'JDA No', 'Attachments link']),
+    { invoiceNo: 'Title', partner: 'Supplier Name', amount: 'Total Payable (incl. tax)', currency: 'Curr.', description: 'Scope of work', jda: 'JDA No', proofs: 'Attachments link', id: '' });
+  // names that say nothing: found from the values
+  const odd = [{ A: 'X-1', B: 'https://sp.com/a.pdf', C: 'MYR', D: 'JDA 2', E: '12,500.00' }, { A: 'X-2', B: 'https://sp.com/b.pdf', C: 'USD', D: 'JDA 1', E: '800' }];
+  const m = autoMapping(['A', 'B', 'C', 'D', 'E'], odd);
+  assert.deepEqual([m.proofs, m.currency, m.jda, m.amount], ['B', 'C', 'D', 'E']);
+  assert.deepEqual(notFound(autoMapping(['Nothing'], [])), ['Invoice No.', 'Partner', 'Amount', 'Currency', 'Description', 'JDA', 'Supporting documents']);
 });
 
 test('proof links: http(s) only; label | url, [label](url), "url, description" and Hyperlink objects', () => {
@@ -32,7 +34,7 @@ test('proof links: http(s) only; label | url, [label](url), "url, description" a
 test('items: amounts in their own currency, and what each one is missing, in words', () => {
   const { headers, rows } = rowsFromSheet(sheet(['1', 'INV-1', 'IBM', 'USD 1,250.50', 'usd', 'Sept work', 'JDA 1', 'TS | https://a.com/ts', ''],
     ['2', '', 'TAI', 'n/a', '', '', 'JDA 2', '', '']));
-  const m = suggestMapping(headers), [a, b] = itemsFrom(rows, m);
+  const m = autoMapping(headers, rows), [a, b] = itemsFrom(rows, m);
   assert.deepEqual([a.key, a.amountMinor, a.currency, a.missing], ['1', 125050, 'USD', []]);
   assert.deepEqual(b.missing, ['Invoice No.', 'Amount ("n/a" is not a number)', 'Currency', 'Description', 'Supporting documents']);
   assert.deepEqual([inJda(a, 'JDA 1', m), inJda(b, 'JDA 1', m), inJda(b, 'jda2', m), inJda(b, 'JDA 1', { ...m, jda: '' })], [true, false, true, true]);
@@ -90,7 +92,7 @@ test('emailing List invoices to the Lead: new ones become register invoices, all
   const f = createFinance(memoryStore(), { now: () => '2026-10-22T02:00:00Z' });
   const { headers, rows } = rowsFromSheet(sheet(['1', 'INV-L1', 'IBM', '1,000.00', 'MYR', 'Sept', 'JDA 1', 'TS | https://a.com/ts', ''],
     ['2', 'INV-L2', 'IBM', '500', 'USD', 'Oct', 'JDA 1', '', ''], ['3', 'INV-OLD', 'IBM', '10', 'MYR', 'x', 'JDA 1', '', '']));
-  const mapping = suggestMapping(headers);
+  const mapping = autoMapping(headers, rows);
   await f.saveListPull({ items: itemsFrom(rows, mapping), mapping, fileName: 'list.xlsx' }, 'farid');
   assert.deepEqual([(await f.listState()).items.length, (await f.listState()).pulledBy], [3, 'farid']);
   // INV-OLD is already in the register and already approved: it is not sent again

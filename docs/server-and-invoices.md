@@ -120,13 +120,20 @@ Received ─┬─ Route 1: Direct ─────► Sent to PD ─────
 
 The company's Microsoft List holds the invoices **before approval** (CJI3 is the evidence after payment).
 
-- **Getting the List in:** with `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_SITE_ID` and
-  `MS_LIST_ID` in `server/.env` (an app registration with `Sites.Read.All` and admin consent),
-  **Pull from the List** reads it through Microsoft Graph. Without them, export the List to Excel or CSV
-  and **Import the List (export)**. Either way the page works the same.
-- **Columns:** the first time, a dialog asks which List column is Invoice No., Partner, Amount,
-  Currency, Description, JDA, Supporting documents and the item's ID. It proposes from the column names,
-  and you confirm. It's remembered and asked again only if the columns change (**Columns…** reopens it).
+- **Getting the List in (no IT setup):** **Sign in to Microsoft** on the page shows a code; open
+  microsoft.com/devicelogin, enter it and sign in with your work account. Paste the List's link once (open
+  the List in the browser and copy the address, `https://….sharepoint.com/sites/…/Lists/…`), then **Pull
+  from the List**. The List is read with your own rights, through Microsoft's own public sign-in app
+  (Microsoft Graph Command Line Tools), so no app registration is needed. Sign-ins are kept per person in
+  `server/.ms-tokens.json` (not in git; delete it to sign everyone out). If the company blocks this sign-in,
+  export the List to Excel or CSV and **Import the List (export)**: the page works the same.
+- **With an app registration (optional):** `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`,
+  `MS_SITE_ID` and `MS_LIST_ID` in `server/.env` (`Sites.Read.All`, admin consent) read the List with no
+  sign-in on the page.
+- **Columns:** found automatically, nobody maps them. First by the column's name (Title, Invoice Number,
+  Vendor, Amount, Currency, Description/Notes, JDA, Supporting Documents/Attachments…), then by what a
+  column holds (web links, currency codes, "JDA n", numbers). The page shows which column was used for
+  each field; a field not found is listed as missing on every row.
 - **The list:** a JDA's rows (by the JDA column), with a checkbox each, Invoice No., Partner, Amount
   (in its own currency), Description and the supporting documents from the List as links. What a row
   lacks is said under its number; one already sent shows its stage.
@@ -135,7 +142,8 @@ The company's Microsoft List holds the invoices **before approval** (CJI3 is the
   preview, and:
   - **Generate email (.eml):** downloads a draft that opens in Outlook, formatted, to edit and send;
   - **Copy formatted email:** copies it, and opens a new message with the subject, to paste into;
-  - **Create Outlook draft:** only with Graph `Mail.ReadWrite` and `MS_MAIL_SENDER`.
+  - **Create Outlook draft:** when signed in to Microsoft (in your own mailbox), or with the app
+    registration and `MS_MAIL_SENDER`.
 - **Generating sends them:** each becomes an invoice in the register if it is not one yet (a draft:
   the project and dates the List does not give are to be completed there), and moves to **Pending Lead
   approval** (through With PM). The email is logged (`listEmails`: who, when, which invoices).

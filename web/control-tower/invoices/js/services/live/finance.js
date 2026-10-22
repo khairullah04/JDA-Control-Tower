@@ -34,14 +34,16 @@ export const cji3Lines = (group = '') => call(`/api/finance/cji3/lines?group=${e
 export const cji3Imports = () => call('/api/finance/cji3/imports');
 // The Microsoft List: its state; rows from the List (no file) or from an export (a file); keep a pull; email to the Lead; an Outlook draft.
 export const listState = () => call('/api/finance/list');
-export async function listRows(file) {
-  if (!file) return post('/api/finance/list/rows', {});
+export async function listRows(file, listUrl = '') {
+  if (!file) return post('/api/finance/list/rows', { listUrl });
   const fileBase64 = await new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1] || ''); r.onerror = () => reject(new Error('That file could not be read.')); r.readAsDataURL(file); });
   return post('/api/finance/list/rows', { fileName: file.name, fileBase64 });
 }
 export const saveListPull = pull => call('/api/finance/list', 'PUT', pull);
 export const sendListToLead = req => post('/api/finance/list/send', req);
 export const listDraft = msg => post('/api/finance/list/draft', msg);
+export const msSignIn = () => post('/api/finance/list/signin', {});
+export const msSignOut = () => post('/api/finance/list/signout', {});
 export const matchLine = (lineId, invoiceId = '') => post('/api/finance/cji3/match', { lineId, invoiceId });
 export const rematch = group => post('/api/finance/cji3/rematch', { group });
 export const workbook = sheets => post('/api/finance/workbook', { sheets }); // -> the .xlsx file, as a Blob

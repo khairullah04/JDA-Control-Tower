@@ -4,7 +4,7 @@ import { bnmRate } from '../forex.js';
 import { readSheets, writeWorkbook } from '../finance-xlsx.js';
 import { isDate } from '../../web/control-tower/invoices/js/finance/core.js';
 import { ROLES, roleFor } from '../../web/control-tower/invoices/js/finance/workflow.js';
-import { graphListConfigured, graphMailConfigured, listRows, createDraft } from '../ms-graph.js';
+import { graphListConfigured, listRows, createDraft, draftsPossible, signInStatus, startSignIn, signOut } from '../ms-graph.js';
 import { rowsFromSheet } from '../../web/control-tower/invoices/js/finance/list-source.js';
 
 // Who holds each role in the approval process: ROLE_ACCOUNTANT1, ROLE_PM, ROLE_LEAD, ROLE_ACCOUNTANT2 in
@@ -74,18 +74,22 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   router.post('/cji3/match', run(req => finance.matchLine(String(req.body?.lineId || ''), String(req.body?.invoiceId || ''), actor(req))));
   router.post('/cji3/rematch', run(async req => finance.matchCji3((await finance.cji3Lines(String(req.body?.group || ''))).filter(l => !l.invoiceId).map(l => l.id), actor(req))));
   router.get('/cji3/imports', run(() => finance.cji3Imports()));
-  // The Microsoft List (invoices before approval): what was last pulled and its mapping; the rows, read
-  // from the List itself (Graph, when configured) or from an uploaded export; keeping a pull; emailing
-  // chosen invoices to the Project Lead (they move to Pending Lead); an Outlook draft (when allowed).
-  router.get('/list', run(async () => ({ ...(await finance.listState()), graph: graphListConfigured(), mail: graphMailConfigured() })));
+  // The Microsoft List (invoices before approval): what was last pulled and its mapping, and whether the
+  // person is signed in to Microsoft; the sign-in (a device code, no IT setup) and sign-out; the rows, read
+  // from the List itself (by its link, or the app registration when configured) or from an uploaded export;
+  // keeping a pull; emailing chosen invoices to the Project Lead (they move to Pending Lead); an Outlook draft.
+  const person = req => String(req.user?.email || 'local').toLowerCase();
+  router.get('/list', run(async req => ({ ...(await finance.listState()), graph: graphListConfigured(), ms: signInStatus(person(req)), mail: draftsPossible(person(req)) })));
+  router.post('/list/signin', run(req => startSignIn(person(req))));
+  router.post('/list/signout', run(req => { signOut(person(req)); return { ok: true }; }));
   router.post('/list/rows', run(async req => {
     const b = req.body || {};
     if (b.fileBase64) return rowsFromSheet(await readSheets(String(b.fileName), Buffer.from(String(b.fileBase64), 'base64')));
-    return listRows();
+    return listRows({ person: person(req), listUrl: String(b.listUrl || '') });
   }));
   router.put('/list', run(req => finance.saveListPull({ ...(req.body || {}), source: req.body?.source === 'graph' ? 'graph' : 'file' }, actor(req))));
   router.post('/list/send', run(req => { const b = req.body || {}; return finance.sendListToLead({ jdaId: String(b.jdaId || ''), jdaName: String(b.jdaName || ''), keys: Array.isArray(b.keys) ? b.keys.map(String) : [], subject: String(b.subject || '') }, actor(req), { may: may(req) }); }));
-  router.post('/list/draft', run(req => createDraft({ to: String(req.body?.to || ''), cc: String(req.body?.cc || ''), subject: String(req.body?.subject || ''), html: String(req.body?.html || '') })));
+  router.post('/list/draft', run(req => createDraft({ person: person(req), to: String(req.body?.to || ''), cc: String(req.body?.cc || ''), subject: String(req.body?.subject || ''), html: String(req.body?.html || '') })));
   router.post('/sanctioned/batch', run(req => finance.saveAll('sanctioned', Array.isArray(req.body?.inputs) ? req.body.inputs : [], actor(req))));
   // A new invoice starts at Received (Pending); an edit keeps the status and stage it has.
   router.post('/:kind', run(req => finance.save(kindOf(req), kindOf(req) === 'entry' ? noHandStatus(req.body) : req.body || {}, actor(req))));
