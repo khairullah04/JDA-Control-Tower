@@ -89,7 +89,6 @@ td.actions button+button{margin-left:calc(.3rem * var(--space-scale))}
 /* a row's invoices, one to a line: the number gives way (…) before its status does */
 .pt-line{display:flex;align-items:center;gap:calc(.45rem * var(--space-scale));min-height:calc(1.7rem * var(--space-scale))}
 .num .pt-line{justify-content:flex-end}
-.pt-line.unpaid{color:var(--muted)}
 .pt-no{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .pt-inv .st{flex:none;padding:2px calc(8px * var(--space-scale));font-size:max(min(10px, 14px), calc(10px * var(--type-scale)))}
 .pt-foot td{background:var(--pt-head);border-top:1px solid var(--line);border-bottom:0;padding-top:calc(.75rem * var(--space-scale));padding-bottom:calc(.75rem * var(--space-scale))}

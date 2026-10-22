@@ -179,3 +179,8 @@ proof of approval and marks them Paid.
 - [x] Remove the queue page (Intake, PM validation, Lead approval, To Be Paid, Paid, archive) and the links to it.
 - [x] CJI3 marks an invoice Paid from any open stage (no "not approved yet" hold); undoing the match returns it to the stage it was in. Lines held as "not approved" by the old rule are matched again by Match again.
 - [x] Tests and docs updated.
+
+# Payment Tables: paid invoices only (owner, 2026-10-22)
+
+- [x] The Payment Tables (per JDA, per project, per CJI3 file) and their exports list only Paid invoices, i.e. those a CJI3 payment line was matched to. No pending, approved or status badges.
+- [x] "Total invoiced amount" card and "+ Add invoice to this row" removed from the Payment Table (an added invoice would be pending, so it would not show).

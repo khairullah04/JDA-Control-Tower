@@ -99,8 +99,10 @@ Received ─► With PM ─► Pending Lead ─┐
    (older: Sent to PD, To Be Paid) ──┴─► Paid (a CJI3 line; undone, it goes back)
 ```
 
-- **The Payment Tables do not change**: they read the invoice's `status` (pending / approved / paid /
-  rejected), which is worked out from its stage (Received, With PM, Pending Lead → pending; Sent to PD,
+- **The Payment Tables show paid invoices only**: an invoice is on them once a CJI3 payment line is
+  matched to it (that is the only way an invoice becomes Paid). Pending ones are in the Microsoft List
+  and the CJI3 register, not on the Payment Tables (nor in their exports). The `status` (pending /
+  approved / paid / rejected) is worked out from the stage (Received, With PM, Pending Lead → pending; Sent to PD,
   To Be Paid → approved; Paid → paid; Rejected → rejected). Invoices entered before the process get
   their stage from their status. **There is no way to set a status by hand**: the register shows it
   read-only (its stage on hover), the invoice form has no status field, imported

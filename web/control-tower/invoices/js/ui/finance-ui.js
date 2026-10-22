@@ -60,9 +60,9 @@ export function costKpis(sanctioned, entries, { budgetMinor = 0, forecastMinor =
       <div class="kpi quiet" title="${esc(`Budget ${rm(budgetMinor)}`)}"><small>Forecast at completion</small><b class="${forecastBad ? 'over' : ''}">${rm(forecastMinor)}</b><small>of budget ${rm(budgetMinor)}</small></div>
     </div>`;
 }
-export const summaryCells = t => `<div class="pt-summary">
+export const summaryCells = (t, { invoiced = true } = {}) => `<div class="pt-summary">
       <div><small>Total sanctioned (w TAX)</small><b>${money(t.sanctionedMinor)}</b></div>
-      <div><small>Total invoiced amount</small><b>${money(t.invoicedMinor)}</b></div>
+      ${invoiced ? `<div><small>Total invoiced amount</small><b>${money(t.invoicedMinor)}</b></div>` : ''}
       <div><small>Total actual (paid)</small><b>${money(t.actualMinor)}</b></div>
       <div class="${t.remainingMinor < 0 ? 'over' : ''}"><small>Remaining</small><b>${money(t.remainingMinor)}</b></div>
     </div>`;
