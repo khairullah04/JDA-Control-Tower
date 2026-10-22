@@ -19,7 +19,7 @@ import { openColumnFilter, filterHeading } from './column-filter.js';
 // does); `sort(row)` orders it. Kept per table shown, and while the page redraws after an edit.
 const views = {};
 // Only paid invoices are on the Payment Table: paid means a CJI3 payment line was matched to the invoice
-// (nothing else can make it Paid). Pending ones are in the Microsoft List and the CJI3 register.
+// (nothing else can make it Paid). Pending ones are in the Microsoft List and Invoice history.
 const paid = e => e.status === COUNTS_AS_ACTUAL;
 const pt = r => ptOriginal(r), has = r => r.sanctioned.length > 0;
 const COLUMNS = [
@@ -203,7 +203,7 @@ export async function renderPaymentsPage(jdaId = '', projectId = '') {
   r0.current();
   page.innerHTML = `
     <div class="section-head"><h2>Payment table</h2>
-      <div class="row"><a class="ghost" href="#/cji3/${esc(jda.id)}${project ? '/' + esc(project.id) : ''}">Invoices (CJI3)</a></div></div>
+      <div class="row"><a class="ghost" href="#/cji3/${esc(jda.id)}${project ? '/' + esc(project.id) : ''}">Invoice history</a></div></div>
     ${scopeBar(ctx, '#/payments', jda.id, project?.id || '')}
     ${storageNotice(ctx)}
     <div class="section" id="payments"></div>`;

@@ -66,7 +66,7 @@ What to show on the branch, in the sidebar under Invoice Tracker:
    makes that invoice Paid.
 3. **Payment tables**: the tabs "JDA 1 + JDA 2 (CJI3 file)" and "JDA 3 (CJI3 file)".
 
-`main` has none of these: compare its CJI3 register and Payment tables.
+`main` has none of these: compare its CJI3 register (here: Invoice history) and Payment tables.
 
 ## 4. Demo data, and resetting it
 

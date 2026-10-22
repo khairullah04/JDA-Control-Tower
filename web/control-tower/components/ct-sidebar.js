@@ -36,7 +36,7 @@ export function mountCtSidebar({ wrap, bar, current = '' }) {
       <p class="side-label">Invoice Tracker</p>
       ${link('/control-tower/invoices/#/approvals', 'approvals', 'Approvals', '<path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>')}
       ${link('/control-tower/invoices/#/cji3-lines', 'cji3-lines', 'CJI3 payments', '<path d="M3 7h18M3 12h18M3 17h12"/><path d="m17 15 2 2 4-4"/>')}
-      ${link('/control-tower/invoices/#/cji3', 'cji3', 'CJI3 register', ICON.cji3)}
+      ${link('/control-tower/invoices/#/cji3', 'cji3', 'Invoice history', ICON.cji3)}
       ${link('/control-tower/invoices/#/payments', 'payments', 'Payment tables', ICON.pay)}
     </nav>
     <nav class="side-nav side-foot" aria-label="Elsewhere">

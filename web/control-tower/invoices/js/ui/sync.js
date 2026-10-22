@@ -6,7 +6,7 @@ function showResult(s) {
   d.className = '';
   d.innerHTML = `<form><h3>Drive sync</h3>` + (s.error ? `<p class="msg">${esc(s.error)}</p>` : `
     <p><b>${s.invoicesCreated}</b> invoice(s) created from <b>${s.filesProcessed}</b> file(s). ${s.filesSkipped} file(s) already imported.
-    Each one is in the CJI3 register as <b>Pending</b>.
+    Each one is in Invoice history as <b>Pending</b>.
     ${s.unsortedAllocations ? `${s.unsortedAllocations} charge(s) went to <b>Unsorted</b> — use Edit on each to give it its project.` : ''}</p>
     ${s.redirected?.length ? `<p class="msg">Came in incomplete:<br>${s.redirected.map(esc).join('<br>')}</p>` : ''}
     ${s.failed.length ? `<p class="msg">Failed:<br>${s.failed.map(esc).join('<br>')}</p>` : ''}`) +

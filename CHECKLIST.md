@@ -190,5 +190,5 @@ proof of approval and marks them Paid.
 - [x] One figure: "planned" is the sanctioned amount. Code renamed (`sanctionedToDate`, `overSanctioned`; timeline bars); every view works it out from the sanctioned records.
 - [x] Control Tower edit mode: only Paid can be set by hand; Sanctioned always follows the Invoice Tracker.
 - [x] Test: one edit to a sanctioned amount moves the Payment Table, project report and Control Tower ring together.
-- [ ] CJI3 register → **Invoice history**: every invoice (paid, pending, approved, rejected), read-only, newest first, filter by JDA and by partner (and status), with each invoice's history.
-- [ ] Links and labels that say "CJI3 register" updated.
+- [x] CJI3 register → **Invoice history**: every invoice (paid, pending, approved, rejected), read-only, newest first, filter by JDA and by partner (and status), with each invoice's history.
+- [x] Links and labels that say "CJI3 register" updated (sidebar, Payment Table, JDA totals, Drive sync, docs).

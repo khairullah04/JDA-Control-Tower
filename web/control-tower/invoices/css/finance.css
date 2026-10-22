@@ -154,15 +154,8 @@ tr.bad td{color:var(--bad)}
 .pt-detail>td{max-width:none!important;overflow:visible!important}
 .rec-form input,.rec-form select{min-width:0}
 
-/* Approvals (ui/approvals.js): the queues and the moves */
-.ap-queues{flex-wrap:wrap;align-items:center}
-.ap-count{display:inline-block;min-width:22px;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--teal-050);color:var(--teal-800);font-size:12px;text-align:center}
-.ap-queues .on .ap-count{background:#fff}
-.ap-table .actions{white-space:normal;min-width:220px}
-.ap-table .actions .btn-sm{margin:2px 4px 2px 0}
-.ap-table .danger{color:var(--bad);border-color:var(--bad-tint)}
-.ap-confirm textarea{width:100%;font:inherit}
-#ap-msg:empty{display:none}
+/* Invoice history (ui/cji3.js) */
+#reg-msg:empty{display:none}
 
 /* CJI3 payments (ui/cji3-lines.js) */
 .cj-upload .row{align-items:center;gap:10px;flex-wrap:wrap}

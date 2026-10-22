@@ -69,7 +69,7 @@ export const summaryCells = (t, { invoiced = true } = {}) => `<div class="pt-sum
 // What a JDA or project page shows of its invoices and payments: the totals, and the way to the two pages.
 export const financeSummary = (sanctioned, entries, where) => `<div class="section">
     <div class="section-head"><h3>Invoices and payments</h3>
-      <div class="row"><a class="primary" href="#/payments/${where}">Open Payment Table</a><a class="ghost" href="#/cji3/${where}">Open invoices (CJI3)</a></div></div>
+      <div class="row"><a class="primary" href="#/payments/${where}">Open Payment Table</a><a class="ghost" href="#/cji3/${where}">Invoice history</a></div></div>
     ${summaryCells(tableTotals(paymentTable(sanctioned, entries)))}</div>`;
 
 export function dialog(html, wide = false) {

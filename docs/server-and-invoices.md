@@ -37,11 +37,19 @@ reads one JDA's Drive folder and has Claude extract its Master Page (`scope: mas
 layout and setup are in `docs/control-tower.md`, "Updating from Google Drive". `npm test` in `server/`
 checks the folder handling and assembly with Drive and Claude stubbed out.
 
-## Invoices and payments (CJI3 register, Payment Tables)
-An invoice is entered once, in the CJI3 register. From then on every figure in the tracker comes from it.
-The register and the Payment Table each have a page of their own, as wide as the window, reached
-from the top bar or from the "Invoices and payments" totals on a JDA or project page:
-`#/cji3`, `#/cji3/<jda>`, `#/cji3/<jda>/<project>` and `#/payments/<jda>`, `#/payments/<jda>/<project>`.
+## Invoices and payments (Invoice history, Payment Tables)
+An invoice arrives once (from the Microsoft List, Approvals) and every figure in the tracker comes from
+it. **Invoice history** (`#/cji3`, `#/cji3/<jda>`; "Invoice history" in the sidebar) lists every invoice,
+whatever became of it (paid, pending, approved, rejected), newest change first, with filters for the
+JDA, that JDA's partners and the status, a search, and Excel-style filters on every column. **History**
+on a row shows who did what and when; **Edit** completes what the List does not give (project, dates).
+Nothing is added there: CJI3 payments shows the payment lines, and the Payment Tables the paid invoices
+(`#/payments/<jda>`, `#/payments/<jda>/<project>`).
+
+- **Planned is sanctioned**: there is no separate planned amount. The sanctioned amounts are the plan,
+  and every view (Payment Table, project report, timeline, Control Tower ring) works it out from them
+  each time, so one edit changes them all. The Control Tower's edit mode can set Paid by hand, never
+  Sanctioned.
 
 - **Three amounts**, as in the payment table sheet: original currency, MYR, taxed MYR. The amount typed
   in is before tax; tax is charged on the MYR amount.
@@ -61,19 +69,19 @@ from the top bar or from the "Invoices and payments" totals on a JDA or project 
   the computer or the server.
 - **Budgets** are saved in whole sen (`budgetMinor`), like every other amount.
 - **Payment month** defaults to the month of the invoice date and can be changed.
-- **Tax rate**: one setting ("Tax rate" on the register page, 8% to start). Each record keeps the rate
+- **Tax rate**: one setting ("Tax rate" on Invoice history, 8% to start). Each record keeps the rate
   it was entered with. A change applies to new records only.
 - **Exchange rate**: stored on each invoice with its date and source. "Get Bank Negara rate" fetches
   the 5 pm middle rate for the invoice date (public service, no key). Typing over a fetched rate
-  marks it overridden. Nothing recalculates by itself: select invoices and choose Recalculate.
+  marks it overridden. Nothing recalculates by itself.
 - **Money** is whole sen (or cents) with its currency code, never a floating-point number, and is
   rounded one way everywhere: half away from zero, as Excel's ROUND does (`js/finance/money.js`).
 - **Limits**: a text field holds 200 characters (description and remarks 1,000, partner 40), checked by
   the form and again by the server. In the tables a long value is cut with … and shown in full on
   hover and in Edit, so no entry can stretch a column.
 - **Audit log**: every change records who, when, field, old value, new value ("History" on a row,
-  "Audit log" on the register page). A delete only marks the record; "Show deleted" > Restore.
-- **Import / Export**: CSV or Excel, in the CJI3 sheet's and the payment table sheet's own columns.
+  "Audit log" on Invoice history).
+- **Import / Export**: CSV or Excel, in the CJI3 sheet's and the payment table sheet's own columns (Invoice history exports; sanctioned amounts are imported on the Payment Table).
   An import shows a preview first and never enters the same invoice twice. A row that states its
   MYR figures keeps them exactly. The preview says how many rows were read, names the blank line
   that ended the table if more lines lie below it, and shows which way round the dates are read
@@ -101,7 +109,7 @@ Received ─► With PM ─► Pending Lead ─┐
 
 - **The Payment Tables show paid invoices only**: an invoice is on them once a CJI3 payment line is
   matched to it (that is the only way an invoice becomes Paid). Pending ones are in the Microsoft List
-  and the CJI3 register, not on the Payment Tables (nor in their exports). The `status` (pending /
+  and Invoice history, not on the Payment Tables (nor in their exports). The `status` (pending /
   approved / paid / rejected) is worked out from the stage (Received, With PM, Pending Lead → pending; Sent to PD,
   To Be Paid → approved; Paid → paid; Rejected → rejected). Invoices entered before the process get
   their stage from their status. **There is no way to set a status by hand**: the register shows it
