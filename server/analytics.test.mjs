@@ -19,10 +19,10 @@ const asOf = new Date('2026-07-01T04:00:00Z');   // midday on 1 July in Malaysia
 test('a project report: budget, sanctioned to date, paid, invoiced, counts', () => {
   const r = computeReport(project, sanctioned, ofProject(entries, 'p1'), asOf);
   assert.equal(r.budget, 100000000);
-  assert.equal(r.planned, 32400000);                    // May + June + July; August is in the future, the deleted one counts for nothing
+  assert.equal(r.sanctionedToDate, 32400000);                    // May + June + July; August is in the future, the deleted one counts for nothing
   assert.equal(r.actual, 16200000);                     // only Paid: 108,000 + 54,000
   assert.equal(r.invoiced, 19980000);                   // everything except the rejected and the deleted one
-  assert.deepEqual([r.variance, r.overPlan, r.budgetUsedPct], [-16200000, false, 0.162]);
+  assert.deepEqual([r.variance, r.overSanctioned, r.budgetUsedPct], [-16200000, false, 0.162]);
   assert.deepEqual(r.counts, { pending: 1, approved: 1, paid: 2, rejected: 1 });
   assert.deepEqual([r.asOf, r.month], ['2026-07-01', '2026-07']);
 });
@@ -43,7 +43,7 @@ test('today and this month are Malaysia\'s, whatever the clock of the machine', 
   assert.equal(localToday(new Date('2026-06-30T16:00:00Z')), '2026-07-01');      // midnight: 1 July there, still 30 June in UTC
   assert.equal(localMonth(new Date('2026-12-31T16:30:00Z')), '2027-01');
   const early = computeReport(project, sanctioned, ofProject(entries, 'p1'), new Date('2026-06-30T17:00:00Z'));   // 1 am on 1 July in Malaysia
-  assert.deepEqual([early.asOf, early.month, early.planned], ['2026-07-01', '2026-07', 32400000]);                // July's sanctioned amount already counts
+  assert.deepEqual([early.asOf, early.month, early.sanctionedToDate], ['2026-07-01', '2026-07', 32400000]);                // July's sanctioned amount already counts
 });
 
 test('forecast at completion: invoiced so far, plus what is sanctioned for the months to come', () => {

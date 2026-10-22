@@ -184,3 +184,11 @@ proof of approval and marks them Paid.
 
 - [x] The Payment Tables (per JDA, per project, per CJI3 file) and their exports list only Paid invoices, i.e. those a CJI3 payment line was matched to. No pending, approved or status badges.
 - [x] "Total invoiced amount" card and "+ Add invoice to this row" removed from the Payment Table (an added invoice would be pending, so it would not show).
+
+# Planned = sanctioned, and the CJI3 register becomes Invoice history (owner, 2026-10-22)
+
+- [x] One figure: "planned" is the sanctioned amount. Code renamed (`sanctionedToDate`, `overSanctioned`; timeline bars); every view works it out from the sanctioned records.
+- [x] Control Tower edit mode: only Paid can be set by hand; Sanctioned always follows the Invoice Tracker.
+- [x] Test: one edit to a sanctioned amount moves the Payment Table, project report and Control Tower ring together.
+- [ ] CJI3 register → **Invoice history**: every invoice (paid, pending, approved, rejected), read-only, newest first, filter by JDA and by partner (and status), with each invoice's history.
+- [ ] Links and labels that say "CJI3 register" updated.

@@ -25,7 +25,8 @@ test('what edit mode wrote overrides the data, and the data is still given', () 
   const plain = jdaFigures(JDA1, report, {}, costs);
   assert.deepEqual([plain.progress, plain.status, plain.latest.text, plain.cost, plain.pending, plain.challenges[0].text], [50, 'amber', 'x', { spent: 100, sanctioned: 400 }, 2, 'd']);
   const set = jdaFigures(JDA1, report, { progressOverride: 70, costOverride: { spent: 1, sanctioned: 2 }, challenges: [] }, costs);
-  assert.deepEqual([set.progress, set.dataProgress, set.cost, set.dataCost, set.challenges, set.reportChallenges.length], [70, 50, { spent: 1, sanctioned: 2, override: true }, { spent: 100, sanctioned: 400 }, [], 1]);
+  assert.deepEqual([set.progress, set.dataProgress, set.cost, set.dataCost, set.challenges, set.reportChallenges.length], [70, 50, { spent: 1, sanctioned: 400, override: true }, { spent: 100, sanctioned: 400 }, [], 1]); // sanctioned follows the tracker
+  assert.deepEqual(jdaFigures(JDA1, report, { costOverride: { spent: 1, sanctioned: 2 } }, {}).cost, { spent: 1, sanctioned: 2, override: true }); // no tracker figures: the typed one
   assert.equal(jdaFigures(JDA1, report, {}, null, { failed: true }).progress, null); // the report could not be read
 });
 

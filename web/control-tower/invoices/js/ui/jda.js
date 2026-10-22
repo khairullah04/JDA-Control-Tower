@@ -93,7 +93,7 @@ export async function renderJda(id) {
   state.page = 'jda';
   state.context = () => ({
     page: `JDA overview: ${jda.name}`, note: `Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month. Forecast: ${FORECAST_NOTE}`,
-    totals: { budget: money(totals.budget), paid: money(totals.actual), sanctionedToDate: money(totals.planned), invoiced: money(totals.invoiced), forecast: money(totals.forecast), pendingInvoices: totals.counts.pending },
+    totals: { budget: money(totals.budget), paid: money(totals.actual), sanctionedToDate: money(totals.sanctionedToDate), invoiced: money(totals.invoiced), forecast: money(totals.forecast), pendingInvoices: totals.counts.pending },
     projects: perProject.map(({ p, r }) => ({ name: p.name, budget: money(r.budget), paid: money(r.actual), forecast: money(r.forecast), pendingInvoices: r.counts.pending }))
   });
 }

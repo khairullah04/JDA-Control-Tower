@@ -97,12 +97,12 @@ function form(j, w, f, changed, say) {
   box.append(el('h4', { textContent: 'Progress' }), override('Set the progress by hand (%)', w.progressOverride !== null, [pct], on => { w.progressOverride = on ? (w.progressOverride ?? f.dataProgress ?? 0) : null; pct.firstChild.value = w.progressOverride ?? ''; changed(); },
     `Otherwise the average of its projects on Overall progress (${f.dataProgress === null ? 'no projects yet' : `${f.dataProgress}% now`}).`));
   const spent = numberInput(w.costOverride?.spent, v => { (w.costOverride ||= { spent: 0, sanctioned: 0 }).spent = v; changed(); }, 'Paid, MYR');
-  const sanctioned = numberInput(w.costOverride?.sanctioned, v => { (w.costOverride ||= { spent: 0, sanctioned: 0 }).sanctioned = v; changed(); }, 'Sanctioned, MYR');
+  // Sanctioned is not typed: it always follows the Invoice Tracker's sanctioned amounts (lib/jda-figures.js).
   const costFields = el('div', { className: 'ct-cost-fields' }, el('label', { className: 'ef' }, el('span', { className: 'ef-label', textContent: 'Paid (MYR, with tax)' }), spent),
-    el('label', { className: 'ef' }, el('span', { className: 'ef-label', textContent: 'Sanctioned (MYR, with tax)' }), sanctioned));
-  box.append(el('h4', { textContent: 'Cost' }), override('Set the cost figures by hand', !!w.costOverride, [costFields], on => {
+    hint(`Sanctioned is not set here: it follows the Invoice Tracker's sanctioned amounts${f.dataCost ? ` (RM ${Math.round(f.dataCost.sanctioned).toLocaleString('en-MY')} now)` : ''}.`));
+  box.append(el('h4', { textContent: 'Cost' }), override('Set the paid figure by hand', !!w.costOverride, [costFields], on => {
     w.costOverride = on ? (w.costOverride || { spent: f.dataCost?.spent ?? 0, sanctioned: f.dataCost?.sanctioned ?? 0 }) : null;
-    spent.firstChild.value = w.costOverride?.spent ?? ''; sanctioned.firstChild.value = w.costOverride?.sanctioned ?? ''; changed();
+    spent.firstChild.value = w.costOverride?.spent ?? ''; changed();
   }, `Otherwise paid invoices against sanctioned amounts from the Invoice Tracker (${f.dataCost ? `now RM ${Math.round(f.dataCost.spent).toLocaleString('en-MY')} paid of RM ${Math.round(f.dataCost.sanctioned).toLocaleString('en-MY')}` : 'no figures there yet'}).`));
   return box;
 }

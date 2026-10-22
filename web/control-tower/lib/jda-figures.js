@@ -54,7 +54,9 @@ export function jdaFigures(jda, report, written = {}, costs = null, { failed = f
     progress: written.progressOverride ?? avg, progressOverride: written.progressOverride !== null && written.progressOverride !== undefined,
     latest: updates[0] || null, updates: updates.length,
     challenges: written.challenges ?? fromReport, challengesOverride: Array.isArray(written.challenges),
-    cost: written.costOverride ? { ...written.costOverride, override: true } : dataCost,
+    // Paid can be set by hand; sanctioned always follows the Invoice Tracker's sanctioned amounts (it is the
+    // plan, so the ring and the tracker never disagree about it). With no tracker figures, the typed one stands.
+    cost: written.costOverride ? { ...written.costOverride, sanctioned: dataCost ? dataCost.sanctioned : written.costOverride.sanctioned, override: true } : dataCost,
     trackerId: tracked?.trackerId, pending: tracked?.pending ?? null, twice: !!tracked?.twice,
     tagline: r?.overview?.tagline || tagline || ''
   };

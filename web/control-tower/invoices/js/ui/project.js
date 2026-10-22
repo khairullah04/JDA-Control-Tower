@@ -30,9 +30,9 @@ export async function renderProject(id) {
       </div></div>
     ${storageNotice(ctx)}
 
-    <div class="banner ${r.overPlan ? 'over' : ''}">
-      Up to ${monthName(r.asOf)} <b>${rm(r.planned)}</b> has been sanctioned, tax included. Paid so far is <b>${rm(r.actual)}</b> —
-      ${r.overPlan ? `<b>${rm(r.variance)} over</b> the sanctioned amount.` : `${rm(-r.variance)} under the sanctioned amount.`}
+    <div class="banner ${r.overSanctioned ? 'over' : ''}">
+      Up to ${monthName(r.asOf)} <b>${rm(r.sanctionedToDate)}</b> has been sanctioned, tax included. Paid so far is <b>${rm(r.actual)}</b> —
+      ${r.overSanctioned ? `<b>${rm(r.variance)} over</b> the sanctioned amount.` : `${rm(-r.variance)} under the sanctioned amount.`}
     </div>
 
     ${costKpis(sanctioned, entries, { budgetMinor: r.budget, forecastMinor: r.forecast, forecastBad: r.forecastOverBudget, waiting: r.counts.pending })}
@@ -63,7 +63,7 @@ export async function renderProject(id) {
   state.context = () => ({
     page: `Project report: ${project.name}`, note: `Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month. Forecast: ${FORECAST_NOTE}`,
     project: { name: project.name, budget: money(r.budget), start: project.startDate, end: project.endDate },
-    report: { asOf: r.asOf, sanctionedToDate: money(r.planned), paid: money(r.actual), invoiced: money(r.invoiced), variance: money(r.variance), overSanctioned: r.overPlan, budgetUsed: pct(r.budgetUsedPct), forecast: money(r.forecast), invoicesByStatus: r.counts },
+    report: { asOf: r.asOf, sanctionedToDate: money(r.sanctionedToDate), paid: money(r.actual), invoiced: money(r.invoiced), variance: money(r.variance), overSanctioned: r.overSanctioned, budgetUsed: pct(r.budgetUsedPct), forecast: money(r.forecast), invoicesByStatus: r.counts },
     ...firstRows(entries.filter(e => !e.deletedAt)),
     paymentTable: paymentTable(sanctioned, entries).slice(0, CONTEXT_ROWS).map(row => ({ id: row.id, month: row.month, partner: row.partner, sanctionedWithTax: money(row.withTaxMinor), paid: money(row.actualMinor), variance: money(row.varianceMinor), status: row.flag })),
     invoices: entries.filter(e => !e.deletedAt).slice(0, CONTEXT_ROWS).map(e => ({ invoiceNo: e.invoiceNo, partner: e.partner, date: e.documentDate, month: e.month, dueDate: e.dueDate, original: money(e.netMinor, e.currency), taxedMYR: money(e.grossMyrMinor), status: STATUS_LABEL[e.status], description: e.description }))

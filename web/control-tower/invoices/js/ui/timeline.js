@@ -72,13 +72,13 @@ export function renderTimeline(root, { project, sanctioned, entries, range }) {
 
   function draw(focusDate) {
     const list = buckets(from, to, grain());
-    cur = Object.fromEntries(list.map(b => [b.key, { ...b, planned: 0, actual: 0, scope: [], inv: [] }]));
-    sc.forEach(s => { const b = cur[keyOf(s.on, grain())]; b.planned += s.grossMyrMinor; b.scope.push(s); });
+    cur = Object.fromEntries(list.map(b => [b.key, { ...b, sanctioned: 0, actual: 0, scope: [], inv: [] }]));
+    sc.forEach(s => { const b = cur[keyOf(s.on, grain())]; b.sanctioned += s.grossMyrMinor; b.scope.push(s); });
     inv.forEach(i => { const b = cur[keyOf(i.on, grain())]; b.actual += i.grossMyrMinor; b.inv.push(i); });
     let cp = 0, ca = 0;
-    list.forEach(({ key }) => { cp += cur[key].planned; ca += cur[key].actual; cur[key].cp = cp; cur[key].ca = ca; });
+    list.forEach(({ key }) => { cp += cur[key].sanctioned; ca += cur[key].actual; cur[key].cp = cp; cur[key].ca = ca; });
 
-    const max = Math.max(1, ...list.map(({ key }) => Math.max(cur[key].planned, cur[key].actual)));
+    const max = Math.max(1, ...list.map(({ key }) => Math.max(cur[key].sanctioned, cur[key].actual)));
     const h = v => v > 0 ? Math.max(v / max * 100, 1.5) : 0;
     const todayKey = keyOf(today, grain());
     let prevMon = '';
@@ -95,14 +95,14 @@ export function renderTimeline(root, { project, sanctioned, entries, range }) {
       }
       prevMon = mon;
       const label = grain() === 'month' ? fmt(b.start, { month: w < 34 ? 'narrow' : 'short' }) : b.start.slice(8);
-      const tip = [titleOf(b, grain()), `Sanctioned ${rm(b.planned)} (cumulative ${rm(b.cp)})`, `Paid ${rm(b.actual)} (cumulative ${rm(b.ca)})`].join('\n');
+      const tip = [titleOf(b, grain()), `Sanctioned ${rm(b.sanctioned)} (cumulative ${rm(b.cp)})`, `Paid ${rm(b.actual)} (cumulative ${rm(b.ca)})`].join('\n');
       return `<div class="tl-col ${newMonth && idx ? 'month-start' : ''} ${key === todayKey ? 'today' : ''}" data-key="${key}" data-month="${mon}" data-start="${b.start}" title="${esc(tip)}">
         <span class="tl-top">${esc(top)}</span>
-        <div class="tl-pair"><i style="height:${h(b.planned)}%"></i><i class="act" style="height:${h(b.actual)}%"></i></div>
+        <div class="tl-pair"><i style="height:${h(b.sanctioned)}%"></i><i class="act" style="height:${h(b.actual)}%"></i></div>
         <small>${label}</small></div>`;
     }).join('');
 
-    // Cumulative-spend overlay: running total of planned vs actual spend to date (not per-period
+    // Cumulative-spend overlay: running total of sanctioned vs actual spend to date (not per-period
     // amounts - each point is everything spent up to and including that bar). Shaded area under
     // each line makes the "total money so far" reading unambiguous. Bars stay in the DOM (hidden)
     // so click/hover/zoom/scroll behaviour is identical in both views.
@@ -157,7 +157,7 @@ export function renderTimeline(root, { project, sanctioned, entries, range }) {
     const b = cur[col.dataset.key];
     const li = (arr, f) => arr.length ? `<ul>${arr.map(f).join('')}</ul>` : '<div class="legend">None</div>';
     detail.innerHTML = `<b>${esc(titleOf(b, grain()))}</b>
-      <div>Sanctioned (w TAX): ${rm(b.planned)}${li(b.scope, s => `<li>${esc(s.projectCode)} ${esc(s.partner)} ${esc(s.description)} - ${money(s.grossMyrMinor)}</li>`)}</div>
+      <div>Sanctioned (w TAX): ${rm(b.sanctioned)}${li(b.scope, s => `<li>${esc(s.projectCode)} ${esc(s.partner)} ${esc(s.description)} - ${money(s.grossMyrMinor)}</li>`)}</div>
       <div>Paid: ${rm(b.actual)}${li(b.inv, i => `<li>${esc(i.projectCode)} ${esc(i.partner)} ${esc(i.invoiceNo)} - ${esc(money(i.netMinor, i.currency))}, ${money(i.grossMyrMinor)} taxed</li>`)}</div>`;
   };
 
