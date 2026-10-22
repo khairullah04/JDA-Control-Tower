@@ -6,7 +6,7 @@ import * as finance from '../services/finance.js';
 import { listLegacyScope, listLegacyInvoices } from '../services/db.js';
 import { config } from '../config/index.js';
 import { money } from '../finance/money.js';
-import { STATUSES, STATUS_LABEL, isMonth, rowId } from '../finance/core.js';
+import { isMonth, rowId } from '../finance/core.js';
 import { tableIn, tableEnd, entryInputs, entryDateOrder, sampleDate, toIsoDate, sanctionedInputs, legacyEntryInput, legacySanctionedInput, ENTRY_HEADERS, SANCTIONED_HEADERS } from '../finance/sheets.js';
 import { dialog, options, monthLabel, statusBadge } from './finance-ui.js';
 

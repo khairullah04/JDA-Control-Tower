@@ -2,7 +2,7 @@ import { updateJda, addProject, addLog, listLog } from '../services/db.js';
 import { audit } from '../services/finance.js';
 import { computeReport, ofProject, FORECAST_NOTE } from '../services/analytics.js';
 import { money } from '../finance/money.js';
-import { $, esc, rm, pct, spendBar, jdaRange, JDA_DATE_FIELDS, checkDates, checkProject } from './dom.js';
+import { $, esc, rm, spendBar, jdaRange, JDA_DATE_FIELDS, checkDates, checkProject } from './dom.js';
 import { state } from './state.js';
 import { openForm } from './modal.js';
 import { runSync } from './sync.js';

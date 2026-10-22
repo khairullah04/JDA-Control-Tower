@@ -9,7 +9,7 @@ import { config } from '../config/index.js';
 import { money, fmt, fromBps } from '../finance/money.js';
 import { BASE, STATUSES, STATUS_LABEL } from '../finance/core.js';
 import { entrySheet } from '../finance/sheets.js';
-import { loadCtx, storageNotice, scopeBar, wireScope, monthLabel, statusBadge, options, dialog, act, openRecord, openAudit, exportButtons, exportSheet, today } from './finance-ui.js';
+import { loadCtx, storageNotice, scopeBar, wireScope, monthLabel, statusBadge, dialog, act, openRecord, openAudit, exportButtons, exportSheet, today } from './finance-ui.js';
 import { openImport, bringOverOldRecords } from './finance-io.js';
 import { openColumnFilter, filterHeading } from './column-filter.js';
 import { stageOf, queueOf, STAGE_LABEL } from '../finance/workflow.js';

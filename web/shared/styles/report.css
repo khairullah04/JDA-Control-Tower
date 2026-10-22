@@ -306,9 +306,7 @@
 
   /* ---------- buttons ---------- */
   .btn{display:inline-flex;align-items:center;gap:calc(8px * var(--space-scale));font-weight:700;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));padding:calc(12px * var(--space-scale)) calc(22px * var(--space-scale));border-radius:calc(9px * var(--space-scale));cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,background .15s ease;margin-top:calc(36px * var(--space-scale));}
-  
-  .btn-teal{background:var(--teal-600);color:#fff;border:none;box-shadow:0 4px 14px rgba(0,80,74,.28);}
-  .btn-teal:hover{background:var(--teal-700);transform:translateY(-2px);}
+
   .btn:active,.back-link:active{transform:scale(.96);}
 
   footer:not(.site-footer){position:sticky;bottom:0;z-index:60;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -346,9 +344,7 @@
   button.add-row{margin-top:calc(18px * var(--space-scale));margin-right:calc(8px * var(--space-scale));background:#fff;color:var(--teal-700);border:1.5px solid var(--teal-500);
     padding:calc(10px * var(--space-scale)) calc(18px * var(--space-scale));border-radius:calc(10px * var(--space-scale));font-size:max(min(13.5px, 14px), calc(13.5px * var(--type-scale)));font-weight:700;cursor:pointer;transition:background .15s ease,transform .15s ease;}
   button.add-row:hover{background:var(--teal-050);transform:translateY(-1px);}
-  .entry-cancel{font-size:max(min(12.5px, 14px), calc(12.5px * var(--type-scale)));font-weight:700;color:var(--muted);cursor:pointer;background:none;border:none;padding:0;
-    margin:calc(18px * var(--space-scale)) 0 0 calc(14px * var(--space-scale));text-decoration:underline;}
-  .entry-cancel:hover{color:var(--text);}
+
   .save-msg{font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));color:var(--green);margin-top:calc(10px * var(--space-scale));height:calc(14px * var(--space-scale));font-weight:600;}
   .entry-list{display:flex;flex-direction:column;gap:calc(8px * var(--space-scale));margin-top:calc(18px * var(--space-scale));padding-top:calc(16px * var(--space-scale));border-top:1px dashed var(--border);}
   .entry-list:empty{display:none;}

@@ -11,13 +11,6 @@
 .st.rejected,.flag.over{background:var(--bad-tint);color:var(--bad)}
 .flag.under{background:var(--blue-tint);color:var(--blue)}
 .flag.within{background:var(--idle-tint);color:var(--muted)}
-select.st-select{appearance:none;width:auto;border:1px solid transparent;border-radius:calc(20px * var(--space-scale));font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));font-weight:700;padding:calc(3px * var(--space-scale)) calc(24px * var(--space-scale)) calc(3px * var(--space-scale)) calc(11px * var(--space-scale));cursor:pointer;
-  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-position:calc(100% - 13px) center,calc(100% - 8px) center;background-size:calc(5px * var(--space-scale)) calc(5px * var(--space-scale)),calc(5px * var(--space-scale)) calc(5px * var(--space-scale));background-repeat:no-repeat}
-select.st-select.paid{background-color:var(--ok-tint);color:var(--ok)}
-select.st-select.approved{background-color:var(--info-tint);color:var(--teal-700)}
-select.st-select.pending{background-color:var(--warn-tint);color:var(--warn)}
-select.st-select.rejected{background-color:var(--bad-tint);color:var(--bad)}
 
 /* The summary cells above a Payment Table */
 .pt-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(200px * var(--space-scale)),1fr));gap:calc(.75rem * var(--space-scale));margin-bottom:calc(1rem * var(--space-scale))}

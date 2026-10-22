@@ -4,7 +4,7 @@ import { $, esc } from './dom.js';
 import { listJdas, listAllProjectsWithJda } from '../services/db.js';
 import * as finance from '../services/finance.js';
 import { money, fmt, toMinor, normRate, toBps, fromBps } from '../finance/money.js';
-import { amounts, paymentTable, tableTotals, monthsBetween, spreadOverMonths, MAX_SPAN, BASE, STATUSES, STATUS_LABEL, SAP_FIELDS } from '../finance/core.js';
+import { amounts, paymentTable, tableTotals, monthsBetween, spreadOverMonths, MAX_SPAN, BASE, STATUS_LABEL, SAP_FIELDS } from '../finance/core.js';
 import { toCsv } from '../finance/sheets.js';
 import { GROUPS } from '../finance/cji3.js';
 import { localToday } from '../../../../shared/lib/dates.js';
