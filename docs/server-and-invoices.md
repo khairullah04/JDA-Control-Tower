@@ -85,36 +85,28 @@ from the top bar or from the "Invoices and payments" totals on a JDA or project 
 
 ### Invoice approval (Approvals, `#/approvals`)
 
-Every invoice in the register goes through the approval process before it is paid. The stages and
-the moves allowed between them are in `web/control-tower/invoices/js/finance/workflow.js`; the server
-refuses any other move.
+Approval happens **outside the system**, by email, from the Microsoft List. **Approvals** in the sidebar
+opens the List for one JDA (the same view as under each JDA's graphs, below): the PM pulls the List,
+ticks invoices and generates the approval-request email to the Project Lead. The invoices go into the
+register and wait as **Pending Lead approval** (Received → With PM → Pending Lead). There are no
+approve or reject buttons: the **CJI3 payment line is the proof of approval**, and matching one marks
+the invoice **Paid**, whatever open stage it is in. Undoing the match puts it back in the stage it was
+in. The stages and moves are in `web/control-tower/invoices/js/finance/workflow.js`; the server refuses
+any other move, and every move is kept in the invoice's history (`financeStages`) and the audit log.
 
 ```
-Received ─┬─ Route 1: Direct ─────► Sent to PD ───────────────────────┐
-          └─ Route 2: Validation ─► With PM ─► Pending Lead ─┬─► To Be Paid ─┤
-                                                             └─► Rejected     │
-                                      Paid (shown by a CJI3 line) ◄──────────┘
+Received ─► With PM ─► Pending Lead ─┐
+   (older: Sent to PD, To Be Paid) ──┴─► Paid (a CJI3 line; undone, it goes back)
 ```
 
-- **Queues** (one tab each on Approvals): Intake (Accountant 1 chooses the route), PM validation,
-  Lead approval, To Be Paid (Accountant 2: approved invoices and those sent to PD, oldest due date
-  first), Paid, and Rejected (the archive).
-- **Every move is confirmed** in a dialog first, with a note; a reason is required to reject, to
-  return an invoice, or to restore one from the archive. Each move is kept in the invoice's history
-  (`financeStages`: who, when, from, to, note) and in the audit log.
-- **Rejected invoices are archived, not deleted**: they keep everything, leave the active queues, and
-  **Restore from archive** sends one back to the Project Lead.
-- **Route 1 passes nothing to PD**: the invoice is only marked Sent to PD, then waits in To Be Paid.
-- **Paid is never a button**: an invoice becomes Paid when a CJI3 line is matched to it (below).
 - **The Payment Tables do not change**: they read the invoice's `status` (pending / approved / paid /
   rejected), which is worked out from its stage (Received, With PM, Pending Lead → pending; Sent to PD,
   To Be Paid → approved; Paid → paid; Rejected → rejected). Invoices entered before the process get
   their stage from their status. **There is no way to set a status by hand**: the register shows it
-  read-only (linked to the invoice's Approvals queue), the invoice form has no status field, imported
+  read-only (its stage on hover), the invoice form has no status field, imported
   invoices always start at Received, and the server refuses all of these.
-- **Roles**: `ROLE_ACCOUNTANT1`, `ROLE_PM`, `ROLE_LEAD`, `ROLE_ACCOUNTANT2` in `server/.env`
-  (comma-separated emails) limit each queue's moves to those people. Left empty (as now), anyone
-  signed in may make any move.
+- **Roles**: `ROLE_PM` in `server/.env` (comma-separated emails) limits who may email invoices to the
+  Lead from the List; left empty (as now), anyone signed in may.
 
 ### Invoices from the Microsoft List (a JDA's tracker page, under the graphs)
 

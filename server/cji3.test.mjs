@@ -80,6 +80,7 @@ test('a file missing a required column is refused whole, saying which', () => {
 import express from 'express';
 import financeRoutes from './routes/finance.js';
 import { createFinance, memoryStore } from '../web/control-tower/invoices/js/finance/service.js';
+import { stageOf } from '../web/control-tower/invoices/js/finance/workflow.js';
 import { toCsv } from '../web/control-tower/invoices/js/finance/sheets.js';
 
 test('uploads over the register: a preview saves nothing; each upload is logged; updates are audited', async () => {
@@ -120,7 +121,7 @@ test('an upload over HTTP: the server reads the file itself', async () => {
 /* ---------- Matching lines to invoices ---------- */
 const inv = (no, over = {}) => ({ jdaId: 'j3', jdaName: 'JDA 3', projectId: 'pc', projectCode: 'CA', partner: 'IBM', invoiceNo: no, documentDate: '2026-09-01', currency: 'MYR', amount: '1000', ...over });
 
-test('matching: To Be Paid and Sent to PD become Paid; not approved is linked, not moved; none and several are left for a person', async () => {
+test('matching: the CJI3 line is the approval, so an invoice at any open stage becomes Paid; none and several are left for a person', async () => {
   const f = createFinance(memoryStore(), { now: () => '2026-10-20T01:00:00Z' });
   const approved = await f.save('entry', inv('INV-CA-101'), 'a'), direct = await f.save('entry', inv('INV-CA-102'), 'a'), fresh = await f.save('entry', inv('INV-CA-103'), 'a');
   const twinA = await f.save('entry', inv('INV-CA-104'), 'a'), twinB = await f.save('entry', inv('INV-CA-104', { projectId: 'pd', projectCode: 'CB' }), 'a');
@@ -130,11 +131,11 @@ test('matching: To Be Paid and Sent to PD become Paid; not approved is linked, n
   const out = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(
     line({ Reference: 'inv-ca-101' }), line({ Reference: 'INV-CA-102' }), line({ Reference: 'INV-CA-103' }),
     line({ Reference: 'INV-CA-104', 'CO Object Name': '' }), line({ Reference: 'INV-CA-104', 'CO Object Name': 'CB', 'Value TranCurr': '500' }), line({ Reference: 'NOPE-1' })) }, 'acc2');
-  assert.deepEqual(out.match, { paid: 2, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 2, none: 1, ambiguous: 1 }); // not approved: INV-CA-103, and INV-CA-104 for CB
+  assert.deepEqual(out.match, { paid: 4, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, none: 1, ambiguous: 1 }); // INV-CA-103 (only Received) and INV-CA-104 for CB are paid too
   const { entries } = await f.data(), get = id => entries.find(e => e.id === id);
-  assert.deepEqual([get(approved.id).status, get(direct.id).status, get(fresh.id).status, get(twinB.id).status], ['paid', 'paid', 'pending', 'pending']);
+  assert.deepEqual([get(approved.id).status, get(direct.id).status, get(fresh.id).status, get(twinB.id).status], ['paid', 'paid', 'paid', 'paid']);
   const lines = await f.cji3Lines('jda3'), byRef = (r, co) => lines.find(l => l.reference === r && (co === undefined || l.coObject === co));
-  assert.deepEqual([byRef('INV-CA-104', '').matchState, byRef('INV-CA-104', '').candidateIds.sort(), byRef('INV-CA-104', 'CB').matchState], ['ambiguous', [twinA.id, twinB.id].sort(), 'not_approved']);
+  assert.deepEqual([byRef('INV-CA-104', '').matchState, byRef('INV-CA-104', '').candidateIds.sort(), byRef('INV-CA-104', 'CB').matchState], ['ambiguous', [twinA.id, twinB.id].sort(), 'paid']);
   assert.deepEqual(get(approved.id).paidBy, [byRef('inv-ca-101').id]);
   assert.ok((await f.stageHistory(approved.id)).some(h => h.to === 'paid' && h.byCji3));
   // the same file again: nothing new, nothing matched twice
@@ -193,4 +194,26 @@ test('matching checks the amount: equal pays, a part payment waits for the rest,
   await f.matchLine(overLine.id, over, 'acc2');
   assert.equal((await status())['INV-C'], 'paid');
   assert.equal(even.length > 0, true);
+});
+
+test('the List replaces Approvals: an emailed invoice is paid by its CJI3 line; undone, it goes back to Pending Lead; lines held as "not approved" are matched again', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-22T01:00:00Z' });
+  const e = await f.save('entry', inv('INV-CA-201'), 'a');
+  await f.moveStage([e.id], 'with_pm', {}, 'pm'); await f.moveStage([e.id], 'pending_lead', {}, 'pm'); // emailed to the Lead from the List
+  const out = await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-CA-201' })) }, 'acc2');
+  assert.equal(out.match.paid, 1);
+  let rec = (await f.data()).entries.find(x => x.id === e.id);
+  assert.deepEqual([rec.status, rec.paidFrom], ['paid', 'pending_lead']);
+  const [l] = await f.cji3Lines('jda3');
+  await f.matchLine(l.id, '', 'acc2'); // a wrong match, undone
+  rec = (await f.data()).entries.find(x => x.id === e.id);
+  assert.deepEqual([stageOf(rec), rec.status, rec.paidFrom], ['pending_lead', 'pending', '']);
+  // a line linked under the old rule ("not approved yet") is picked up by Match again
+  const store = memoryStore(), g = createFinance(store, { now: () => '2026-10-22T01:00:00Z' });
+  const old = await g.save('entry', inv('INV-CA-202'), 'a');
+  await g.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'NOT-YET' })) }, 'acc2');
+  const [held] = await g.cji3Lines('jda3');
+  await store.atomic(async () => ({ writes: [{ coll: 'cji3Lines', id: held.id, data: { ...held, reference: 'INV-CA-202', invoiceId: old.id, matchState: 'not_approved' } }] }));
+  assert.equal((await g.matchCji3([held.id], 'acc2')).paid, 1);
+  assert.equal((await g.data()).entries.find(x => x.id === old.id).status, 'paid');
 });

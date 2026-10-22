@@ -12,7 +12,7 @@ import { entrySheet } from '../finance/sheets.js';
 import { loadCtx, storageNotice, scopeBar, wireScope, monthLabel, statusBadge, dialog, act, openRecord, openAudit, exportButtons, exportSheet, today } from './finance-ui.js';
 import { openImport, bringOverOldRecords } from './finance-io.js';
 import { openColumnFilter, filterHeading } from './column-filter.js';
-import { stageOf, queueOf, STAGE_LABEL } from '../finance/workflow.js';
+import { stageOf, STAGE_LABEL } from '../finance/workflow.js';
 
 const views = {}; // filters, sort order and selection, kept per place the register is shown
 const viewFor = key => views[key] ||= { q: '', cols: {}, deleted: false, sort: 'documentDate', dir: -1, selected: new Set() };
@@ -73,7 +73,7 @@ export function renderRegister(root, ctx, { jdaId = '', projectId = '', full = f
         <td class="num mono">${esc(money(e.netMinor, e.currency))}</td>
         <td class="num mono" title="${esc([e.rateSource, e.rateDate].filter(Boolean).join(', '))}">${e.currency === BASE ? '—' : esc(e.rate || '')}${e.rateOverridden ? ' <span class="flag over">overridden</span>' : ''}</td>
         <td class="num mono">${esc(fmt(e.netMyrMinor))}</td><td class="num mono" title="Tax rate ${esc(fromBps(e.taxRateBps ?? 0))}%">${esc(fmt(e.taxMyrMinor))}</td><td class="num mono"><b>${esc(fmt(e.grossMyrMinor))}</b></td>
-        <td><a class="st-link" href="#/approvals/${esc(queueOf(e).id)}" title="${esc(STAGE_LABEL[stageOf(e)])}: change it in Approvals">${statusBadge(e.status)}</a></td>
+        <td title="${esc(STAGE_LABEL[stageOf(e)])}">${statusBadge(e.status)}</td>
         <td class="${e.dueDate && e.status !== 'paid' && e.dueDate < today() ? 'overdue' : ''}">${esc(e.dueDate || '')}</td>
         <td class="actions">${e.deletedAt ? `<button type="button" class="ghost btn-sm" data-restore="${esc(e.id)}">Restore</button>` : `<button type="button" class="ghost btn-sm" data-edit="${esc(e.id)}">Edit</button>`}
           <button type="button" class="ghost btn-sm" data-history="${esc(e.id)}">History</button>${e.deletedAt ? '' : `<button type="button" class="ghost btn-sm" data-delete="${esc(e.id)}">Delete</button>`}</td></tr>`).join('')

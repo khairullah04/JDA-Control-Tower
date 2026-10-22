@@ -2,7 +2,7 @@
 // The PM pulls the List (from Microsoft with their own sign-in, or an export of it; the columns are
 // found automatically), ticks invoices, and generates the
 // approval-request email to the Project Lead. Generating it sends them: they move to Pending Lead
-// approval in Approvals (finance/service.js sendListToLead). Proof links come from the List itself.
+// approval (finance/service.js sendListToLead); a CJI3 payment line later marks them Paid. Proof links come from the List itself.
 import { $, esc } from './dom.js';
 import * as finance from '../services/finance.js';
 import { money } from '../finance/money.js';
@@ -118,7 +118,7 @@ export async function renderListInvoices(root, ctx, jda) {
     const d = dialog(`<form class="li-preview"><h3>Approval request · ${chosen.length} invoice${chosen.length === 1 ? '' : 's'}</h3>
       <p class="legend"><b>Subject:</b> ${esc(subject)}<br><b>To:</b> ${esc(who.to) || '<i>blank: fill in, in Outlook</i>'}${who.cc ? ` · <b>Cc:</b> ${esc(who.cc)}` : ''}</p>
       <iframe class="li-frame" title="Preview of the email" sandbox></iframe>
-      <p class="legend">Generating sends these invoices to the Project Lead: they move to <b>Pending Lead approval</b> in Approvals, and the email is logged.</p>
+      <p class="legend">Generating sends these invoices to the Project Lead: they move to <b>Pending Lead approval</b>, and the email is logged. A CJI3 payment line marks them Paid.</p>
       <p class="msg" id="pv-msg" role="status"></p>
       <div class="row"><button type="button" class="ghost" id="cancel">Cancel</button>
         <button type="button" class="ghost" id="pv-copy">Copy formatted email</button>

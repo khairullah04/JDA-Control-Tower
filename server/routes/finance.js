@@ -72,7 +72,7 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   // Match a line to an invoice by hand (`invoiceId`), or undo its match (no `invoiceId`); match again
   // every line of a file not yet matched (after new invoices have come in).
   router.post('/cji3/match', run(req => finance.matchLine(String(req.body?.lineId || ''), String(req.body?.invoiceId || ''), actor(req))));
-  router.post('/cji3/rematch', run(async req => finance.matchCji3((await finance.cji3Lines(String(req.body?.group || ''))).filter(l => !l.invoiceId).map(l => l.id), actor(req))));
+  router.post('/cji3/rematch', run(async req => finance.matchCji3((await finance.cji3Lines(String(req.body?.group || ''))).filter(l => !l.invoiceId || l.matchState === 'not_approved').map(l => l.id), actor(req))));
   router.get('/cji3/imports', run(() => finance.cji3Imports()));
   // The Microsoft List (invoices before approval): what was last pulled and its mapping, and whether the
   // person is signed in to Microsoft; the sign-in (a device code, no IT setup) and sign-out; the rows, read

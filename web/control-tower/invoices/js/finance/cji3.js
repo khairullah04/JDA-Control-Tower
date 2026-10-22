@@ -128,7 +128,7 @@ export function paidAgainst(invoiceMinor, linesMinor) {
   return Math.abs(d) <= TOLERANCE(invoiceMinor) ? 'equal' : d < 0 ? 'less' : 'more';
 }
 export const MATCH_LABEL = { paid: 'Matched: invoice Paid', linked: 'Matched (invoice already Paid)', part_paid: 'Part payment: the invoice is Paid when the rest arrives',
-  amount_differs: 'Matched, but the amount does not agree: check it', not_approved: 'Matched, but the invoice is not approved yet', none: 'No invoice with this Reference',
+  amount_differs: 'Matched, but the amount does not agree: check it', not_approved: 'Matched before CJI3 counted as approval: use Match again', none: 'No invoice with this Reference',
   ambiguous: 'Several invoices could match', manual: 'Matched by hand' };
 
 const show = (k, l) => /Minor$/.test(k) ? (l[k] == null ? '' : fmt(l[k])) : text(l[k]);

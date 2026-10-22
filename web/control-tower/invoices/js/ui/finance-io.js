@@ -23,7 +23,7 @@ export function openImport(kind, ctx, jdaId = '') {
     <p class="legend">An Excel workbook (.xlsx) or a CSV file whose header row has: ${esc(k.columns)}. An export from this page imports back as it is. ${entry ? 'An invoice already in the register is left out, so importing a file twice adds nothing.' : ''}</p>
     <div class="rec-grid">
       <label>JDA the rows belong to<select name="jdaId" required>${options(ctx.jdas.map(j => [j.id, j.name]), jdaId, 'Choose…')}</select></label>
-      ${entry ? '<p class="legend">Imported invoices start at Received, in Approvals > Intake, whatever the sheet says about their status.</p>' : ''}
+      ${entry ? '<p class="legend">Imported invoices start at Received (pending), whatever the sheet says about their status; a CJI3 payment line makes them Paid.</p>' : ''}
       <label>File<input name="file" type="file" accept=".xlsx,.csv" required></label>
     </div>
     <div id="import-preview"></div>

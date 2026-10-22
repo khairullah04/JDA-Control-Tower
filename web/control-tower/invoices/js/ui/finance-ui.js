@@ -227,7 +227,7 @@ export function openRecord(kind, ctx, { record = null, preset = {} } = {}) {
       ...(foreign && { rate: get('rate'), rateDate: get('rateDate'), rateSource: get('rateSource') || 'Entered by hand', rateOverridden: overridden }),
       ...(entry && {
         invoiceNo: get('invoiceNo'), documentDate: get('documentDate'), vendor: get('vendor'), postingDate: get('postingDate'), dueDate: get('dueDate'),
-        fileUrl: get('fileUrl'), // no status: it follows the invoice's stage (Approvals, and Paid from a CJI3 match)
+        fileUrl: get('fileUrl'), // no status: it follows the invoice's stage (Pending until emailed from the List, Paid from a CJI3 match)
         sap: Object.fromEntries(SAP_FIELDS.map(([k]) => [k, get('sap.' + k)]))
       })
     };

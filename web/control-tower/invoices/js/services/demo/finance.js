@@ -36,7 +36,7 @@ export async function importCji3(group, file, { dryRun = false } = {}) {
 export const cji3Lines = (group = '') => f.cji3Lines(group);
 export const cji3Imports = () => f.cji3Imports();
 export const matchLine = (lineId, invoiceId = '') => f.matchLine(lineId, invoiceId, who());
-export const rematch = async group => f.matchCji3((await f.cji3Lines(group)).filter(l => !l.invoiceId).map(l => l.id), who());
+export const rematch = async group => f.matchCji3((await f.cji3Lines(group)).filter(l => !l.invoiceId || l.matchState === 'not_approved').map(l => l.id), who());
 // The Microsoft List in demo mode: an export (CSV) only; no Graph, no Outlook drafts.
 export const listState = async () => ({ ...(await f.listState()), graph: false, demo: true, ms: { signedIn: false, account: '', pending: null }, mail: false });
 export async function listRows(file) {

@@ -32,7 +32,7 @@ async function route() {
     return;
   }
   if (kind === 'cji3-lines') { $('#page').classList.add('wide'); await show(() => renderCji3Lines(id || 'jda12')); refreshCopilot(); return; }
-  if (kind === 'approvals') { $('#page').classList.add('wide'); await show(() => renderApprovals(id || 'intake', sub || '')); refreshCopilot(); return; }
+  if (kind === 'approvals') { $('#page').classList.add('wide'); await show(() => renderApprovals(id || '')); refreshCopilot(); return; }
   if (!['project', 'jda', 'cji3', 'payments'].includes(kind) || ((kind === 'project' || kind === 'jda') && !id)) return location.replace('/control-tower/');
   $('#page').classList.toggle('wide', kind === 'cji3' || kind === 'payments'); // the two wide tables get the whole window
   await show(kind === 'project' && id ? () => renderProject(id) : kind === 'jda' && id ? () => renderJda(id)

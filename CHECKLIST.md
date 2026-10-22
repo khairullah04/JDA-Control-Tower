@@ -174,8 +174,8 @@ The List and its approval-request email are the approval process; the Approvals 
 approves inside the system: emailed invoices wait as Pending Lead approval, and a CJI3 payment line is the
 proof of approval and marks them Paid.
 
-- [ ] Sidebar "Approvals" opens the List view (pull, tick, Generate Email), with a JDA picker.
-- [ ] The List stays under the graphs on each JDA's tracker page too.
-- [ ] Remove the queue page (Intake, PM validation, Lead approval, To Be Paid, Paid, archive) and the links to it.
-- [ ] CJI3 marks an invoice Paid from any open stage (no "not approved yet" hold); undoing the match returns it to the stage it was in.
-- [ ] Tests and docs updated.
+- [x] Sidebar "Approvals" opens the List view (pull, tick, Generate Email), with a JDA picker.
+- [x] The List stays under the graphs on each JDA's tracker page too.
+- [x] Remove the queue page (Intake, PM validation, Lead approval, To Be Paid, Paid, archive) and the links to it.
+- [x] CJI3 marks an invoice Paid from any open stage (no "not approved yet" hold); undoing the match returns it to the stage it was in. Lines held as "not approved" by the old rule are matched again by Match again.
+- [x] Tests and docs updated.

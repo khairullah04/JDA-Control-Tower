@@ -58,12 +58,12 @@ Open them in **different addresses**, so the browser keeps their sign-ins and sa
 
 What to show on the branch, in the sidebar under Invoice Tracker:
 
-1. **Approvals**: the queues (Intake, PM validation, Lead approval, To Be Paid, Paid, Rejected).
-   Route an invoice, validate it, approve or reject it; every move asks for confirmation; History
-   shows who did what.
+1. **Approvals**: the Microsoft List for a JDA. Import an export of the List (or sign in to Microsoft
+   and pull it), tick invoices, Generate Email: they go to Pending Lead approval. No approve buttons:
+   the CJI3 payment line is the approval.
 2. **CJI3 payments**: upload a CJI3 file on its tab (JDA 1 + JDA 2, or JDA 3). Preview, Import;
-   upload the same file again and nothing is added; a line whose Reference is a To Be Paid invoice's
-   number makes that invoice Paid.
+   upload the same file again and nothing is added; a line whose Reference is an invoice's number
+   makes that invoice Paid.
 3. **Payment tables**: the tabs "JDA 1 + JDA 2 (CJI3 file)" and "JDA 3 (CJI3 file)".
 
 `main` has none of these: compare its CJI3 register and Payment tables.

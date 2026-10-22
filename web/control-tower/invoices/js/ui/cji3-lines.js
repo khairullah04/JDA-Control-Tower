@@ -13,7 +13,7 @@ import { loadCtx, storageNotice, options, dialog, exportButtons, exportSheet } f
 
 const views = {};
 const viewFor = g => views[g] ||= { show: 'all', q: '' };
-const SHOW = [['all', 'All lines'], ['open', 'Not matched'], ['check', 'Amount to check or part paid'], ['not_approved', 'Invoice not approved yet'], ['matched', 'Matched']];
+const SHOW = [['all', 'All lines'], ['open', 'Not matched'], ['check', 'Amount to check or part paid'], ['matched', 'Matched']];
 const CHECK = ['part_paid', 'amount_differs'];
 const when = iso => iso ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 const num = (minor, cur) => minor == null ? '' : { n: fmt(minor, cur, true) };
@@ -27,7 +27,7 @@ export async function renderCji3Lines(groupId = 'jda12') {
   const open = lines.filter(l => !l.invoiceId).length;
   page.innerHTML = `
     <div class="section-head"><h2>CJI3 payments</h2>
-      <div class="row"><a class="ghost" href="#/approvals/pay">To Be Paid queue</a><a class="ghost" href="#/payments">Payment tables</a></div></div>
+      <div class="row"><a class="ghost" href="#/payments">Payment tables</a></div></div>
     ${storageNotice(ctx)}
     <nav class="scope-bar" aria-label="CJI3 file">${Object.entries(GROUPS).map(([id, g]) => `<a class="ghost${id === group ? ' on' : ''}" href="#/cji3-lines/${id}"${id === group ? ' aria-current="page"' : ''}>${esc(g.label)}</a>`).join('')}</nav>
 
@@ -54,11 +54,11 @@ export async function renderCji3Lines(groupId = 'jda12') {
         <tr><th>When</th><th>Who</th><th>File</th><th class="num">Rows</th><th class="num">Added</th><th class="num">Skipped</th><th class="num">Updated</th><th class="num">Not readable</th><th>Matched</th></tr>
         ${imports.filter(i => i.group === group).map(i => `<tr><td class="mono">${esc(when(i.at))}</td><td>${esc(i.by)}</td><td>${esc(i.fileName)}</td><td class="num">${i.rows}</td><td class="num">${i.added}</td><td class="num">${i.skipped}</td><td class="num">${i.updated}</td>
           <td class="num" title="${esc((i.malformed || []).map(m => `Line ${m.line}: ${m.why}`).join('\n'))}">${(i.malformed || []).length}</td>
-          <td class="legend">${i.match ? `${i.match.paid} paid, ${(i.match.part_paid ?? 0) + (i.match.amount_differs ?? 0)} amount to check, ${i.match.linked} added to paid, ${i.match.not_approved} not approved, ${i.match.none + i.match.ambiguous} to match` : ''}</td></tr>`).join('')}
+          <td class="legend">${i.match ? `${i.match.paid} paid, ${(i.match.part_paid ?? 0) + (i.match.amount_differs ?? 0)} amount to check, ${i.match.linked} added to paid, ${i.match.none + i.match.ambiguous} to match` : ''}</td></tr>`).join('')}
       </table></div>` : '<p class="legend">No uploads yet.</p>'}</div>`;
 
   const text = l => [l.reference, l.wbs, l.name, l.headerText, l.coObject, byId.get(l.invoiceId)?.invoiceNo].join(' ').toLowerCase();
-  const shown = () => lines.filter(l => (view.show === 'all' || (view.show === 'open' ? !l.invoiceId : view.show === 'check' ? CHECK.includes(l.matchState) : view.show === 'not_approved' ? l.matchState === 'not_approved' : l.invoiceId && l.matchState !== 'not_approved' && !CHECK.includes(l.matchState)))
+  const shown = () => lines.filter(l => (view.show === 'all' || (view.show === 'open' ? !l.invoiceId : view.show === 'check' ? CHECK.includes(l.matchState) : l.invoiceId && !CHECK.includes(l.matchState)))
     && (!view.q || text(l).includes(view.q.toLowerCase())));
   function draw() {
     const list = shown();
@@ -92,7 +92,7 @@ export async function renderCji3Lines(groupId = 'jda12') {
     }
   });
   $('#cj-rematch')?.addEventListener('click', async () => {
-    try { const c = await finance.rematch(group); say(`${c.paid} line(s) made their invoice Paid, ${c.part_paid} part payment(s), ${c.amount_differs} with an amount to check, ${c.linked} added to paid invoices, ${c.not_approved} matched to invoices not yet approved, ${c.none + c.ambiguous} still to match.`); setTimeout(ctx.refresh, 1500); }
+    try { const c = await finance.rematch(group); say(`${c.paid} line(s) made their invoice Paid, ${c.part_paid} part payment(s), ${c.amount_differs} with an amount to check, ${c.linked} added to paid invoices, ${c.none + c.ambiguous} still to match.`); setTimeout(ctx.refresh, 1500); }
     catch (e) { say(e.message); }
   });
   page.querySelectorAll('[data-export]').forEach(b => b.onclick = () => exportSheet(`CJI3 ${GROUPS[group].label}`, sheetOf(shown(), byId), b.dataset.export));
