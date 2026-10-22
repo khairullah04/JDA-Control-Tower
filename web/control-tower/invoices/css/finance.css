@@ -6,7 +6,7 @@
 /* Status pills: payment status, and a Payment Table row against its sanctioned amount */
 .st,.flag{display:inline-block;padding:calc(3px * var(--space-scale)) calc(11px * var(--space-scale));border-radius:calc(20px * var(--space-scale));font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));font-weight:700;white-space:nowrap}
 .st.paid{background:var(--ok-tint);color:var(--ok)}
-.st.approved{background:var(--info-tint);color:var(--teal-700)}
+.st.approved{background:var(--blue-tint);color:var(--blue)} /* approved, not yet paid: blue; paid: green */
 .st.pending{background:var(--warn-tint);color:var(--warn)}
 .st.rejected,.flag.over{background:var(--bad-tint);color:var(--bad)}
 .flag.under{background:var(--blue-tint);color:var(--blue)}

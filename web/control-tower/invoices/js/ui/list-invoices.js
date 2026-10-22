@@ -52,7 +52,7 @@ export async function renderListInvoices(root, ctx, jda) {
         <tr><th><input type="checkbox" id="li-all" aria-label="Select all" ${all ? 'checked' : ''}></th><th>Invoice No.</th><th>Partner</th><th class="num">Amount</th><th>Description</th><th>Supporting documents</th></tr>
         ${items.map(i => { const r = inRegister(i); return `<tr class="${i.missing.length ? 'li-gap' : ''}">
           <td><input type="checkbox" data-pick="${esc(i.key)}" aria-label="Select ${esc(i.invoiceNo || 'this invoice')}" ${sel.has(i.key) ? 'checked' : ''}></td>
-          <td><b>${esc(i.invoiceNo || '—')}</b>${r ? ` <span class="st ${stageOf(r) === 'received' ? 'pending' : 'approved'}" title="Already in the register">${esc(STAGE_LABEL[stageOf(r)])}</span>` : ''}
+          <td><b>${esc(i.invoiceNo || '—')}</b>${r ? ` <span class="st ${esc(r.status)}" title="Already in the register">${esc(STAGE_LABEL[stageOf(r)])}</span>` : ''}
             ${i.missing.length ? `<br><small class="li-missing">Missing: ${esc(i.missing.join(', '))}</small>` : ''}</td>
           <td>${esc(i.partner || '—')}</td>
           <td class="num mono">${i.amountMinor != null ? esc(money(i.amountMinor, i.currency || '')) : esc(i.amountText || '—')}</td>
