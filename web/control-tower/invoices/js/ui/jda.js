@@ -10,6 +10,7 @@ import { renderTimeline } from './timeline.js';
 import { renderLog, LOG_LINES } from './log.js';
 import { loadCtx, forget, storageNotice, auditLine, financeSummary, costKpis } from './finance-ui.js';
 import { startRender } from './render.js';
+import { renderListInvoices } from './list-invoices.js';
 
 export async function renderJda(id) {
   const r = startRender('Loading JDA…', () => renderJda(id)), { page, refresh } = r;
@@ -42,6 +43,8 @@ export async function renderJda(id) {
 
     <div class="section" id="timeline"></div>
 
+    <div class="section" id="list-invoices"></div>
+
     <div class="section-head"><h3>Projects in ${esc(jda.name)}</h3></div>
     <div class="grid-4">
       ${perProject.map(({ p, r }) => `
@@ -58,6 +61,7 @@ export async function renderJda(id) {
     <div class="section"><h3>Change log</h3>${renderLog(activity)}</div>`;
 
   renderTimeline($('#timeline'), { project: whole, sanctioned, entries, range: jdaRange(jda) });
+  renderListInvoices($('#list-invoices'), ctx, jda); // the invoices waiting in the Microsoft List, under the graphs
 
   $('#sync-drive').onclick = e => runSync(e.target, refresh);
   $('#edit-jda').onclick = () => openForm({

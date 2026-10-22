@@ -125,43 +125,43 @@ logged (who, when, note).
 
 ## To confirm before building (asked 2026-10-22)
 
-- [ ] **L1 — The List's column names**, and whether a Graph app registration (and admin consent) is possible in the company tenant.
-- [ ] **L2 — Where proof links are stored**: written back to the List (needs write permission), or in our own database keyed by invoice number (the default when Graph is not available).
-- [ ] **L3 — Recipients**: default To / CC per JDA (Project Lead), and the sign-off name.
-- [ ] **L4 — Currency**: one currency (MYR), or mixed currencies with the forex conversion shown.
-- [ ] **L5 — List invoices vs the register**: do the List's invoices become the register's invoices (imported into Approvals, one record each), or a separate list on the JDA page only?
-- [ ] **L6 — The PM step**: the email sends invoices to Pending Lead Approval. From Received that skips "With PM" in today's process. Is the email the PM's validation (Received/With PM → Pending Lead), or only allowed from With PM?
+- [ ] **L1 — The List's column names** *(on hold: the mapping is chosen in the page when the List is first imported, so nothing is guessed; Graph needs IT to register an app)*, and whether a Graph app registration (and admin consent) is possible in the company tenant.
+- [x] **L2 — Where proof links are stored**: written back to the List (needs write permission), or in our own database keyed by invoice number (the default when Graph is not available). *Answered 2026-10-22: in the Microsoft List itself; the page only reads and shows them (no adding links in the app).*
+- [x] **L3 — Recipients**: default To / CC per JDA (Project Lead), and the sign-off name. *Answered: blank for now (`invoices/js/config/email-recipients.js`).*
+- [x] **L4 — Currency**: one currency (MYR), or mixed currencies with the forex conversion shown. *Answered: mixed, each invoice in its own currency, totals per currency, no conversion.*
+- [x] **L5 — List invoices vs the register**: do the List's invoices become the register's invoices (imported into Approvals, one record each), or a separate list on the JDA page only? *Answered: the List is before approval, CJI3 after payment. A List invoice becomes a register invoice (a draft) when it is emailed, so Approvals, CJI3 matching and the Payment Tables carry on from there.*
+- [x] **L6 — The PM step**: the email sends invoices to Pending Lead Approval. From Received that skips "With PM" in today's process. Is the email the PM's validation (Received/With PM → Pending Lead), or only allowed from With PM? *Answered: the PM pulls the List, ticks invoices, generates the email: they move Received → With PM → Pending Lead. Missing data is listed invoice by invoice first, with "Proceed anyway".*
 
 ## Data source
-- [ ] Source adapter interface (`listInvoices()`, `writeProof()` where supported), one shape for both.
-- [ ] `GraphListSource`: MSAL client credentials, `GET /sites/{site-id}/lists/{list-id}/items?expand=fields` with paging; settings `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_SITE_ID`, `MS_LIST_ID` in `server/.env`.
-- [ ] `FileListSource`: a CSV / XLSX export of the List, uploaded on the page.
-- [ ] Fallback to the file source when Graph is not configured; the page works the same with either.
-- [ ] Column-mapping config: List field → invoiceNo, partner, amount, currency, description, JDA (from L1, not guessed).
-- [ ] `server/.env.example` placeholders; no secrets committed.
+- [x] Source adapter interface (`listInvoices()`, `writeProof()` where supported), one shape for both.
+- [x] `GraphListSource`: MSAL client credentials, `GET /sites/{site-id}/lists/{list-id}/items?expand=fields` with paging; settings `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`, `MS_SITE_ID`, `MS_LIST_ID` in `server/.env`.
+- [x] `FileListSource`: a CSV / XLSX export of the List, uploaded on the page.
+- [x] Fallback to the file source when Graph is not configured; the page works the same with either.
+- [x] Column-mapping config: List field → invoiceNo, partner, amount, currency, description, JDA (from L1, not guessed).
+- [x] `server/.env.example` placeholders; no secrets committed.
 
 ## Per-JDA invoice list
-- [ ] On each JDA's tracker page, below the existing graphs, filtered to that JDA.
-- [ ] Columns: checkbox (select all) · Invoice No. · Partner · Amount (right-aligned, with currency) · Description · Add Proof.
-- [ ] Add Proof: one or more links per invoice with an optional label; http(s) only; remove; shown as clickable chips.
-- [ ] Proof links stored per L2.
-- [ ] Above the table: selected count, total of the selected amounts, Generate Email (off when nothing is selected).
+- [x] On each JDA's tracker page, below the existing graphs, filtered to that JDA (by the List's JDA column; with none mapped, every row).
+- [x] Columns: checkbox (select all) · Invoice No. · Partner · Amount (right-aligned, with currency) · Description · Add Proof.
+- [x] ~~Add Proof~~: dropped (owner, 2026-10-22): links come from the List and show as chips. One or more links per invoice with an optional label; http(s) only; remove; shown as clickable chips.
+- [x] Proof links stored per L2 (in the List).
+- [x] Above the table: selected count, total of the selected amounts, Generate Email (off when nothing is selected).
 
 ## Email
-- [ ] Outlook-safe HTML builder: tables, inline CSS only, no flex/grid, Segoe UI / Arial.
-- [ ] Content: greeting, intro (JDA and purpose), invoice table (dark header, zebra rows, amount right-aligned, TOTAL row; No. | Invoice No. | Partner | Description | Amount | Supporting Documents), proof links by label or "Document n" (never a raw URL), closing line, sign-off.
-- [ ] Subject: `[JDA X] Invoice Approval Request – N invoices – DD/MM/YYYY`.
-- [ ] Preview modal before generating.
-- [ ] Delivery a) `.eml` download: `X-Unsent: 1`, `Content-Type: text/html; charset=utf-8`, To/CC from config.
-- [ ] Delivery b) with Graph `Mail.ReadWrite`: `POST /me/messages` draft, open its `webLink`.
-- [ ] Delivery c) "Copy formatted email" (clipboard `text/html`) + `mailto:` with subject and recipients only (never the body).
+- [x] Outlook-safe HTML builder: tables, inline CSS only, no flex/grid, Segoe UI / Arial.
+- [x] Content: greeting, intro (JDA and purpose), invoice table (dark header, zebra rows, amount right-aligned, TOTAL row; No. | Invoice No. | Partner | Description | Amount | Supporting Documents), proof links by label or "Document n" (never a raw URL), closing line, sign-off.
+- [x] Subject: `[JDA X] Invoice Approval Request – N invoices – DD/MM/YYYY`.
+- [x] Preview modal before generating.
+- [x] Delivery a) `.eml` download: `X-Unsent: 1`, `Content-Type: text/html; charset=utf-8`, To/CC from config.
+- [x] Delivery b) with Graph `Mail.ReadWrite`: `POST /me/messages` draft, open its `webLink`.
+- [x] Delivery c) "Copy formatted email" (clipboard `text/html`) + `mailto:` with subject and recipients only (never the body).
 
 ## Approval workflow
-- [ ] Generating the email moves the selected invoices to Pending Lead Approval (per L6) and logs who, when and which invoices.
+- [x] Generating the email moves the selected invoices to Pending Lead Approval (per L6) and logs who, when and which invoices.
 
 ## Tests
-- [ ] Column mapping.
-- [ ] URL validation.
-- [ ] Email HTML builder: escapes user text, correct totals, hyperlinks by label / "Document n".
-- [ ] `.eml` headers.
-- [ ] Selection logic (count, total, select all).
+- [x] Column mapping.
+- [x] URL validation.
+- [x] Email HTML builder: escapes user text, correct totals, hyperlinks by label / "Document n".
+- [x] `.eml` headers.
+- [x] Selection logic (count, total, select all).
