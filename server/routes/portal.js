@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { publicMessage } from '../errors.js';
 import { syncJda } from '../portal-sync.js';
 import { masterFolderUrl } from '../portal-drive.js';
 import { reports } from '../report-store.js';
@@ -23,7 +24,7 @@ router.use((req, res, next) => {
 // The one way a report document is changed: see portal-save.js. { patch, remove, base, force } -> the saved document.
 router.post('/save', async (req, res) => {
   try { const saved = await reports().save(req.jda.source, req.body); forgetReport(req.jda.id); res.json({ saved }); }
-  catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: e.message, changed: e.changed }); }
+  catch (e) { res.status(e.status || 500).json({ error: publicMessage(e, 'The report could not be saved just now. Try again.'), changed: e.changed }); }
 });
 
 // A picture for the Master Page (a logo, the press release picture): stored now, named in the page when saved.
@@ -34,7 +35,7 @@ router.post('/upload', (req, res) => {
 
 router.post('/master-folder', async (req, res) => {
   try { res.json({ url: await masterFolderUrl(req.jda) }); }
-  catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
+  catch (e) { res.status(e.status || 500).json({ error: publicMessage(e) }); }
 });
 
 // scope 'master' = the Master File folder (the Editor Page); 'progress' = Overall + Weekly Progress
@@ -48,7 +49,7 @@ router.post('/sync', async (req, res) => {
   if (running.has(key)) return res.status(429).json({ error: 'A sync for this JDA is still running. Wait for it to finish.' });
   running.add(key);
   try { res.json(await syncJda(req.jda, { scope, currentProjects })); }
-  catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
+  catch (e) { res.status(e.status || 500).json({ error: publicMessage(e) }); }
   finally { running.delete(key); }
 });
 

@@ -37,11 +37,19 @@ reads one JDA's Drive folder and has Claude extract its Master Page (`scope: mas
 layout and setup are in `docs/control-tower.md`, "Updating from Google Drive". `npm test` in `server/`
 checks the folder handling and assembly with Drive and Claude stubbed out.
 
-## Invoices and payments (CJI3 register, Payment Tables)
-An invoice is entered once, in the CJI3 register. From then on every figure in the tracker comes from it.
-The register and the Payment Table each have a page of their own, as wide as the window, reached
-from the top bar or from the "Invoices and payments" totals on a JDA or project page:
-`#/cji3`, `#/cji3/<jda>`, `#/cji3/<jda>/<project>` and `#/payments/<jda>`, `#/payments/<jda>/<project>`.
+## Invoices and payments (Invoice history, Payment Tables)
+An invoice arrives once (from the Microsoft List, Approvals) and every figure in the tracker comes from
+it. **Invoice history** (`#/cji3`, `#/cji3/<jda>`; "Invoice history" in the sidebar) lists every invoice,
+whatever became of it (paid, pending, approved, rejected), newest change first, with filters for the
+JDA, that JDA's partners and the status, a search, and Excel-style filters on every column. **History**
+on a row shows who did what and when; **Edit** completes what the List does not give (project, dates).
+Nothing is added there: CJI3 payments shows the payment lines, and the Payment Tables the paid invoices
+(`#/payments/<jda>`, `#/payments/<jda>/<project>`).
+
+- **Planned is sanctioned**: there is no separate planned amount. The sanctioned amounts are the plan,
+  and every view (Payment Table, project report, timeline, Control Tower ring) works it out from them
+  each time, so one edit changes them all. The Control Tower's edit mode can set Paid by hand, never
+  Sanctioned.
 
 - **Three amounts**, as in the payment table sheet: original currency, MYR, taxed MYR. The amount typed
   in is before tax; tax is charged on the MYR amount.
@@ -61,19 +69,19 @@ from the top bar or from the "Invoices and payments" totals on a JDA or project 
   the computer or the server.
 - **Budgets** are saved in whole sen (`budgetMinor`), like every other amount.
 - **Payment month** defaults to the month of the invoice date and can be changed.
-- **Tax rate**: one setting ("Tax rate" on the register page, 8% to start). Each record keeps the rate
+- **Tax rate**: one setting ("Tax rate" on Invoice history, 8% to start). Each record keeps the rate
   it was entered with. A change applies to new records only.
 - **Exchange rate**: stored on each invoice with its date and source. "Get Bank Negara rate" fetches
   the 5 pm middle rate for the invoice date (public service, no key). Typing over a fetched rate
-  marks it overridden. Nothing recalculates by itself: select invoices and choose Recalculate.
+  marks it overridden. Nothing recalculates by itself.
 - **Money** is whole sen (or cents) with its currency code, never a floating-point number, and is
   rounded one way everywhere: half away from zero, as Excel's ROUND does (`js/finance/money.js`).
 - **Limits**: a text field holds 200 characters (description and remarks 1,000, partner 40), checked by
   the form and again by the server. In the tables a long value is cut with … and shown in full on
   hover and in Edit, so no entry can stretch a column.
 - **Audit log**: every change records who, when, field, old value, new value ("History" on a row,
-  "Audit log" on the register page). A delete only marks the record; "Show deleted" > Restore.
-- **Import / Export**: CSV or Excel, in the CJI3 sheet's and the payment table sheet's own columns.
+  "Audit log" on Invoice history).
+- **Import / Export**: CSV or Excel, in the CJI3 sheet's and the payment table sheet's own columns (Invoice history exports; sanctioned amounts are imported on the Payment Table).
   An import shows a preview first and never enters the same invoice twice. A row that states its
   MYR figures keeps them exactly. The preview says how many rows were read, names the blank line
   that ended the table if more lines lie below it, and shows which way round the dates are read
@@ -82,6 +90,103 @@ from the top bar or from the "Invoices and payments" totals on a JDA or project 
   the register refuses it if asked again, so a sync that was interrupted or run twice adds nothing twice.
 - **Who sees it**: invoices and payments are for people signed in to the JDA Control Tower only.
   Every finance request is checked by the server, and the person's name goes into the audit log.
+
+### Invoice approval (Approvals, `#/approvals`)
+
+Approval happens **outside the system**, by email, from the Microsoft List. **Approvals** in the sidebar
+opens the List for one JDA (the same view as under each JDA's graphs, below): the PM pulls the List,
+ticks invoices and generates the approval-request email to the Project Lead. The invoices go into the
+register and wait as **Pending Lead approval** (Received → With PM → Pending Lead). There are no
+approve or reject buttons: the **CJI3 payment line is the proof of approval**, and matching one marks
+the invoice **Paid**, whatever open stage it is in. Undoing the match puts it back in the stage it was
+in. The stages and moves are in `web/control-tower/invoices/js/finance/workflow.js`; the server refuses
+any other move, and every move is kept in the invoice's history (`financeStages`) and the audit log.
+
+```
+Received ─► With PM ─► Pending Lead ─┐
+   (older: Sent to PD, To Be Paid) ──┴─► Paid (a CJI3 line; undone, it goes back)
+```
+
+- **The Payment Tables show paid invoices only**: an invoice is on them once a CJI3 payment line is
+  matched to it (that is the only way an invoice becomes Paid). Pending ones are in the Microsoft List
+  and Invoice history, not on the Payment Tables (nor in their exports). The `status` (pending /
+  approved / paid / rejected) is worked out from the stage (Received, With PM, Pending Lead → pending; Sent to PD,
+  To Be Paid → approved; Paid → paid; Rejected → rejected). Invoices entered before the process get
+  their stage from their status. **There is no way to set a status by hand**: the register shows it
+  read-only (its stage on hover), the invoice form has no status field, imported
+  invoices always start at Received, and the server refuses all of these.
+- **Roles**: `ROLE_PM` in `server/.env` (comma-separated emails) limits who may email invoices to the
+  Lead from the List; left empty (as now), anyone signed in may.
+
+### Invoices from the Microsoft List (a JDA's tracker page, under the graphs)
+
+The company's Microsoft List holds the invoices **before approval** (CJI3 is the evidence after payment).
+
+- **Getting the List in (no IT setup):** **Sign in to Microsoft** on the page shows a code; open
+  microsoft.com/devicelogin, enter it and sign in with your work account. Paste the List's link once (open
+  the List in the browser and copy the address, `https://….sharepoint.com/sites/…/Lists/…`), then **Pull
+  from the List**. The List is read with your own rights, through Microsoft's own public sign-in app
+  (Microsoft Graph Command Line Tools), so no app registration is needed. Sign-ins are kept per person in
+  `server/.ms-tokens.json` (not in git; delete it to sign everyone out). If the company blocks this sign-in,
+  export the List to Excel or CSV and **Import the List (export)**: the page works the same.
+- **With an app registration (optional):** `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`,
+  `MS_SITE_ID` and `MS_LIST_ID` in `server/.env` (`Sites.Read.All`, admin consent) read the List with no
+  sign-in on the page.
+- **Columns:** found automatically, nobody maps them. First by the column's name (Title, Invoice Number,
+  Vendor, Amount, Currency, Description/Notes, JDA, Supporting Documents/Attachments…), then by what a
+  column holds (web links, currency codes, "JDA n", numbers). The page shows which column was used for
+  each field; a field not found is listed as missing on every row.
+- **The list:** a JDA's rows (by the JDA column), with a checkbox each, Invoice No., Partner, Amount
+  (in its own currency), Description and the supporting documents from the List as links. What a row
+  lacks is said under its number; one already sent shows its stage.
+- **Generate Email:** with invoices ticked (count and a total per currency above the table). If any
+  lack something, the missing data is listed invoice by invoice first, with **Proceed anyway**. Then a
+  preview, and:
+  - **Generate email (.eml):** downloads a draft that opens in Outlook, formatted, to edit and send;
+  - **Copy formatted email:** copies it, and opens a new message with the subject, to paste into;
+  - **Create Outlook draft:** when signed in to Microsoft (in your own mailbox), or with the app
+    registration and `MS_MAIL_SENDER`.
+- **Generating sends them:** each becomes an invoice in the register if it is not one yet (a draft:
+  the project and dates the List does not give are to be completed there), and moves to **Pending Lead
+  approval** (through With PM). The email is logged (`listEmails`: who, when, which invoices).
+  The List amount is taken as the invoice total (tax rate 0 on the draft).
+- **Recipients and sign-off** are blank for now (`invoices/js/config/email-recipients.js`).
+
+### CJI3 payments (`#/cji3-lines`)
+
+The CJI3 export is the only payment evidence. It comes as **two files** (JDA 1 + JDA 2 together, and
+JDA 3) and is uploaded again and again as payments are made one at a time.
+
+- **Upload** on the file's tab: **Preview** says what the file will do (lines added, skipped,
+  updated, rows that cannot be read), then **Import**.
+- **No duplicates**: a line is known by **WBS Element + Reference + Posting Date + Document Date +
+  Document Type + Cost Element + Transaction Currency + Value TranCurr**, and by its order among
+  lines identical in all of these within one file. The same file again, or an overlapping one, adds
+  only the lines not seen before; a known line whose other columns changed (Remarks, Forex,
+  Val/COArea Crcy…) is updated, and the change goes in the audit log. A line's record id is made from
+  this key, so two uploads at the same moment cannot store it twice.
+- **Checks**: a file without one of the key's columns is refused, naming them; a row without a WBS
+  Element, a readable amount (`1,000.00`, `-1,000.00`, `(1,000.00)` and `1,000.00-` are read) or a
+  readable posting date is left out and listed by line number. The last heading of SAP's export
+  ("Forex Confidential - For PETRONAS Staff Only…") is read as Forex.
+- **Log**: every upload (file, who, when, rows, added, skipped, updated, not readable, matched) is kept
+  in `cji3Imports` and listed under Uploads.
+- **Amounts are checked**: a line's Val/COArea Crcy (MYR, tax included) is compared with the invoice's
+  taxed MYR, all of the invoice's lines together. Within RM 1 or 0.5%: Paid. Less: **Part payment**, Paid
+  when the rest arrives. More, or a line with no MYR amount: linked and flagged (**Amount to check**);
+  **Confirm invoice Paid** is the person's check. The lines table shows both amounts.
+- **Matching**: each new line's Reference is compared with the invoice numbers of its file's JDAs
+  (ignoring case and spaces; CO Object Name narrows a number that bills several projects). One
+  match that is To Be Paid or Sent to PD → the invoice becomes **Paid**, with the line recorded on it;
+  one already Paid → the line is added to it; one not yet approved → linked and flagged, not moved;
+  none or several → left for a person: **Match…** picks the invoice, **Undo match** takes it back
+  (an invoice made Paid by that line returns to To Be Paid), **Match again** tries the unmatched lines
+  against the invoices there are now.
+- **Which project a line is**: today, from the invoice it matches. Assigning lines by WBS Element
+  (a WBS → JDA/project list) is not built yet.
+- **Payment Tables per file**: the tabs **JDA 1 + JDA 2 (CJI3 file)** and **JDA 3 (CJI3 file)** show
+  one Payment Table over the file's JDAs, by the same rules; **Export Excel** writes it, then a sheet
+  per JDA and per project. The CJI3 payments page exports its lines per file.
 
 ### Where invoices and payments are saved
 The browser never writes them. The server does, after validating and working out each change:
@@ -193,7 +298,7 @@ git) and lists what it saved:
 
 - every collection of the main Firebase project, with the saved versions of each report
   (needs `service-account.json`);
-- each JDA's report document, read the way the portal reads it, which also covers JDA 3's
+- each JDA's report document, read the way the Control Tower reads it, which also covers JDA 3's
   separate project;
 - the local finance file, if the server was saving to one.
 

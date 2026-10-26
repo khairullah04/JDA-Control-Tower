@@ -224,11 +224,11 @@ export function setupBlockEditor(){
 
   /* ---------- toolbar: Save, Cancel, Back ---------- */
   async function save(){
-    $('blkSave').disabled = true; setStatus('Saving…');
+    $('blkSave').disabled = true;
     try {
       await session.save(session.title, cleanBlocks(blocks));
       dirty = false;
-      setStatus('Saved — the Master Page is updated', 'var(--green)');
+      setStatus('Kept in the Master Page. It goes public when you press Save changes there.', 'var(--green)');
     } catch (e){
       setStatus(`Not saved: ${e.message}`, 'var(--red)');
       $('blkSave').disabled = false;

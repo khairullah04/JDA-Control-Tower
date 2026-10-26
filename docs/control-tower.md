@@ -90,17 +90,18 @@ signed in). In edit mode:
 - **Edit detail page** on a solution card opens a full-page block editor for that solution's detail
   page: Header, Sub Header, Sub Sub Header, Body, or a Box row. Add a block between any two, drag the
   grip to reorder (SortableJS, kept in `web/shared/vendor`) or use the up/down buttons; change a
-  block's type, duplicate or delete it; format text with bold, italic, underline, lists and links. Its
-  Save publishes straight away, with any other unsaved Master Page edits. Detail pages saved in the
+  block's type, duplicate or delete it; format text with bold, italic, underline, lists and links.
+  **Keep these changes** puts the detail page into the Master Page's draft: it goes public with the rest
+  when you press Save changes, never on its own. Detail pages saved in the
   older shape load as blocks, and the first save over one keeps the old version as `overviewBackup`;
 - **Update from Google Drive** at the top reads the JDA's Master File folder into the page as an
   unsaved draft, and **Open Master File folder** opens that folder in Drive;
-- **Save changes** in the bottom bar publishes; **Leave the editor** goes back to the page as saved;
-- **Reset to the built-in content** removes what was saved, so the page shows what is written in
-  `web/control-tower/config/jda-content.js` again.
+- **Save changes** in the bottom bar publishes; **Discard changes** goes back to the page as saved.
+  (There is no button to wipe a saved Master Page: the server keeps the last 20 versions of each report,
+  in `jdaReports/<jda>/versions`, if one ever has to be put back.)
 
 Once saved from edit mode, the saved version is what shows: later changes to that JDA's entry in
-`jda-content.js` do not appear until it is reset. The architecture diagram of the old private Master
+`jda-content.js` do not appear (the saved version wins). The architecture diagram of the old private Master
 Page is gone.
 
 **Overall progress** and **Weekly progress** are edited on their own pages: **Edit page** in the
@@ -129,7 +130,7 @@ the Master Page's edit mode (**Update from Google Drive**), and the two Progress
 progress pages' edit mode or Edit report (**Sync from Drive**). The JDA server reads the folder and Claude extracts the information.
 
 ```
-<portal Drive folder>/
+<JDA Control Tower Drive folder>/
   JDA 1/
     Master File/              -> the home page: hero text, winning aspiration, solutions,
                                  collaborators, press release
@@ -162,10 +163,10 @@ progress pages' edit mode or Edit report (**Sync from Drive**). The JDA server r
 
 One-time setup:
 
-1. In Google Drive, create the portal folder and the JDA folders inside it as above. Share the
-   portal folder (Viewer) with the service account's email - the `client_email` in
+1. In Google Drive, create the JDA Control Tower folder and the JDA folders inside it as above. Share
+   that folder (Viewer) with the service account's email - the `client_email` in
    `server/service-account.json`.
-2. In `server/.env` add `PORTAL_DRIVE_ROOT_FOLDER_ID` (the portal folder's id, the last part of
+2. In `server/.env` add `PORTAL_DRIVE_ROOT_FOLDER_ID` (that folder's id, the last part of
    its Drive URL).
 3. Restart the server (`cd server && npm install && npm start`).
 4. Nothing else. The server serves these pages itself, so they call it at the address they came
@@ -185,7 +186,7 @@ numbers, and never another JDA's content. To fill it in:
 
 ## Setup
 
-1. Firestore rules: publish `firebase/firestore.rules` on the portal's project (it holds the `jdaReports`
+1. Firestore rules: publish `firebase/firestore.rules` on the main Firebase project (it holds the `jdaReports`
    block), and follow `firebase/jda3-rules.txt` for the `report` block on the JDA 3 project.
    Read its warning first: two things must be in place before JDA 3's rule is closed.
 2. Accounts: each person needs a Firebase account on `ALLOWED_EMAILS` in `server/.env`

@@ -36,7 +36,11 @@ test('an invoice is worked out, validated and logged by the server', async () =>
   assert.equal((await call('/api/finance/widgets', { method: 'POST', body: invoice })).status, 400);  // not a kind of record
 
   const id = made.body.id;
-  assert.equal((await call('/api/finance/entries/status', { method: 'POST', body: { ids: [id], status: 'paid' }, as: 'badrul' })).body.changed, 1);
+  const byHand = await call('/api/finance/entries/status', { method: 'POST', body: { ids: [id], status: 'paid' }, as: 'badrul' });
+  assert.deepEqual([byHand.status, /Approvals/.test(byHand.body.error)], [410, true]);                 // no status by hand any more
+  const edited = await call('/api/finance/entries', { method: 'POST', body: { ...invoice, id, status: 'paid', remarks: 'x' } });
+  assert.equal(edited.body.status, 'pending');                                                          // an edit cannot set it either
+  assert.equal((await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'sent_to_pd' }, as: 'badrul' })).body.changed, 1);
   assert.equal((await call('/api/finance/entries/delete', { method: 'POST', body: { ids: [id] }, as: 'chong' })).body.changed, 1);
   assert.equal((await call('/api/finance/entries/restore', { method: 'POST', body: { ids: [id] }, as: 'chong' })).body.changed, 1);
   const log = (await call(`/api/finance/audit?entityId=${id}`)).body;
@@ -44,10 +48,10 @@ test('an invoice is worked out, validated and logged by the server', async () =>
   assert.deepEqual((await call('/api/finance/audit?jdaId=j1&limit=1')).body, log.slice(0, 1));
   assert.deepEqual((await call('/api/finance/audit?projectId=none')).body, []);
   assert.deepEqual(log.map(l => [l.by, l.action, l.field, l.old, l.new]).reverse(), [
-    ['aina', 'create', '', '', 'USD 100.00 at 4.7, MYR 507.60 taxed, 2025-08'], ['badrul', 'status', 'Status', 'Pending', 'Paid'], ['chong', 'delete', '', '', ''], ['chong', 'restore', '', '', '']
+    ['aina', 'create', '', '', 'USD 100.00 at 4.7, MYR 507.60 taxed, 2025-08'], ['aina', 'edit', 'Remarks', '', 'x'], ['badrul', 'stage', 'Stage', 'Received', 'Sent to PD'], ['chong', 'delete', '', '', ''], ['chong', 'restore', '', '', '']
   ]);
   const data = (await call('/api/finance/data')).body;
-  assert.deepEqual([data.storage, data.settings.taxRateBps, data.entries.length, data.entries[0].status], ['memory', 800, 1, 'paid']);
+  assert.deepEqual([data.storage, data.settings.taxRateBps, data.entries.length, data.entries[0].status], ['memory', 800, 1, 'approved']);
 });
 
 test('sanctioned amounts and the tax setting', async () => {
@@ -71,6 +75,47 @@ test('Excel: the register goes out as a workbook and reads back in', async () =>
   const read = await call('/api/finance/read', { method: 'POST', body: { name: 'cji3.xlsx', fileBase64: book.body.toString('base64') } });
   const rows = entryInputs(tableIn(read.body.sheets, ENTRY_HEADERS), { jda: { id: 'j2', name: 'JDA 2' }, projects: [{ id: 'p9', name: 'AA' }], status: 'pending' });
   const preview = await call('/api/finance/entries/import', { method: 'POST', body: { inputs: rows.map(r => r.input), dryRun: true } });
-  assert.deepEqual(preview.body.results.map(r => [r.ok, r.record.invoiceNo, r.record.currency, r.record.netMinor, r.record.grossMyrMinor, r.record.rate, r.record.status]), [[true, 'IN-1', 'USD', 10000, 50760, '4.7', 'paid']]);
+  assert.deepEqual(preview.body.results.map(r => [r.ok, r.record.invoiceNo, r.record.currency, r.record.netMinor, r.record.grossMyrMinor, r.record.rate, r.record.status]), [[true, 'IN-1', 'USD', 10000, 50760, '4.7', 'pending']]); // imported invoices start at Received, whatever the sheet says
   assert.equal((await call('/api/finance/read', { method: 'POST', body: { name: 'old.xls', fileBase64: '' } })).status, 400);
+});
+
+test('the approval process over HTTP: moves, refusals, and Paid is not a button', async () => {
+  const made = await call('/api/finance/entries', { method: 'POST', body: { ...invoice, invoiceNo: 'IN-STAGE' } });
+  const id = made.body.id;
+  const ok = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'sent_to_pd' }, as: 'acc1' });
+  assert.deepEqual([ok.status, ok.body.changed, ok.body.records[0].status], [200, 1, 'approved']);
+  const paid = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'paid' } });
+  assert.match(paid.body.refused[0].why, /cannot be moved to Paid by hand/);
+  const history = await call(`/api/finance/stages?entityId=${id}`);
+  assert.deepEqual(history.body.map(h => [h.from, h.to, h.by]), [['received', 'sent_to_pd', 'acc1']]);
+});
+
+test('the approval roles: an empty list is open to anyone; a filled one only to the people on it', async () => {
+  const { rolesFromEnv } = await import('./routes/finance.js');
+  assert.deepEqual(rolesFromEnv({ ROLE_LEAD: ' Lead@jda.app, x@jda.app ' }), { accountant1: [], pm: [], lead: ['lead@jda.app', 'x@jda.app'], accountant2: [] });
+  const app = express();
+  app.use(express.json());
+  app.use('/api', (req, res, next) => { req.user = { name: req.headers['x-test-user'], email: `${req.headers['x-test-user']}@jda.app` }; next(); });
+  app.use('/api/finance', financeRoutes(createFinance(memoryStore()), 'memory', { roles: rolesFromEnv({ ROLE_LEAD: 'lead@jda.app' }) }));
+  const srv = app.listen(0), at = `http://localhost:${srv.address().port}`;
+  const post = async (path, body, who) => (await fetch(at + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Test-User': who }, body: JSON.stringify(body) })).json();
+  try {
+    const { id } = await post('/api/finance/entries', { ...invoice, invoiceNo: 'IN-ROLE' }, 'aina');
+    await post('/api/finance/entries/stage', { ids: [id], to: 'with_pm' }, 'aina');                    // Accountant 1: open to all
+    await post('/api/finance/entries/stage', { ids: [id], to: 'pending_lead' }, 'aina');               // PM: open to all
+    const refused = await post('/api/finance/entries/stage', { ids: [id], to: 'to_be_paid' }, 'aina'); // Lead: only lead@jda.app
+    assert.match(refused.refused[0].why, /Only the Project Lead/);
+    const ok = await post('/api/finance/entries/stage', { ids: [id], to: 'to_be_paid' }, 'lead');
+    assert.equal(ok.changed, 1);
+  } finally { srv.close(); }
+});
+
+test('segregation of duties: whoever validated an invoice as PM cannot approve it as Lead', async () => {
+  const { id } = (await call('/api/finance/entries', { method: 'POST', body: { ...invoice, invoiceNo: 'IN-SOD' } })).body;
+  await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'with_pm' }, as: 'acc1' });
+  await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'pending_lead' }, as: 'farid' });
+  const own = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'to_be_paid' }, as: 'farid' });
+  assert.match(own.body.refused[0].why, /someone else has to approve/);
+  const other = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'to_be_paid' }, as: 'rahman' });
+  assert.equal(other.body.changed, 1);
 });

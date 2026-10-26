@@ -1,0 +1,33 @@
+/* A column's sort-and-filter window (js/ui/column-filter.js), laid out as Excel's */
+.cf-head{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:2px 4px;margin:-2px -4px;border-radius:6px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;white-space:nowrap}
+.cf-head:hover,.cf-head[aria-expanded="true"]{background:var(--teal-050);color:var(--teal-800)}
+.cf-head:focus-visible{outline:2px solid var(--teal-500);outline-offset:1px}
+.cf-mark{display:inline-grid;place-items:center;width:16px;height:16px;border:1px solid var(--border);border-radius:3px;background:#fff;font-size:9px;color:var(--muted)}
+.cf-mark svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cf-head.filtered .cf-mark{color:var(--teal-700);border-color:var(--teal-500);background:var(--teal-050)}
+.cf-head.filtered .cf-mark svg{fill:currentColor}
+.cf-head.sorted .cf-mark{color:var(--teal-700)}
+.cf-hint{align-self:center}
+.cf-pop{position:fixed;z-index:200;width:300px;max-width:calc(100vw - 16px);padding:6px 0 10px;background:#fff;color:#1f1f1f;border:1px solid #c8c8c8;border-radius:6px;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);font:14px/1.3 "Segoe UI",-apple-system,Roboto,Helvetica,Arial,sans-serif;text-transform:none;letter-spacing:0}
+.cf-pop hr{border:0;border-top:1px solid #e1e1e1;margin:4px 8px}
+.cf-item{display:flex;align-items:center;gap:12px;width:100%;min-height:36px;padding:0 14px;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.cf-item:hover:not(:disabled),.cf-item:focus-visible{background:#f0f0f0;outline:none}
+.cf-item:disabled{color:#a6a6a6;cursor:default}
+.cf-item svg,.cf-search svg{width:18px;height:18px;flex:none;fill:none;stroke:#2b78d0;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.cf-item:disabled svg{stroke:#c0c0c0}
+.cf-item[data-clear] svg{stroke:#c64343}
+.cf-search{display:flex;align-items:center;gap:8px;margin:6px 12px;padding:0 10px;border:1px solid #8a8a8a;border-radius:4px;min-height:34px}
+.cf-search svg{stroke:#555}
+.cf-search input{flex:1;min-width:0;border:0;outline:0;font:inherit;background:none;padding:6px 0}
+.cf-search:focus-within{border-color:#2b78d0;box-shadow:0 0 0 1px #2b78d0}
+.cf-list{max-height:240px;overflow:auto;margin:4px 12px 0;padding:4px 0}
+.cf-row{display:flex;align-items:center;gap:10px;min-height:30px;padding:0 6px;border-radius:3px;cursor:pointer}
+.cf-row:hover{background:#f3f3f3}
+.cf-row input{width:16px;height:16px;margin:0;accent-color:#2b78d0;flex:none}
+.cf-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-none{margin:8px 6px;color:#767676}
+.cf-foot{display:flex;justify-content:flex-end;gap:8px;margin:10px 12px 0}
+.cf-foot button{min-width:76px}
+.cf-search input,.cf-search input:focus{border:0;box-shadow:none;border-radius:0;min-height:0;width:auto}
+.cj-amounts{display:block;margin:4px 0}

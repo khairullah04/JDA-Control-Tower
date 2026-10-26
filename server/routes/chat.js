@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { publicMessage } from '../errors.js';
 import { ask } from '../claude.js';
 import { chatSystem } from '../prompts.js';
 
@@ -20,7 +21,7 @@ router.post('/', async (req, res) => {
     const { messages, context } = checked(req.body);
     const reply = await ask({ system: chatSystem(context), messages, maxTokens: 800 });
     res.json({ reply });
-  } catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: e.message }); }
+  } catch (e) { if (!e.status) console.error(e); res.status(e.status || 500).json({ error: publicMessage(e, 'The assistant is not available just now.') }); }
 });
 
 export default router;

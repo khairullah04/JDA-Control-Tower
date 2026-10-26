@@ -2,14 +2,15 @@ import { updateJda, addProject, addLog, listLog } from '../services/db.js';
 import { audit } from '../services/finance.js';
 import { computeReport, ofProject, FORECAST_NOTE } from '../services/analytics.js';
 import { money } from '../finance/money.js';
-import { $, esc, rm, pct, spendBar, jdaRange, JDA_DATE_FIELDS, checkDates, checkProject } from './dom.js';
+import { $, esc, rm, spendBar, jdaRange, JDA_DATE_FIELDS, checkDates, checkProject } from './dom.js';
 import { state } from './state.js';
 import { openForm } from './modal.js';
 import { runSync } from './sync.js';
 import { renderTimeline } from './timeline.js';
 import { renderLog, LOG_LINES } from './log.js';
-import { loadCtx, forget, storageNotice, auditLine, financeSummary } from './finance-ui.js';
+import { loadCtx, forget, storageNotice, auditLine, financeSummary, costKpis } from './finance-ui.js';
 import { startRender } from './render.js';
+import { renderListInvoices } from './list-invoices.js';
 
 export async function renderJda(id) {
   const r = startRender('Loading JDA…', () => renderJda(id)), { page, refresh } = r;
@@ -38,15 +39,11 @@ export async function renderJda(id) {
       </div></div>
     ${storageNotice(ctx)}
 
-    <div class="kpis">
-      <div class="kpi"><small>Total budget</small><b>${rm(totals.budget)}</b></div>
-      <div class="kpi ${totals.overPlan ? 'bad' : 'good'}"><small>Paid (MYR)</small><b>${rm(totals.actual)}</b></div>
-      <div class="kpi"><small>Budget used</small><b>${totals.budget ? pct(totals.budgetUsedPct) : '—'}</b></div>
-      <div class="kpi ${totals.forecast > totals.budget ? 'bad' : 'good'}" title="${esc(FORECAST_NOTE)}"><small>Forecast at completion</small><b>${rm(totals.forecast)}</b></div>
-      <div class="kpi ${totals.counts.pending ? 'bad' : ''}"><small>Invoices pending</small><b>${totals.counts.pending}</b></div>
-    </div>
+    ${costKpis(sanctioned, entries, { budgetMinor: totals.budget, forecastMinor: totals.forecast, forecastBad: totals.forecast > totals.budget, waiting: totals.counts.pending })}
 
     <div class="section" id="timeline"></div>
+
+    <div class="section" id="list-invoices"></div>
 
     <div class="section-head"><h3>Projects in ${esc(jda.name)}</h3></div>
     <div class="grid-4">
@@ -64,6 +61,7 @@ export async function renderJda(id) {
     <div class="section"><h3>Change log</h3>${renderLog(activity)}</div>`;
 
   renderTimeline($('#timeline'), { project: whole, sanctioned, entries, range: jdaRange(jda) });
+  renderListInvoices($('#list-invoices'), ctx, jda); // the invoices waiting in the Microsoft List, under the graphs
 
   $('#sync-drive').onclick = e => runSync(e.target, refresh);
   $('#edit-jda').onclick = () => openForm({
@@ -95,7 +93,7 @@ export async function renderJda(id) {
   state.page = 'jda';
   state.context = () => ({
     page: `JDA overview: ${jda.name}`, note: `Actual spend counts paid invoices only, in MYR after tax. Planned is the sanctioned amount with tax, up to this month. Forecast: ${FORECAST_NOTE}`,
-    totals: { budget: money(totals.budget), paid: money(totals.actual), sanctionedToDate: money(totals.planned), invoiced: money(totals.invoiced), forecast: money(totals.forecast), pendingInvoices: totals.counts.pending },
+    totals: { budget: money(totals.budget), paid: money(totals.actual), sanctionedToDate: money(totals.sanctionedToDate), invoiced: money(totals.invoiced), forecast: money(totals.forecast), pendingInvoices: totals.counts.pending },
     projects: perProject.map(({ p, r }) => ({ name: p.name, budget: money(r.budget), paid: money(r.actual), forecast: money(r.forecast), pendingInvoices: r.counts.pending }))
   });
 }

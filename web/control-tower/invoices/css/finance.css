@@ -1,4 +1,4 @@
-/* CJI3 register and Payment Tables. Colours and shapes follow the portal's design (index5):
+/* CJI3 register and Payment Tables. Colours and shapes follow the Control Tower's design (index5):
    its status pills, glass cards and IBM Plex Mono figures. */
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 .banner.notice{margin-bottom:calc(1rem * var(--space-scale))}
@@ -6,18 +6,11 @@
 /* Status pills: payment status, and a Payment Table row against its sanctioned amount */
 .st,.flag{display:inline-block;padding:calc(3px * var(--space-scale)) calc(11px * var(--space-scale));border-radius:calc(20px * var(--space-scale));font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));font-weight:700;white-space:nowrap}
 .st.paid{background:var(--ok-tint);color:var(--ok)}
-.st.approved{background:var(--info-tint);color:var(--teal-700)}
+.st.approved{background:var(--blue-tint);color:var(--blue)} /* approved, not yet paid: blue; paid: green */
 .st.pending{background:var(--warn-tint);color:var(--warn)}
 .st.rejected,.flag.over{background:var(--bad-tint);color:var(--bad)}
 .flag.under{background:var(--blue-tint);color:var(--blue)}
 .flag.within{background:var(--idle-tint);color:var(--muted)}
-select.st-select{appearance:none;width:auto;border:1px solid transparent;border-radius:calc(20px * var(--space-scale));font-size:max(min(11.5px, 14px), calc(11.5px * var(--type-scale)));font-weight:700;padding:calc(3px * var(--space-scale)) calc(24px * var(--space-scale)) calc(3px * var(--space-scale)) calc(11px * var(--space-scale));cursor:pointer;
-  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
-  background-position:calc(100% - 13px) center,calc(100% - 8px) center;background-size:calc(5px * var(--space-scale)) calc(5px * var(--space-scale)),calc(5px * var(--space-scale)) calc(5px * var(--space-scale));background-repeat:no-repeat}
-select.st-select.paid{background-color:var(--ok-tint);color:var(--ok)}
-select.st-select.approved{background-color:var(--info-tint);color:var(--teal-700)}
-select.st-select.pending{background-color:var(--warn-tint);color:var(--warn)}
-select.st-select.rejected{background-color:var(--bad-tint);color:var(--bad)}
 
 /* The summary cells above a Payment Table */
 .pt-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(calc(200px * var(--space-scale)),1fr));gap:calc(.75rem * var(--space-scale));margin-bottom:calc(1rem * var(--space-scale))}
@@ -96,7 +89,6 @@ td.actions button+button{margin-left:calc(.3rem * var(--space-scale))}
 /* a row's invoices, one to a line: the number gives way (…) before its status does */
 .pt-line{display:flex;align-items:center;gap:calc(.45rem * var(--space-scale));min-height:calc(1.7rem * var(--space-scale))}
 .num .pt-line{justify-content:flex-end}
-.pt-line.unpaid{color:var(--muted)}
 .pt-no{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .pt-inv .st{flex:none;padding:2px calc(8px * var(--space-scale));font-size:max(min(10px, 14px), calc(10px * var(--type-scale)))}
 .pt-foot td{background:var(--pt-head);border-top:1px solid var(--line);border-bottom:0;padding-top:calc(.75rem * var(--space-scale));padding-bottom:calc(.75rem * var(--space-scale))}
@@ -161,3 +153,14 @@ tr.bad td{color:var(--bad)}
 .pt-scroll td.desc-cell{white-space:normal;overflow-wrap:anywhere}
 .pt-detail>td{max-width:none!important;overflow:visible!important}
 .rec-form input,.rec-form select{min-width:0}
+
+/* Invoice history (ui/cji3.js) */
+#reg-msg:empty{display:none}
+
+/* CJI3 payments (ui/cji3-lines.js) */
+.cj-upload .row{align-items:center;gap:10px;flex-wrap:wrap}
+.cj-preview{margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.cj-table tr.cj-open td{background:rgba(163,58,48,.04)}
+#cj-msg:empty{display:none}
+p.ok{color:var(--ok);font-weight:600}
+.scope-sep{width:1px;align-self:stretch;margin:0 4px;background:var(--border)}

@@ -1,4 +1,4 @@
-/* The JDA Control Tower landing page (index.html, js/control-tower.js), over the portal's styles. */
+/* The JDA Control Tower landing page (index.html, components/control-tower.js), over the shared report styles. */
 .ct{padding-top:calc(28px * var(--space-scale));padding-bottom:calc(56px * var(--space-scale))}
 .ct-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:calc(18px * var(--space-scale));margin-bottom:calc(22px * var(--space-scale))}
 .ct-eyebrow{font-size:max(min(12px, 14px), calc(12px * var(--type-scale)));font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-600)}
@@ -91,10 +91,6 @@
 .sev-low .ct-sev{background:var(--idle-tint);color:#3f5156}
 .ct-more{margin-top:calc(6px * var(--space-scale));min-height:40px;background:none;border:none;padding:0;font:700 max(min(13.5px, 14px), calc(13.5px * var(--type-scale))) var(--font);color:var(--teal-700);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .ct-tag{display:inline-block;font-size:max(min(10.5px, 14px), calc(10.5px * var(--type-scale)));font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:calc(3px * var(--space-scale)) calc(8px * var(--space-scale));border-radius:calc(999px * var(--space-scale));background:#ede7fb;color:#4b3592}
-
-.ct-cost{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:calc(24px * var(--space-scale))}
-
-@media (max-width:640px){.ct-cost{grid-template-columns:auto 1fr}.ct-cost .ct-btn{grid-column:1/-1}}
 
 /* ---- activity ---- */
 .ct-activity{margin-top:calc(28px * var(--space-scale));background:var(--glass-bg);border:1px solid var(--glass-brd);border-radius:calc(18px * var(--space-scale));box-shadow:var(--elev-1);padding:calc(4px * var(--space-scale)) calc(22px * var(--space-scale))}

@@ -27,7 +27,7 @@ const PORTAL_RULES = `Use only what the files say. Where the files give nothing 
 
 export const PORTAL_ART_KEYS = ['gai', 'sap', 'vision', 'agentic', 'integrity', 'maintenance', 'hse', 'production', 'workprocess'];
 
-export const PORTAL_MASTER_SYSTEM = `You fill in the home page of one Joint Development Agreement (JDA) on a programme portal, from the files in that JDA's "Master File" folder.
+export const PORTAL_MASTER_SYSTEM = `You fill in the home page of one Joint Development Agreement (JDA) in the JDA Control Tower, from the files in that JDA's "Master File" folder.
 Return a JSON object:
 {
  "eyebrow": string|null (one short line shown above the title, e.g. the programme and which agreement this is),
@@ -48,7 +48,7 @@ Return a JSON object:
 }
 ${PORTAL_RULES}`;
 
-export const PORTAL_OVERALL_SYSTEM = `You read the files in one JDA's "Overall Progress" folder and report its current overall progress for a programme portal.
+export const PORTAL_OVERALL_SYSTEM = `You read the files in one JDA's "Overall Progress" folder and report its current overall progress for the JDA Control Tower.
 Return a JSON object:
 {
  "overallStatus": "green" | "amber" | "red" | null (green = on track, amber = at risk, red = delayed),
@@ -59,7 +59,7 @@ Return a JSON object:
 }
 If a project's status is not stated, use "green". ${PORTAL_RULES}`;
 
-export const portalWeeklySystem = projectNames => `You read ONE weekly progress report for a JDA and extract it for a programme portal.
+export const portalWeeklySystem = projectNames => `You read ONE weekly progress report for a JDA and extract it for the JDA Control Tower.
 The JDA's projects are: ${JSON.stringify(projectNames)}. Whenever the report refers to one of them, use that exact name, even if the report abbreviates it or words it differently.
 Return a JSON object:
 {

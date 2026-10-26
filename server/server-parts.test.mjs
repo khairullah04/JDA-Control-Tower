@@ -57,3 +57,15 @@ test('an exported workbook has columns as wide as what is in them', async () => 
   assert.deepEqual(wb.worksheets[0].columns.map(c => c.width), [12, 44, 19]);     // never narrower than 12 or wider than 44; 12,345,678,901.25 is 17 characters
   assert.equal((await readSheets('CJI3.xlsx', file))[0].rows[1][2], '813000');
 });
+
+test('errors: our own messages are shown; a library\'s (paths, keys, request ids) never are', async () => {
+  const { publicMessage, userError } = await import('./errors.js');
+  const quiet = console.error; console.error = () => {};
+  try {
+    assert.equal(publicMessage(userError('Drive is not configured: set DRIVE_ROOT_FOLDER_ID')), 'Drive is not configured: set DRIVE_ROOT_FOLDER_ID');
+    assert.equal(publicMessage(Object.assign(new Error('Invoice IN-1 is already entered'), { status: 400 })), 'Invoice IN-1 is already entered');
+    assert.equal(publicMessage(new Error('/srv/app/server/service-account.json does not exist'), 'Drive is unavailable.'), 'Drive is unavailable.');
+    const sdk = Object.assign(new Error('401 {"request_id":"req_1"}'), { status: 401, headers: {}, requestID: 'req_1' });
+    assert.equal(publicMessage(sdk, 'The assistant is not available just now.'), 'The assistant is not available just now.');
+  } finally { console.error = quiet; }
+});

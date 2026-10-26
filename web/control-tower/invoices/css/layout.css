@@ -36,3 +36,4 @@
 .jda-nav-slot{max-width:1240px;margin:0 auto;padding:calc(1.25rem * var(--space-scale)) calc(1.5rem * var(--space-scale)) 0}
 .jda-nav-slot:empty{display:none}
 .jda-nav-slot .ct-jda-nav{margin:0}
+.jda-nav-slot.wide{max-width:none} /* over a wide register: the same width as it */

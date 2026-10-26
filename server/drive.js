@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { userError } from './errors.js';
 
 // Service account key path comes from GOOGLE_APPLICATION_CREDENTIALS in .env
 const auth = new google.auth.GoogleAuth({ scopes: ['https://www.googleapis.com/auth/drive.readonly'] });
@@ -7,7 +8,7 @@ export const ALL ={ supportsAllDrives: true, includeItemsFromAllDrives: true };
 const FILES = "(mimeType='application/pdf' or mimeType='image/png' or mimeType='image/jpeg')";
 
 export const rootId = () => {
-  if (!process.env.DRIVE_ROOT_FOLDER_ID) throw new Error('Drive is not configured: set DRIVE_ROOT_FOLDER_ID in server/.env');
+  if (!process.env.DRIVE_ROOT_FOLDER_ID) throw userError('Drive is not configured: set DRIVE_ROOT_FOLDER_ID in server/.env');
   return process.env.DRIVE_ROOT_FOLDER_ID;
 };
 
@@ -37,7 +38,7 @@ export async function fetchInboxFile(fileId) {
   const f = await get(fileId);
   const parent = f.parents?.[0];
   const ok = parent === root || (parent && (await get(parent)).parents?.includes(root));
-  if (!ok) throw new Error('File is not inside the invoice inbox folder');
+  if (!ok) throw userError('File is not inside the invoice inbox folder');
   const r = await drive.files.get({ fileId, alt: 'media', ...ALL }, { responseType: 'arraybuffer' });
   return { fileBase64: Buffer.from(r.data).toString('base64'), mediaType: f.mimeType };
 }

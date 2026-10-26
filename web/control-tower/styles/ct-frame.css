@@ -31,9 +31,8 @@
 .ct-top-right .ct-btn.ghost{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28);color:#fff}
 .ct-top-right .ct-btn.ghost:hover{background:rgba(255,255,255,.2)}
 .ct-top-right .ct-btn.primary{background:#fff;color:var(--teal-900);border-color:#fff}
-.ct-top-link{display:inline-flex;align-items:center;gap:calc(6px * var(--space-scale));min-height:40px;padding:0 calc(10px * var(--space-scale));border-radius:calc(10px * var(--space-scale));color:#fff;text-decoration:none;font-weight:600;font-size:max(min(14px, 14px), calc(14px * var(--type-scale)));white-space:nowrap}
-.ct-top-link:hover{background:rgba(255,255,255,.12)}
-.ct-top-link svg,.ct-user-btn svg,.ct-top-right .ct-btn svg{width:calc(18px * var(--space-scale));height:calc(18px * var(--space-scale));flex:none}
+
+.ct-user-btn svg,.ct-top-right .ct-btn svg{width:calc(18px * var(--space-scale));height:calc(18px * var(--space-scale));flex:none}
 .ct-user{position:relative}
 .ct-user-btn{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;cursor:pointer}
 .ct-user-btn:hover{background:rgba(255,255,255,.2)}
@@ -48,7 +47,7 @@
   .ct-top-left{order:3;flex-basis:100%}
 }
 @media (max-width:640px){
-  .ct-top-link span,.ct-top-right .ct-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .ct-top-right .ct-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .ct-top-right{gap:calc(4px * var(--space-scale))}
   .ct-topbar .brand .mark,.ct-topbar .brand h1{display:none}
 }
@@ -95,9 +94,6 @@
 @media (max-width:640px){.ct-top-right .ct-btn[aria-busy] span{position:static;width:auto;height:auto;overflow:visible;clip:auto}} /* "Syncing: …" stays readable */
 
 /* Edit public site in the bar; View public site as an icon beside it */
-.ct-top-edit{border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1)}
-.ct-top-edit[aria-current]{background:#fff;color:var(--teal-900)}
-.ct-top-link.icon-only{width:40px;justify-content:center;padding:0}
 
 /* Edit public site (site.html): the page chosen, shown live below its tabs */
 .site-tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--border);margin-bottom:10px}
@@ -130,3 +126,6 @@
 .ct-tools-status{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d4efec;font-size:14px}
 .ct-tools-status:empty{display:none}
 @media (max-width:640px){.ct-tools-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.ct-tools-status{max-width:120px}}
+
+/* text for screen readers only (the tracker has no rule of its own for it) */
+.visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

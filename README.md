@@ -80,7 +80,7 @@ a full backup first (`scripts/backup.mjs`) and stops if the backup did not save 
     npm test
 
 About a hundred tests: the money rules, the register, the Payment Table, imports and exports, the
-sign-in checks and which pages are private, report saves, the Drive syncs and the portal's page logic. They need
+sign-in checks and which pages are private, report saves, the Drive syncs and the Control Tower's page logic. They need
 no network, no Firebase and no keys.
 
 ## Before putting it in front of people

@@ -1,7 +1,7 @@
 import { config } from '../config/index.js';
 import { ringgit } from '../finance/money.js';
 export { checkDates, checkProject } from './checks.js';
-export { esc } from '../../../../shared/lib/esc.js'; // the one escaping function, shared with the portal
+export { esc } from '../../../../shared/lib/esc.js'; // the one escaping function, shared with the Control Tower
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const rm = ringgit; // headline figures: whole ringgit, from an amount in sen

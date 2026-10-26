@@ -143,8 +143,6 @@ export async function start({ id, main, leave }) {
       const backup = old && !stored.overviewBackup && !JSON.stringify(old).includes('"blocks"');
       return saveDraft(backup ? { overview, overviewBackup: old } : { overview }).then(() => { stored.overview = overview; if (backup) stored.overviewBackup = old; });
     },
-    // Back to the content written in config/jda-content.js.
-    reset: () => saveDraft({}, ['overview'])
   });
   $('editorHeading').focus?.();
 }

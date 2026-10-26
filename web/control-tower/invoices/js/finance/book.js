@@ -21,8 +21,14 @@ export function withBook(api) {
     remove: (kind, ids) => keeping(kind, api.remove(kind, ids), out => out.records),
     restore: (kind, ids) => keeping(kind, api.restore(kind, ids), out => out.records),
     setStatus: (ids, status) => keeping('entry', api.setStatus(ids, status), out => out.records),
+    moveStage: (ids, to, note) => keeping('entry', api.moveStage(ids, to, note), out => out.records),
     recalculate: (kind, ids, options) => keeping(kind, api.recalculate(kind, ids, options), out => out.records),
     saveSettings: input => api.saveSettings(input).then(settings => { if (book) book.settings = settings; return settings; }, stale),
+    // A CJI3 upload or match can make invoices Paid anywhere in the register: the copy is read again after one.
+    importCji3: (group, file, options = {}) => api.importCji3(group, file, options).then(out => { if (!options.dryRun) book = null; return out; }),
+    matchLine: (lineId, invoiceId) => api.matchLine(lineId, invoiceId).then(out => { book = null; return out; }),
+    rematch: group => api.rematch(group).then(out => { book = null; return out; }),
+    sendListToLead: req => api.sendListToLead(req).then(out => { book = null; return out; }), // invoices made or moved: read again
     importRecords: (kind, inputs, options = {}) => keeping(kind, api.importRecords(kind, inputs, options), out => options.dryRun ? [] : out.results.filter(r => r.added).map(r => r.record))
   };
 }

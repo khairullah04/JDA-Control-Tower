@@ -4,8 +4,9 @@ import { $, esc } from './dom.js';
 import { listJdas, listAllProjectsWithJda } from '../services/db.js';
 import * as finance from '../services/finance.js';
 import { money, fmt, toMinor, normRate, toBps, fromBps } from '../finance/money.js';
-import { amounts, paymentTable, tableTotals, monthsBetween, spreadOverMonths, MAX_SPAN, BASE, STATUSES, STATUS_LABEL, SAP_FIELDS } from '../finance/core.js';
+import { amounts, paymentTable, tableTotals, monthsBetween, spreadOverMonths, MAX_SPAN, BASE, STATUS_LABEL, SAP_FIELDS } from '../finance/core.js';
 import { toCsv } from '../finance/sheets.js';
+import { GROUPS } from '../finance/cji3.js';
 import { localToday } from '../../../../shared/lib/dates.js';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -35,25 +36,40 @@ export const partnersIn = fin => [...new Set([...fin.entries, ...fin.sanctioned]
 
 // The Payment Table and the CJI3 register each have a page of their own, as wide as the window.
 // At the top of both: a tab per JDA and, inside a JDA, a project filter. `base` is '#/payments' or '#/cji3'.
-export const scopeBar = (ctx, base, jdaId, projectId, all = false) => `<div class="scope-bar">
+// On the Payment Tables, two more: each CJI3 file's JDAs together (JDA 1 + JDA 2, JDA 3); `group` is the one open.
+export const scopeBar = (ctx, base, jdaId, projectId, all = false, group = '') => `<div class="scope-bar">
     ${all ? `<a class="ghost${jdaId ? '' : ' on'}" href="${base}">All JDAs</a>` : ''}
     ${ctx.jdas.map(j => `<a class="ghost${j.id === jdaId ? ' on' : ''}" href="${base}/${esc(j.id)}">${esc(j.name)}</a>`).join('')}
-    ${jdaId ? `<select data-scope aria-label="Project">${options(ctx.projects.filter(p => p.jdaId === jdaId).map(p => [p.id, p.name]), projectId, 'All projects')}</select>` : ''}</div>`;
+    ${base === '#/payments' ? `<span class="scope-sep" aria-hidden="true"></span>${Object.entries(GROUPS).map(([id, g]) => `<a class="ghost${id === group ? ' on' : ''}" href="#/payments/group/${id}" title="${esc(g.label)} together, as in its CJI3 file">${esc(g.label)} (CJI3 file)</a>`).join('')}` : ''}
+  </div>`; // a project is chosen with the Project column's filter (column-filter.js), not here
 export function wireScope(base, jdaId) {
   const select = $('[data-scope]');
   if (select) select.onchange = () => { location.hash = `${base}/${jdaId}${select.value ? '/' + select.value : ''}`; };
 }
 // The summary cells: sanctioned, invoiced, paid, and what is left.
-export const summaryCells = t => `<div class="pt-summary">
+// Cost, by the one rule the whole system uses (the Control Tower's ring too): paid ÷ sanctioned, both with
+// tax, from the Payment Table. Budget and forecast are shown after it, as secondary figures.
+export function costKpis(sanctioned, entries, { budgetMinor = 0, forecastMinor = 0, forecastBad = false, waiting = 0 } = {}) {
+  const t = tableTotals(paymentTable(sanctioned, entries)), pct = t.sanctionedMinor > 0 ? Math.round(t.actualMinor / t.sanctionedMinor * 100) : null;
+  const rm = m => money(m).replace(/\.\d\d$/, '');
+  return `<div class="kpis">
+      <div class="kpi"><small>Sanctioned (w TAX)</small><b>${rm(t.sanctionedMinor)}</b></div>
+      <div class="kpi ${t.actualMinor > t.sanctionedMinor ? 'bad' : 'good'}"><small>Paid (MYR)</small><b>${rm(t.actualMinor)}</b></div>
+      <div class="kpi"><small>Paid of sanctioned</small><b>${pct === null ? '—' : `${pct}%`}</b></div>
+      <div class="kpi"><small>Waiting for approval</small><b>${waiting}</b></div>
+      <div class="kpi quiet" title="${esc(`Budget ${rm(budgetMinor)}`)}"><small>Forecast at completion</small><b class="${forecastBad ? 'over' : ''}">${rm(forecastMinor)}</b><small>of budget ${rm(budgetMinor)}</small></div>
+    </div>`;
+}
+export const summaryCells = (t, { invoiced = true } = {}) => `<div class="pt-summary">
       <div><small>Total sanctioned (w TAX)</small><b>${money(t.sanctionedMinor)}</b></div>
-      <div><small>Total invoiced amount</small><b>${money(t.invoicedMinor)}</b></div>
+      ${invoiced ? `<div><small>Total invoiced amount</small><b>${money(t.invoicedMinor)}</b></div>` : ''}
       <div><small>Total actual (paid)</small><b>${money(t.actualMinor)}</b></div>
       <div class="${t.remainingMinor < 0 ? 'over' : ''}"><small>Remaining</small><b>${money(t.remainingMinor)}</b></div>
     </div>`;
 // What a JDA or project page shows of its invoices and payments: the totals, and the way to the two pages.
 export const financeSummary = (sanctioned, entries, where) => `<div class="section">
     <div class="section-head"><h3>Invoices and payments</h3>
-      <div class="row"><a class="primary" href="#/payments/${where}">Open Payment Table</a><a class="ghost" href="#/cji3/${where}">Open invoices (CJI3)</a></div></div>
+      <div class="row"><a class="primary" href="#/payments/${where}">Open Payment Table</a><a class="ghost" href="#/cji3/${where}">Invoice history</a></div></div>
     ${summaryCells(tableTotals(paymentTable(sanctioned, entries)))}</div>`;
 
 export function dialog(html, wide = false) {
@@ -82,6 +98,11 @@ function download(name, blob) {
 }
 export const exportButtons = () => `<button type="button" class="ghost btn-sm" data-export="csv">Export CSV</button>` +
   (finance.workbook ? '<button type="button" class="ghost btn-sm" data-export="xlsx">Export Excel</button>' : '');
+// Several sheets in one Excel workbook (Excel only: the server writes it).
+export async function exportBook(name, sheets) {
+  if (!finance.workbook) throw new Error('Excel files are written by the server, which demo mode does not use. Export CSV instead.');
+  download(`${name}.xlsx`, await finance.workbook(sheets));
+}
 export async function exportSheet(name, rows, as) {
   if (as === 'xlsx') download(`${name}.xlsx`, await finance.workbook([{ name, rows }]));
   else download(`${name}.csv`, new Blob(['﻿' + toCsv(rows)], { type: 'text/csv;charset=utf-8' }));
@@ -123,7 +144,6 @@ export function openRecord(kind, ctx, { record = null, preset = {} } = {}) {
     <div class="rec-grid">
       ${entry ? input('vendor', 'Vendor name on the invoice (optional)', v('vendor') === v('partner') ? '' : v('vendor'))
         + input('postingDate', 'Posting date (optional)', v('postingDate'), 'type="date"') + input('dueDate', 'Due date (optional)', v('dueDate'), 'type="date"')
-        + `<label>Payment status<select name="status">${options(STATUSES.map(s => [s, STATUS_LABEL[s]]), v('status') || 'pending')}</select></label>`
         + input('fileUrl', 'Link to the invoice file (optional)', v('fileUrl'), 'type="url" placeholder="https://…"') : ''}
       ${input('description', 'Description (optional)', v('description'))}
       ${input('remarks', 'Remarks (optional)', v('remarks'))}
@@ -207,7 +227,8 @@ export function openRecord(kind, ctx, { record = null, preset = {} } = {}) {
       ...(foreign && { rate: get('rate'), rateDate: get('rateDate'), rateSource: get('rateSource') || 'Entered by hand', rateOverridden: overridden }),
       ...(entry && {
         invoiceNo: get('invoiceNo'), documentDate: get('documentDate'), vendor: get('vendor'), postingDate: get('postingDate'), dueDate: get('dueDate'),
-        status: get('status'), fileUrl: get('fileUrl'), sap: Object.fromEntries(SAP_FIELDS.map(([k]) => [k, get('sap.' + k)]))
+        fileUrl: get('fileUrl'), // no status: it follows the invoice's stage (Pending until emailed from the List, Paid from a CJI3 match)
+        sap: Object.fromEntries(SAP_FIELDS.map(([k]) => [k, get('sap.' + k)]))
       })
     };
     btn.disabled = true; msg.textContent = 'Saving…';
