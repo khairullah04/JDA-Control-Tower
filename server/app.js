@@ -13,9 +13,12 @@ import { apiErrors, apiNotFound } from './errors.js';
 import { createFinance } from '../web/control-tower/invoices/js/finance/service.js';
 import { JDAS } from '../web/shared/config/jdas.js';
 
-const dir = rel => fileURLToPath(new URL(rel, import.meta.url));
 // The front end is web/, and each of its three folders is served at the address of the same name.
-export const WEB = dir('../web/'), PUBLIC = `${WEB}public`, SHARED = `${WEB}shared`, CONTROL_TOWER = `${WEB}control-tower`;
+// (Written out in full, so Vercel sees them and packs the files in with the server.)
+export const WEB = fileURLToPath(new URL('../web/', import.meta.url));
+export const PUBLIC = fileURLToPath(new URL('../web/public', import.meta.url));
+export const SHARED = fileURLToPath(new URL('../web/shared', import.meta.url));
+export const CONTROL_TOWER = fileURLToPath(new URL('../web/control-tower', import.meta.url));
 
 // Everything the server answers, in one place. What anyone may open is listed first; everything
 // after the two `require...` lines needs a signed-in person on the access list (auth.js):
@@ -85,4 +88,21 @@ export function createApp({ finance, storage, site = siteStore(storage) }) {
   app.get('/control-tower/:jda', (req, res, next) => known(req.params.jda) ? res.redirect(302, `/control-tower/${req.params.jda}/overall-progress`) : next());
   app.use('/control-tower', express.static(CONTROL_TOWER));
   return app;
+}
+
+// Vercel runs this file as a function: the app is started on the first request and kept for the
+// next ones (start.js; locally, server.js does the same and listens on a port). A start that fails
+// (a missing setting) answers every request with 503 and says why in the log, then tries again.
+let starting = null;
+export default async function vercel(req, res) {
+  try {
+    const { app } = await (starting ||= import('./start.js').then(m => m.startApp()).then(s => { console.log(s.access); return s; }));
+    return app(req, res);
+  } catch (e) {
+    starting = null;
+    console.error('The server could not start:', e.message);
+    res.statusCode = 503;
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.end('The JDA Control Tower is not set up yet on this server. The owner can see why in the server log.');
+  }
 }

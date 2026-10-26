@@ -286,6 +286,25 @@ The server is one Node process. Everything else follows from that.
 - **After updating the code**: `git pull`, `npm ci` in `server/`, `npm test`, restart. If
   `firestore.rules` or `firestore.indexes.json` changed, publish them again (Setup step 7).
 
+## Running on Vercel
+
+Vercel runs `server/app.js` as one function (its default export starts the app on the first request,
+through `server/start.js`, the same start-up as `server.js`). In the Vercel project, Settings →
+Environment Variables (Production):
+
+| Setting | Value |
+|---|---|
+| `FINANCE_STORE` | `firestore` |
+| `FIREBASE_SERVICE_ACCOUNT` | the whole service-account key file's contents (JSON), or that JSON in base64 |
+| `SESSION_SECRET` | 32 or more random characters |
+| `ALLOWED_EMAILS` | who may sign in, comma-separated |
+
+Then Deployments → the latest → Redeploy. Until these are set, every page answers "not set up yet" and
+the function's log says which one is missing. Vercel's disk cannot be written to, so everything that
+is saved must go to Firestore: with `FINANCE_STORE=firestore` invoices, payments and the site's text
+do. Not yet on Vercel: pictures uploaded in Edit public site (saved as files), Microsoft sign-ins for
+the List (kept in a file; import an export of the List instead), and Sync from Drive's long runs.
+
 ## Backup and restore
 
 Back up before every update, before publishing new database rules, and on a schedule you choose.
