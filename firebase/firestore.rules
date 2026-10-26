@@ -1,12 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Who may use the JDA Control Tower: signed in, and on the access list. The list is ALLOWED_EMAILS in
-    // server/.env; the server copies it to access/allowlist at start-up, and only the server can
-    // write it. Signing in alone gives nothing: without the list document, everyone is refused.
+    // Who may use the JDA Control Tower: signed in with a verified @petronas.com address (the same rule
+    // as the server's, server/auth.js SIGNUP_DOMAIN), or on the access list of exceptions. That list is
+    // ALLOWED_EMAILS; the server copies it to access/allowlist at start-up, and only the server can
+    // write it. An address whose verification link has not been clicked gets nothing.
     function onAccessList() {
-      return request.auth != null
-        && request.auth.token.email in get(/databases/$(database)/documents/access/allowlist).data.emails;
+      return request.auth != null && (
+        (request.auth.token.email_verified == true && request.auth.token.email.lower().matches('^[^@]+@petronas[.]com$'))
+        || request.auth.token.email in get(/databases/$(database)/documents/access/allowlist).data.emails);
     }
 
     // Closed by default: a collection not named below is refused to every browser, whoever is signed in.

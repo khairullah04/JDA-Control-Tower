@@ -15,14 +15,43 @@
       <span class="wordmark">TRICIPTA AI</span>
       <div>
         <h1>JDA Control Tower</h1>
-        <p>Employee sign-in. Use the username or email your administrator gave you.</p>
+        <p>Sign in with your PETRONAS email.</p>
       </div>
-      <label class="field">Username or email<input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="login-msg" required></label>
+      <label class="field">Email<input id="username" name="username" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="name@petronas.com" aria-describedby="login-msg" required></label>
       <label class="field">Password<input id="password" name="password" type="password" autocomplete="current-password" aria-describedby="login-msg" required></label>
       <p class="msg" id="login-msg" role="alert"></p>
       <p class="msg ok" id="login-status" role="status"></p>
+      <button type="button" class="btn ghost" id="resend-btn" hidden>Send the verification email again</button>
       <button class="btn primary" id="login-btn">Sign in</button>
+      <p class="login-links"><a href="#signup" data-view="signup">Create an account</a> · <a href="#reset" data-view="reset">Forgot password?</a></p>
       <a class="login-back" href="/">← Back to TriCipta AI</a>
+    </form>
+    <form class="login-card" id="signup-form" novalidate hidden>
+      <span class="wordmark">TRICIPTA AI</span>
+      <div>
+        <h1>Create an account</h1>
+        <p>For PETRONAS staff: use your @petronas.com email. We will send a link to it to confirm it is yours.</p>
+      </div>
+      <label class="field">Email<input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="name@petronas.com" aria-describedby="signup-msg" required></label>
+      <label class="field">Password<input name="password" type="password" autocomplete="new-password" aria-describedby="signup-hint signup-msg" required>
+        <small id="signup-hint">At least 10 characters, with letters and a digit. Not your PETRONAS password.</small></label>
+      <label class="field">Password again<input name="again" type="password" autocomplete="new-password" aria-describedby="signup-msg" required></label>
+      <p class="msg" id="signup-msg" role="alert"></p>
+      <p class="msg ok" id="signup-status" role="status"></p>
+      <button class="btn primary">Create account</button>
+      <p class="login-links"><a href="#" data-view="login">← Back to sign in</a></p>
+    </form>
+    <form class="login-card" id="reset-form" novalidate hidden>
+      <span class="wordmark">TRICIPTA AI</span>
+      <div>
+        <h1>Reset your password</h1>
+        <p>Enter your email. We will send a link to set a new password.</p>
+      </div>
+      <label class="field">Email<input name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="name@petronas.com" aria-describedby="reset-msg" required></label>
+      <p class="msg" id="reset-msg" role="alert"></p>
+      <p class="msg ok" id="reset-status" role="status"></p>
+      <button class="btn primary">Send reset link</button>
+      <p class="login-links"><a href="#" data-view="login">← Back to sign in</a></p>
     </form>
   </main>
   <script type="module" src="/public/components/login.js"></script>

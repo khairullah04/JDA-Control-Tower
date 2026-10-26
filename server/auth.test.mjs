@@ -2,7 +2,7 @@
 // The sign-in check in front of the API, with Google's token service stubbed out.
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { requireUser, forgetTokens } from './auth.js';
+import { requireUser, forgetTokens, authRoutes, inDomain, passwordProblem } from './auth.js';
 
 const realFetch = globalThis.fetch;
 let answer, asked;
@@ -32,20 +32,25 @@ test('a good token renews the session cookie, so a page whose cookie ran out kee
   assert.match((await run({ authorization: 'Bearer tok-r' })).cookie, /^ct_session=[^;]+; Max-Age=28800; Path=\/; HttpOnly; SameSite=Lax$/);
 });
 
-test('signed in but not on the access list: refused, by name', async () => {
-  answer = reply(true, { users: [{ email: 'stranger@jda.app' }] });
+test('outside @petronas.com and not on the list of exceptions: refused', async () => {
+  answer = reply(true, { users: [{ email: 'stranger@jda.app', emailVerified: true }] });
   const out = await run({ authorization: 'Bearer tok' });
-  assert.deepEqual([out.code, out.body.error], [403, 'stranger@jda.app is not on the access list. Ask the administrator to add it.']);
+  assert.deepEqual([out.code, out.body.error], [403, 'Only @petronas.com addresses can use the JDA Control Tower.']);
   answer = reply(true, { users: [{ email: 'BADRUL@jda.app' }] });                     // the list is not case-sensitive
   assert.equal((await run({ authorization: 'Bearer tok-2' })).next, true);
 });
 
-test('an empty access list lets nobody in, and says to ask the administrator', async () => {
+test('@petronas.com: in once verified, refused (and told to verify) before; look-alike domains refused', async () => {
   process.env.ALLOWED_EMAILS = ' ';
-  answer = reply(true, { users: [{ email: 'aina@jda.app' }] });
-  const out = await run({ authorization: 'Bearer tok' });
-  assert.equal(out.code, 403);
-  assert.match(out.body.error, /no one is on the access list/);
+  answer = reply(true, { users: [{ email: 'Siti@Petronas.com', emailVerified: true }] });
+  const ok = await run({ authorization: 'Bearer tok-p' });
+  assert.deepEqual([ok.next, ok.req.user.email], [true, 'siti@petronas.com']);
+  answer = reply(true, { users: [{ email: 'new@petronas.com', emailVerified: false }] });
+  const out = await run({ authorization: 'Bearer tok-u' });
+  assert.deepEqual([out.code, out.body.verify], [403, true]);
+  assert.match(out.body.error, /not verified/);
+  for (const email of ['x@petronas.com.evil.io', 'x@evilpetronas.com', 'x@sub.petronas.com', 'x@petronas.co', 'a@b@petronas.com'])
+    assert.equal(inDomain(email), false, email);
 });
 
 test('an expired or made-up token: 401', async () => {
@@ -96,4 +101,49 @@ test('a token that has been checked is not checked again for five minutes; the a
     await run({ authorization: 'Bearer ' + expiring }); clock += 61_000; await run({ authorization: 'Bearer ' + expiring });
     assert.equal(asked.length, 7);
   } finally { Date.now = realNow; }
+});
+
+/* ---------- Sign up and reset password (/api/auth/signup, /api/auth/reset) ---------- */
+const call = (path, body, ip = '10.0.0.' + Math.random()) => new Promise(resolve => {
+  const req = { method: 'POST', url: path, headers: {}, body, ip }, res = { statusCode: 200, status(c) { this.statusCode = c; return this; }, json(b) { resolve({ code: this.statusCode, body: b }); }, setHeader() {}, set() { return this; }, end() {} };
+  authRoutes.handle(req, res, () => resolve({ code: 404 }));
+});
+
+test('passwords: 10 or more characters, letters and a digit', () => {
+  assert.deepEqual(['short1', 'longenoughbutnodigit', '1234567890', 'goodpass123'].map(p => !passwordProblem(p)), [false, false, false, true]);
+});
+
+test('sign up: @petronas.com only, checked by the server; Firebase makes the account and sends the verification link', async () => {
+  answer = reply(true, { idToken: 'new-tok' });
+  const outside = await call('/signup', { email: 'me@gmail.com', password: 'goodpass123' });
+  assert.deepEqual([outside.code, outside.body.field, asked.length], [400, 'email', 0]);
+  const weak = await call('/signup', { email: 'me@petronas.com', password: 'short' });
+  assert.deepEqual([weak.code, asked.length], [400, 0]);
+  const ok = await call('/signup', { email: ' Me@Petronas.com ', password: 'goodpass123' });
+  assert.equal(ok.code, 200);
+  assert.deepEqual(asked.map(([u, b]) => [u.replace(/\?.*/, ''), b]), [
+    ['https://identitytoolkit.googleapis.com/v1/accounts:signUp', { email: 'me@petronas.com', password: 'goodpass123', returnSecureToken: true }],
+    ['https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode', { requestType: 'VERIFY_EMAIL', idToken: 'new-tok' }]]);
+  // an address that already has an account gets the same answer, so nobody can find out who has one
+  answer = reply(false, { error: { message: 'EMAIL_EXISTS' } });
+  const again = await call('/signup', { email: 'me@petronas.com', password: 'goodpass123' });
+  assert.deepEqual([again.code, again.body.message], [200, ok.body.message]);
+});
+
+test('reset password: a link for @petronas.com (or an exception), the same answer for everyone', async () => {
+  process.env.ALLOWED_EMAILS = 'aina@jda.app';
+  answer = reply(true, {});
+  const a = await call('/reset', { email: 'me@petronas.com' }), b = await call('/reset', { email: 'aina@jda.app' }), c = await call('/reset', { email: 'me@gmail.com' });
+  assert.deepEqual([a.code, b.code, c.code], [200, 200, 200]);
+  assert.equal(a.body.message, c.body.message);
+  assert.deepEqual(asked.map(([, body]) => body), [{ requestType: 'PASSWORD_RESET', email: 'me@petronas.com' }, { requestType: 'PASSWORD_RESET', email: 'aina@jda.app' }]); // none for gmail
+  answer = reply(false, { error: { message: 'EMAIL_NOT_FOUND' } });
+  assert.equal((await call('/reset', { email: 'nobody@petronas.com' })).body.message, a.body.message);
+});
+
+test('sign up and reset are slowed down: 5 tries per 15 minutes from one address', async () => {
+  answer = reply(true, { idToken: 't' });
+  const codes = [];
+  for (let i = 0; i < 6; i++) codes.push((await call('/reset', { email: 'me@petronas.com' }, '10.9.9.9')).code);
+  assert.deepEqual(codes, [200, 200, 200, 200, 200, 429]);
 });
