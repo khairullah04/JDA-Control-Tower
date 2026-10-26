@@ -192,3 +192,11 @@ proof of approval and marks them Paid.
 - [x] Test: one edit to a sanctioned amount moves the Payment Table, project report and Control Tower ring together.
 - [x] CJI3 register → **Invoice history**: every invoice (paid, pending, approved, rejected), read-only, newest first, filter by JDA and by partner (and status), with each invoice's history.
 - [x] Links and labels that say "CJI3 register" updated (sidebar, Payment Table, JDA totals, Drive sync, docs).
+
+# Sign-up for @petronas.com and reset password (owner, 2026-10-26)
+
+- [x] /login: Create an account (@petronas.com only, password 10+ with letters and a digit), Forgot password?, resend verification.
+- [x] Server checks the domain (/api/auth/signup, /api/auth/reset); Firebase sends the verification and reset emails; same answer whether an account exists; 5 tries per 15 minutes.
+- [x] Access only once verified, on the server and in firestore.rules; ALLOWED_EMAILS kept for exceptions only.
+- [ ] Owner, Firebase console: Password policy and Email enumeration protection on; edit the email templates' sender name if wanted.
+- [ ] Owner: publish the updated firestore.rules (needs the key).

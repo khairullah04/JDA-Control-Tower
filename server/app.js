@@ -21,7 +21,7 @@ export const SHARED = fileURLToPath(new URL('../web/shared', import.meta.url));
 export const CONTROL_TOWER = fileURLToPath(new URL('../web/control-tower', import.meta.url));
 
 // Everything the server answers, in one place. What anyone may open is listed first; everything
-// after the two `require...` lines needs a signed-in person on the access list (auth.js):
+// after the two `require...` lines needs a signed-in person with a verified @petronas.com address, or on ALLOWED_EMAILS (auth.js):
 //
 //   public   /                 TriCipta AI landing page            web/public/index.html
 //            /login            employee sign-in                     web/public/login.html

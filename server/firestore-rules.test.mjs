@@ -22,3 +22,10 @@ test('only these collections are open to browsers, and only to people on the acc
 test('the server-only collections are never named, so they stay closed', () => {
   for (const name of ['financeEntries', 'financeSanctioned', 'financeAudit', 'financeMeta', 'financeStages', 'cji3Lines', 'cji3Imports', 'access', 'site']) assert.ok(!(name in opened), name);
 });
+
+test('a verified @petronas.com address is let in by the rules; an unverified one, or a look-alike domain, is not', () => {
+  const fn = rules.slice(rules.indexOf('function onAccessList()'), rules.indexOf('match /jdas/'));
+  assert.match(fn, /request\.auth\.token\.email_verified == true/);
+  const re = new RegExp(fn.match(/matches\('([^']+)'\)/)[1]);
+  assert.deepEqual(['a@petronas.com', 'a@petronas.com.evil.io', 'a@xpetronas.com', 'a@sub.petronas.com'].map(e => re.test(e)), [true, false, false, false]);
+});

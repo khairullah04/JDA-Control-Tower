@@ -35,6 +35,10 @@ label.field{display:grid;gap:calc(6px * var(--space-scale));font-size:max(min(.8
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--teal-500);box-shadow:0 0 0 3px rgba(0,161,156,.2)}
 .msg{margin:0;min-height:1.2em;font-size:max(min(.86rem, 14px), calc(.86rem * var(--type-scale)));color:var(--red)}
 .msg.ok{color:var(--green)}
+.login-page [hidden]{display:none!important}
+.login-card .msg{color:var(--red)} .login-card .msg.ok{color:var(--green)}
+.login-links{text-align:center;font-size:max(min(.86rem, 14px), calc(.86rem * var(--type-scale)))}
+.field small{font-weight:400}
 .login-back{font-size:max(min(.86rem, 14px), calc(.86rem * var(--type-scale)));text-align:center}
 
 /* phones: 16px fields, or iOS zooms in on focus */

@@ -23,12 +23,26 @@ firestore.rules · firestore.indexes.json · firebase.json   the database rules 
 ## Sign-in
 
 The tracker is part of the JDA Control Tower, at `/control-tower/invoices/`. It has no login of its own:
-people sign in once at `/login` with their Firebase account, which must be on `ALLOWED_EMAILS`, and
-the server gives the browser a signed session cookie (`server/session.js`, `server/auth.js`). The
+people sign in once at `/login` with their Firebase account, and the server gives the browser a signed session cookie (`server/session.js`, `server/auth.js`). The
 server checks that cookie before it sends any page or file under `/control-tower` (otherwise it
 redirects to `/login`) and on every `/api` call (otherwise 401). The tracker also keeps the Firebase
 sign-in `/login` made, because it reads JDAs and projects from Firestore. What is public and what is
 private is listed at the top of `server/app.js`; `server/app.test.mjs` checks every private file and API.
+
+**Who gets in: PETRONAS staff, by sign-up.** On `/login`, **Create an account** takes an
+`@petronas.com` address and a password (10+ characters, letters and a digit). The server checks the
+domain itself (`/api/auth/signup`, `server/auth.js` `SIGNUP_DOMAIN`), makes the Firebase account, and
+Firebase emails a verification link. Nothing opens until that link is clicked; signing in before then
+says so and offers to send the link again. **Forgot password?** sends a reset link (`/api/auth/reset`).
+Both answer the same whether or not the address has an account, and allow 5 tries per 15 minutes from
+one address. The database rules (`firebase/firestore.rules`) make the same check: a verified
+`@petronas.com` address. `ALLOWED_EMAILS` is now only for exceptions outside that domain (an
+administrator's own account); it may be empty. The emails come from Firebase: their wording and
+sender name are in the Firebase console, Authentication → Templates.
+
+Recommended in the Firebase console, Authentication → Settings: **Password policy** (at least 10
+characters, letters and numbers) and **Email enumeration protection** on. Someone who leaves PETRONAS
+keeps working here until their account is disabled (Authentication → Users → Disable account).
 
 ## JDA report Drive sync
 The server also serves `/api/portal/*` for the JDA report pages: `save` writes a report, and `sync`
@@ -224,7 +238,7 @@ Do these once. Steps 1 to 4 are in the Firebase console (https://console.firebas
 6. In `server/.env` fill in:
    - `ANTHROPIC_API_KEY`: the Claude key.
    - `FIREBASE_API_KEY`: the `apiKey` from step 2.
-   - `ALLOWED_EMAILS`: the addresses from step 4, comma-separated. Only these can sign in.
+   - `ALLOWED_EMAILS`: optional, addresses outside @petronas.com that may also sign in (comma-separated).
    - `SESSION_SECRET`: 32 or more random characters (signs the session cookie).
    - `DRIVE_ROOT_FOLDER_ID`: the Drive folder that is the invoice inbox. Share that folder with the
      `client_email` inside `service-account.json` (Viewer is enough).
@@ -297,7 +311,8 @@ Environment Variables (Production):
 | `FINANCE_STORE` | `firestore` |
 | `FIREBASE_SERVICE_ACCOUNT` | the whole service-account key file's contents (JSON), or that JSON in base64 |
 | `SESSION_SECRET` | 32 or more random characters |
-| `ALLOWED_EMAILS` | who may sign in, comma-separated |
+| `FIREBASE_API_KEY` | the `apiKey` in `web/shared/config/firebase-config.js` (checks sign-ins, sends the sign-up and reset emails) |
+| `ALLOWED_EMAILS` | optional: addresses outside @petronas.com that may also sign in, comma-separated |
 
 Then Deployments → the latest → Redeploy. Until these are set, every page answers "not set up yet" and
 the function's log says which one is missing. Vercel's disk cannot be written to, so everything that
