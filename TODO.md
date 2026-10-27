@@ -3,6 +3,9 @@
 What is left for the TriCipta AI site and the JDA Control Tower, in the order it is best done.
 Last updated 2026-10-27. Tick a box (`[x]`) when it is done.
 
+**Rule (owner, 2026-10-27):** every change, progress step or alteration is listed here: items ticked or
+added, and a dated line in the **Change log** at the bottom, in the same commit as the change.
+
 Who does it: **You** (needs your accounts, a decision or real data) or **Claude** (code).
 
 ## 1. Get the latest work live (You)
@@ -106,3 +109,19 @@ Finding IDs refer to `reviews/REVIEW.md`.
 - [x] No CJI3 tolerance: paid only on an exact amount.
 - [x] @petronas.com sign-up and reset password.
 - [x] Invoice history; Payment Tables show paid invoices only.
+
+## Change log
+
+Newest first. Each line: date, what changed, branch (merged into `main` or not yet).
+
+- 2026-10-27: TODO.md tracking rule added; Change log started. (`fix/batch-2-approval`, not merged)
+- 2026-10-27: TODO.md created. (`fix/batch-2-approval`, not merged)
+- 2026-10-27: The 9 reviewer agents and the review reports committed (`.claude/agents/review/`, `reviews/`). (`fix/batch-2-approval`, not merged)
+- 2026-10-27: No CJI3 tolerance (paid only on an exact amount); Reject and Restore buttons on Invoice history. (`fix/batch-2-approval`, not merged)
+- 2026-10-27: Pending → Approved (by hand, Approve / Undo approval) → Paid (only from CJI3); CJI3 lines for unapproved invoices held until approval. (`fix/batch-2-approval`, not merged)
+- 2026-10-27: Review batch 1: demo mode off with a banner; "migrated" import closed; re-match undoes the first match; reversals unpay; incomplete invoices not paid; CJI3 role check; activity lines in own name only. (`fix/batch-1-critical`, not merged)
+- 2026-10-27: Review of `main` by 9 persona agents: 178 findings, verdict "Do not ship" (`reviews/REVIEW.md`).
+- 2026-10-26: Sign-up for verified @petronas.com addresses and reset password. (merged, PR #4)
+- 2026-10-26: Vercel entry point (`server/app.js` default export), Firebase key from a setting. (merged, PR #3)
+- 2026-10-26: Invoice approval, CJI3, Microsoft List, Invoice history, paid-only Payment Tables. (merged, PR #2)
+- 2026-10-26: Overhaul (TriCipta landing, Control Tower). (merged, PR #1)
