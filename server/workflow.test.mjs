@@ -39,13 +39,17 @@ test('Reject needs a reason, archives, and Restore brings it back to the Lead', 
 
 test('moves not on the graph are refused, and Paid only comes from a CJI3 match', () => {
   const refused = [
-    [inv(), 'to_be_paid'], [inv(), 'paid'], [inv(), 'rejected'], [inv(), 'pending_lead'],             // no skipping the steps
-    [walk(inv(), ['with_pm']), 'to_be_paid'], [walk(inv(), ['sent_to_pd']), 'to_be_paid'],
+    [inv(), 'paid'], [inv(), 'rejected'], [inv(), 'pending_lead'],                                     // no skipping the steps
+    [walk(inv(), ['sent_to_pd']), 'to_be_paid'],
     [walk(inv(), ['sent_to_pd']), 'paid'], [walk(inv(), ['with_pm'], ['pending_lead'], ['to_be_paid']), 'paid'], // by hand
     [inv(), 'nonsense'], [inv({ deletedAt: at }), 'with_pm']
   ];
   for (const [e, to] of refused) assert.notEqual(checkMove(e, to), '', `${stageOf(e)} -> ${to} should be refused`);
-  assert.equal(checkMove(inv(), 'paid', { byCji3: true }), '');                                        // the CJI3 line is the approval
+  // three steps: Pending -> Approved by hand (from any pending stage) -> Paid by CJI3, only once approved
+  for (const stages of [[], [['with_pm']], [['with_pm'], ['pending_lead']]]) assert.equal(checkMove(walk(inv(), ...stages), 'to_be_paid'), '');
+  for (const stages of [[], [['with_pm']], [['with_pm'], ['pending_lead']]]) assert.match(checkMove(walk(inv(), ...stages), 'paid', { byCji3: true }), /cannot be moved to Paid/);
+  assert.equal(checkMove(walk(inv(), ['to_be_paid']), 'paid', { byCji3: true }), '');
+  assert.match(checkMove(walk(inv(), ['to_be_paid']), 'pending_lead'), /Say why/);                 // undoing an approval needs a reason
   assert.notEqual(checkMove(walk(inv(), ['with_pm'], ['pending_lead'], ['rejected', { note: 'Wrong project' }]), 'paid', { byCji3: true }), ''); // but not a rejected one
 });
 
@@ -60,11 +64,9 @@ test('an undone CJI3 match goes back to the queue the invoice came from', () => 
   assert.deepEqual(movesFrom(viaPd, { byCji3: true }).map(m => m.to), ['sent_to_pd']);
   const viaLead = walk(inv(), ['with_pm'], ['pending_lead'], ['to_be_paid'], ['paid', { byCji3: true }]);
   assert.deepEqual(movesFrom(viaLead, { byCji3: true }).map(m => m.to), ['to_be_paid']);
-  // the List replaces Approvals: a CJI3 line pays an invoice at any open stage, and undone it goes back there
-  for (const stages of [[], [['with_pm']], [['with_pm'], ['pending_lead']]]) {
-    const before = walk(inv(), ...stages), paid = walk(before, ['paid', { byCji3: true }]);
-    assert.deepEqual([paid.status, movesFrom(paid, { byCji3: true }).map(m => m.to)], ['paid', [stageOf(before)]]);
-  }
+  // approved from any pending stage, paid, undone: back to approved
+  const approved = walk(inv(), ['to_be_paid']), paid = walk(approved, ['paid', { byCji3: true }]);
+  assert.deepEqual([paid.status, movesFrom(paid, { byCji3: true }).map(m => m.to)], ['paid', ['to_be_paid']]);
   assert.deepEqual(movesFrom({ status: 'paid' }, { byCji3: true }).map(m => m.to), ['to_be_paid']); // paid before paidFrom was kept
   assert.match(checkMove(walk(inv(), ['with_pm']), 'paid'), /by hand/);                             // never by a person
 });
@@ -89,7 +91,7 @@ test('the register: moves are saved with who, when, from, to and note; refused o
   const a = await f.save('entry', entryInput(), 'aina'), b = await f.save('entry', entryInput({ invoiceNo: 'IN-2' }), 'aina');
   const first = await f.moveStage([a.id, b.id], 'with_pm', {}, 'aina');
   assert.deepEqual([first.changed, first.refused], [2, []]);
-  const wrong = await f.moveStage([a.id, 'nope'], 'to_be_paid', {}, 'badrul');                          // skipping the Lead; an id that is not there
+  const wrong = await f.moveStage([a.id, 'nope'], 'paid', {}, 'badrul');                                // Paid by hand; an id that is not there
   assert.deepEqual([wrong.changed, wrong.refused.map(r => r.id)], [0, [a.id, 'nope']]);
   await f.moveStage([a.id], 'pending_lead', { note: 'Docs checked' }, 'pm1');
   const noReason = await f.moveStage([a.id], 'rejected', {}, 'lead1');
@@ -110,4 +112,15 @@ test('the register: the old status buttons still work, and the stage is then rea
   await f.setStatus([a.id], 'pending', 'aina');
   const rec = (await f.data()).entries[0];
   assert.deepEqual([rec.status, 'stage' in rec, stageOf(rec)], ['pending', false, 'received']);
+});
+
+test('Reject from any pending stage needs a reason, and a rejected invoice can be restored to Pending; it is never paid', () => {
+  for (const stages of [[], [['with_pm']], [['with_pm'], ['pending_lead']]]) {
+    const e = walk(inv(), ...stages);
+    assert.match(checkMove(e, 'rejected'), /Say why/);
+    assert.equal(checkMove(e, 'rejected', { note: 'Wrong partner' }), '');
+  }
+  const rejected = walk(inv(), ['rejected', { note: 'Wrong partner' }]);
+  assert.deepEqual([rejected.status, checkMove(rejected, 'paid', { byCji3: true }) !== '', checkMove(rejected, 'pending_lead', { note: 'Corrected' })], ['rejected', true, '']);
+  assert.notEqual(checkMove(walk(inv(), ['to_be_paid']), 'rejected', { note: 'x' }), '');           // an approved one: undo the approval first
 });

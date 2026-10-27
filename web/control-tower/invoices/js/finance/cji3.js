@@ -119,16 +119,17 @@ export function candidatesFor(l, invoices) {
 // A line's amount in MYR, tax included (Val/COArea Crcy), as the invoice's taxed MYR is; or its own amount
 // when it is in MYR; otherwise none (it cannot be compared).
 export const lineMyr = l => l.valueCoAreaMinor ?? (l.currency === 'MYR' ? l.valueTranMinor : null) ?? null;
-// What the lines add up to against the invoice: 'equal' within RM 1 or 0.5% (rounding, bank charges),
-// 'less' (part paid so far), 'more', or 'unknown' when a line has no amount.
-export const TOLERANCE = minor => Math.max(100, Math.round(Math.abs(minor) * 0.005));
+// What the lines add up to against the invoice: 'equal' only when they agree to the sen (no tolerance:
+// owner, 2026-10-27), 'less' (part paid so far), 'more', or 'unknown' when a line has no amount. Any
+// difference is left for a person to check ("Confirm invoice Paid").
+export const TOLERANCE = () => 0;
 export function paidAgainst(invoiceMinor, linesMinor) {
   if (!Number.isFinite(linesMinor) || !Number.isFinite(invoiceMinor)) return 'unknown';
   const d = linesMinor - invoiceMinor;
   return Math.abs(d) <= TOLERANCE(invoiceMinor) ? 'equal' : d < 0 ? 'less' : 'more';
 }
 export const MATCH_LABEL = { paid: 'Matched: invoice Paid', linked: 'Matched (invoice already Paid)', part_paid: 'Part payment: the invoice is Paid when the rest arrives',
-  amount_differs: 'Matched, but the amount does not agree: check it', not_approved: 'Matched before CJI3 counted as approval: use Match again',
+  amount_differs: 'Matched, but the amount does not agree: check it', not_approved: 'Invoice found, but not approved yet: it is paid as soon as it is approved',
   incomplete: 'Invoice found, but it has no project or payment month yet: complete it (Invoice history > Edit), then Match again', none: 'No invoice with this Reference',
   ambiguous: 'Several invoices could match', manual: 'Matched by hand' };
 

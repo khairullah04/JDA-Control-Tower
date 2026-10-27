@@ -8,7 +8,7 @@
 //   - Each change answers with the records as they now are, so a page can update without reloading everything.
 import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, isMonth, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
 import { toBps, fromBps, normRate, fmt } from './money.js';
-import { checkMove, applyMove, stageOf, unpaidStage, STAGE_LABEL, MOVES } from './workflow.js';
+import { checkMove, applyMove, stageOf, unpaidStage, isApproved, STAGE_LABEL, MOVES } from './workflow.js';
 import { readCji3, planCji3, lineId, GROUPS, candidatesFor, lineMyr, paidAgainst } from './cji3.js';
 
 const COLL = { entry: 'financeEntries', sanctioned: 'financeSanctioned' };
@@ -126,6 +126,12 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     });
     const found = new Set(out.records.map(r => r.id).concat(refused.map(r => r.id)));
     for (const id of new Set(ids)) if (!found.has(id)) refused.push({ id, ref: id, why: 'That invoice no longer exists.' });
+    // Approved: CJI3 lines held because the invoice was not approved yet are matched again, and pay it now.
+    if (to === 'to_be_paid' && !byCji3 && out.records.length) {
+      const approved = new Set(out.records.map(r => r.id));
+      const held = (await store.list('cji3Lines')).filter(l => approved.has(l.invoiceId) && HELD.includes(l.matchState)).map(l => l.id);
+      if (held.length) { out.cji3 = await matchCji3(held, actor); out.records = await Promise.all(out.records.map(r => store.get(COLL.entry, r.id))); } // as they are now: Paid
+    }
     return { ...out, refused };
   }
   // One invoice's moves through the process, oldest first.
@@ -271,8 +277,9 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     return { importId: dryRun ? '' : importId, ...log, dryRun, lines: changed };
   }
   // Match CJI3 lines to invoices (cji3.js candidatesFor). One clear match: the line names its invoice,
-  // and (the payment being the proof of approval) the invoice becomes Paid from whatever open stage it is
-  // in; its stage history says by which line. One already Paid gets the line added to its list. No match
+  // and the invoice becomes Paid, as long as it has been approved (one not approved yet is linked and
+  // held: approving it pays it);
+  // its stage history says by which line. One already Paid gets the line added to its list. No match
   // or several: the line is left for a person to match. An invoice with no project or payment month yet
   // (one sent from the Microsoft List and not completed) is linked but not paid: Paid would drop out of
   // every total. A reversal (lines netting below the invoice) takes a Paid invoice back to unpaid.
@@ -288,6 +295,7 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     for (const l of lines) {
       const found = candidatesFor(l, invoices);
       if (found.length !== 1) { write(l, found.length ? 'ambiguous' : 'none', null, { candidateIds: found.length ? found.map(e => e.id) : [] }); continue; }
+      if (stageOf(found[0]) !== 'paid' && !isApproved(found[0])) { write(l, 'not_approved', found[0]); continue; }
       if (!complete(found[0])) { write(l, 'incomplete', found[0]); continue; }
       byInvoice.set(found[0].id, [...(byInvoice.get(found[0].id) || []), l]);
     }
@@ -320,6 +328,7 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     let l = await store.get('cji3Lines', lineIdIn);
     const inv = invoiceId && await store.get(COLL.entry, invoiceId), at = now();
     if (!l) throw new FinanceError('That CJI3 line no longer exists.', null, 404);
+    if (invoiceId && inv && stageOf(inv) !== 'paid' && !isApproved(inv)) throw new FinanceError(`Invoice ${inv.invoiceNo || ''} is not approved yet. Approve it first (Invoice history); a CJI3 line pays only approved invoices.`);
     if (invoiceId && inv && !complete(inv)) throw new FinanceError(`Invoice ${inv.invoiceNo || ''} has no project or payment month yet. Complete it in Invoice history (Edit), then match it.`);
     // matched to another invoice before: that match is undone first, so one payment never pays two invoices
     if (invoiceId && l.invoiceId && l.invoiceId !== invoiceId) { await matchLine(lineIdIn, '', actor); l = await store.get('cji3Lines', lineIdIn); }

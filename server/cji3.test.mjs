@@ -122,7 +122,7 @@ test('an upload over HTTP: the server reads the file itself', async () => {
 /* ---------- Matching lines to invoices ---------- */
 const inv = (no, over = {}) => ({ jdaId: 'j3', jdaName: 'JDA 3', projectId: 'pc', projectCode: 'CA', partner: 'IBM', invoiceNo: no, documentDate: '2026-09-01', currency: 'MYR', amount: '1000', ...over });
 
-test('matching: the CJI3 line is the approval, so an invoice at any open stage becomes Paid; none and several are left for a person', async () => {
+test('matching: an approved invoice becomes Paid; one not approved yet is held and paid the moment it is approved; none and several are left for a person', async () => {
   const f = createFinance(memoryStore(), { now: () => '2026-10-20T01:00:00Z' });
   const approved = await f.save('entry', inv('INV-CA-101'), 'a'), direct = await f.save('entry', inv('INV-CA-102'), 'a'), fresh = await f.save('entry', inv('INV-CA-103'), 'a');
   const twinA = await f.save('entry', inv('INV-CA-104'), 'a'), twinB = await f.save('entry', inv('INV-CA-104', { projectId: 'pd', projectCode: 'CB' }), 'a');
@@ -132,13 +132,17 @@ test('matching: the CJI3 line is the approval, so an invoice at any open stage b
   const out = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(
     line({ Reference: 'inv-ca-101' }), line({ Reference: 'INV-CA-102' }), line({ Reference: 'INV-CA-103' }),
     line({ Reference: 'INV-CA-104', 'CO Object Name': '' }), line({ Reference: 'INV-CA-104', 'CO Object Name': 'CB', 'Value TranCurr': '500' }), line({ Reference: 'NOPE-1' })) }, 'acc2');
-  assert.deepEqual(out.match, { paid: 4, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, incomplete: 0, none: 1, ambiguous: 1 }); // INV-CA-103 (only Received) and INV-CA-104 for CB are paid too
+  assert.deepEqual(out.match, { paid: 2, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 2, incomplete: 0, none: 1, ambiguous: 1 }); // INV-CA-103 and INV-CA-104 for CB: not approved yet
   const { entries } = await f.data(), get = id => entries.find(e => e.id === id);
-  assert.deepEqual([get(approved.id).status, get(direct.id).status, get(fresh.id).status, get(twinB.id).status], ['paid', 'paid', 'paid', 'paid']);
+  assert.deepEqual([get(approved.id).status, get(direct.id).status, get(fresh.id).status, get(twinB.id).status], ['paid', 'paid', 'pending', 'pending']);
   const lines = await f.cji3Lines('jda3'), byRef = (r, co) => lines.find(l => l.reference === r && (co === undefined || l.coObject === co));
-  assert.deepEqual([byRef('INV-CA-104', '').matchState, byRef('INV-CA-104', '').candidateIds.sort(), byRef('INV-CA-104', 'CB').matchState], ['ambiguous', [twinA.id, twinB.id].sort(), 'paid']);
+  assert.deepEqual([byRef('INV-CA-104', '').matchState, byRef('INV-CA-104', '').candidateIds.sort(), byRef('INV-CA-104', 'CB').matchState], ['ambiguous', [twinA.id, twinB.id].sort(), 'not_approved']);
   assert.deepEqual(get(approved.id).paidBy, [byRef('inv-ca-101').id]);
   assert.ok((await f.stageHistory(approved.id)).some(h => h.to === 'paid' && h.byCji3));
+  // approving the held one pays it at once, by the line that was waiting
+  const later = await f.moveStage([fresh.id], 'to_be_paid', {}, 'lead');
+  assert.equal(later.cji3.paid, 1);
+  assert.equal((await f.data()).entries.find(e => e.id === fresh.id).status, 'paid');
   // the same file again: nothing new, nothing matched twice
   const again = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(line({ Reference: 'inv-ca-101' })) }, 'acc2');
   assert.deepEqual([again.added, again.match], [0, { paid: 0, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, incomplete: 0, none: 0, ambiguous: 0 }]);
@@ -156,7 +160,10 @@ test('matching by hand, and undoing it sends the invoice back to its queue', asy
   await f.matchLine(l.id, '', 'acc2');
   const back = (await f.data()).entries[0];
   assert.deepEqual([back.stage, back.status, back.paidBy, (await f.cji3Lines())[0].invoiceId], ['sent_to_pd', 'approved', [], '']);
+  const pending = await f.save('entry', inv('INV-CA-202'), 'a');
+  await assert.rejects(f.matchLine(l.id, pending.id, 'acc2'), /not approved yet/);              // a person cannot pay an unapproved invoice either
   const other = await f.save('entry', inv('INV-1', { jdaId: 'j1', jdaName: 'JDA 1' }), 'a');
+  await f.moveStage([other.id], 'to_be_paid', {}, 'lead');
   await assert.rejects(f.matchLine(l.id, other.id, 'acc2'), /not in JDA 3/);
 });
 
@@ -174,17 +181,19 @@ test("a CJI3 file's Payment Table (JDA 1 + JDA 2) is exactly JDA 1's rows and JD
   assert.ok(combined.every(r => r.jdaId !== 'j3'));
 });
 
-test('matching checks the amount: equal pays, a part payment waits for the rest, too much is left for a person', async () => {
+test('matching checks the amount to the sen: equal pays, a part payment waits for the rest, any other difference is left for a person', async () => {
   const f = createFinance(memoryStore(), { now: () => '2026-10-20T01:00:00Z' });
   const approve = async no => { const e = await f.save('entry', inv(no), 'a'); await f.moveStage([e.id], 'sent_to_pd', {}, 'a'); return e.id; }; // RM 1,000 + 8% = RM 1,080.00
-  const [even, part, over] = [await approve('INV-A'), await approve('INV-B'), await approve('INV-C')];
+  const [even, part, over, near] = [await approve('INV-A'), await approve('INV-B'), await approve('INV-C'), await approve('INV-D')];
   const up = (...rows) => f.importCji3({ group: 'jda3', fileName: 'x.xlsx', sheets: file(...rows) }, 'acc2');
-  const first = await up(line({ Reference: 'INV-A', 'Val/COArea Crcy': '1,080.50' }),                // 50 sen out: within RM 1
+  const first = await up(line({ Reference: 'INV-A', 'Val/COArea Crcy': '1,080.00' }),                // exactly the invoice
+    line({ Reference: 'INV-D', 'Val/COArea Crcy': '1,080.50' }),                                       // 50 sen out: no tolerance
     line({ Reference: 'INV-B', 'Value TranCurr': '500', 'Val/COArea Crcy': '540.00' }),               // half
     line({ Reference: 'INV-C', 'Value TranCurr': '2000', 'Val/COArea Crcy': '2,160.00' }));            // twice
-  assert.deepEqual([first.match.paid, first.match.part_paid, first.match.amount_differs], [1, 1, 1]);
+  assert.deepEqual([first.match.paid, first.match.part_paid, first.match.amount_differs], [1, 1, 2]);
   const status = async () => Object.fromEntries((await f.data()).entries.map(e => [e.invoiceNo, e.status]));
-  assert.deepEqual(await status(), { 'INV-A': 'paid', 'INV-B': 'approved', 'INV-C': 'approved' });
+  assert.deepEqual(await status(), { 'INV-A': 'paid', 'INV-B': 'approved', 'INV-C': 'approved', 'INV-D': 'approved' });
+  assert.equal(near.length > 0, true);
   await up(line({ Reference: 'INV-B', 'Value TranCurr': '500', 'Val/COArea Crcy': '540.00', 'Posting Date': '10/01/2026' })); // the rest
   assert.equal((await status())['INV-B'], 'paid');
   const b = (await f.data()).entries.find(e => e.invoiceNo === 'INV-B');
@@ -197,64 +206,62 @@ test('matching checks the amount: equal pays, a part payment waits for the rest,
   assert.equal(even.length > 0, true);
 });
 
-test('the List replaces Approvals: an emailed invoice is paid by its CJI3 line; undone, it goes back to Pending Lead; lines held as "not approved" are matched again', async () => {
-  const f = createFinance(memoryStore(), { now: () => '2026-10-22T01:00:00Z' });
+test('an emailed invoice (Pending Lead) is held by its CJI3 line until approved by hand; undoing the match takes it back to approved', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-27T01:00:00Z' });
   const e = await f.save('entry', inv('INV-CA-201'), 'a');
   await f.moveStage([e.id], 'with_pm', {}, 'pm'); await f.moveStage([e.id], 'pending_lead', {}, 'pm'); // emailed to the Lead from the List
   const out = await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-CA-201' })) }, 'acc2');
-  assert.equal(out.match.paid, 1);
+  assert.deepEqual([out.match.paid, out.match.not_approved], [0, 1]);
+  assert.equal((await f.data()).entries.find(x => x.id === e.id).status, 'pending');
+  await f.moveStage([e.id], 'to_be_paid', { note: 'Approved by the Lead (email of 27 Oct)' }, 'lead');
   let rec = (await f.data()).entries.find(x => x.id === e.id);
-  assert.deepEqual([rec.status, rec.paidFrom], ['paid', 'pending_lead']);
+  assert.deepEqual([rec.status, rec.paidFrom], ['paid', 'to_be_paid']);
   const [l] = await f.cji3Lines('jda3');
   await f.matchLine(l.id, '', 'acc2'); // a wrong match, undone
   rec = (await f.data()).entries.find(x => x.id === e.id);
-  assert.deepEqual([stageOf(rec), rec.status, rec.paidFrom], ['pending_lead', 'pending', '']);
-  // a line linked under the old rule ("not approved yet") is picked up by Match again
-  const store = memoryStore(), g = createFinance(store, { now: () => '2026-10-22T01:00:00Z' });
-  const old = await g.save('entry', inv('INV-CA-202'), 'a');
-  await g.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'NOT-YET' })) }, 'acc2');
-  const [held] = await g.cji3Lines('jda3');
-  await store.atomic(async () => ({ writes: [{ coll: 'cji3Lines', id: held.id, data: { ...held, reference: 'INV-CA-202', invoiceId: old.id, matchState: 'not_approved' } }] }));
-  assert.equal((await g.matchCji3([held.id], 'acc2')).paid, 1);
-  assert.equal((await g.data()).entries.find(x => x.id === old.id).status, 'paid');
+  assert.deepEqual([stageOf(rec), rec.status], ['to_be_paid', 'approved']);
+  // an approval can be undone, with a reason
+  assert.match((await f.moveStage([e.id], 'pending_lead', {}, 'lead')).refused[0].why, /Say why/);
+  assert.equal((await f.moveStage([e.id], 'pending_lead', { note: 'Approved by mistake' }, 'lead')).changed, 1);
 });
 
 /* ---------- Batch 1 fixes (reviews/REVIEW.md) ---------- */
 test('a reversal line takes a Paid invoice back to unpaid, and its amount stops counting (ACC-01, LOG-02)', async () => {
   const f = createFinance(memoryStore(), { now: () => '2026-10-27T01:00:00Z' });
   const e = await f.save('entry', inv('INV-CA-301'), 'a');
-  await f.moveStage([e.id], 'with_pm', {}, 'pm'); await f.moveStage([e.id], 'pending_lead', {}, 'pm');
+  await f.moveStage([e.id], 'to_be_paid', {}, 'lead');
   await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-CA-301' })) }, 'acc2');
   assert.equal((await f.data()).entries.find(x => x.id === e.id).status, 'paid');
   const out = await f.importCji3({ group: 'jda3', fileName: 'nov.xlsx', sheets: file(line({ Reference: 'INV-CA-301', 'Val/COArea Crcy': '-1080', 'Value TranCurr': '-1080', 'Posting Date': '2026-11-02' })) }, 'acc2');
   assert.ok(out.match.part_paid >= 1);                                               // the reversal, and the line it cancels
   const rec = (await f.data()).entries.find(x => x.id === e.id);
-  assert.deepEqual([stageOf(rec), rec.status], ['pending_lead', 'pending']);
+  assert.deepEqual([stageOf(rec), rec.status], ['to_be_paid', 'approved']);
   assert.equal(ptRows([], (await f.data()).entries).reduce((t, r) => t + r.actualMinor, 0), 0);
 });
 
 test('matching a line to another invoice undoes the first match, so one payment never pays two invoices (SWE-02, LOG-04)', async () => {
   const f = createFinance(memoryStore(), { now: () => '2026-10-27T01:00:00Z' });
   const a = await f.save('entry', inv('INV-CA-401'), 'a'), b = await f.save('entry', inv('INV-CA-402'), 'a');
+  await f.moveStage([a.id, b.id], 'to_be_paid', {}, 'lead');
   await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-CA-401' })) }, 'acc2');
   const [l] = await f.cji3Lines('jda3');
   await f.matchLine(l.id, b.id, 'acc2');
   const { entries } = await f.data(), get = id => entries.find(x => x.id === id);
-  assert.deepEqual([get(a.id).status, get(b.id).status], ['pending', 'paid']);
+  assert.deepEqual([get(a.id).status, get(b.id).status], ['approved', 'paid']);
 });
 
-test('an invoice with no project or payment month (a List draft) is linked, not paid, until completed (LOG-01, ACC-02)', async () => {
+test('a List draft (no project or payment month) cannot be approved or paid until completed; then approving pays it and it counts (LOG-01, ACC-02)', async () => {
   const f = createFinance(memoryStore(), { now: () => '2026-10-27T01:00:00Z' });
   await f.saveListPull({ items: [{ key: 'k1', invoiceNo: 'INV-L-1', partner: 'IBM', amountMinor: 100000, amountText: '1000', currency: 'MYR', proofs: [] }], mapping: {} }, 'pm');
-  const { sent } = await f.sendListToLead({ jdaId: 'j3', jdaName: 'JDA 3', keys: ['k1'] }, 'pm'), d = { id: sent[0].id };
+  const { sent } = await f.sendListToLead({ jdaId: 'j3', jdaName: 'JDA 3', keys: ['k1'] }, 'pm'), id = sent[0].id;
   const out = await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-L-1' })) }, 'acc2');
-  assert.equal(out.match.incomplete, 1);
-  assert.equal((await f.data()).entries.find(x => x.id === d.id).status, 'pending');
+  assert.equal(out.match.not_approved, 1);
+  assert.match((await f.moveStage([id], 'to_be_paid', {}, 'lead')).refused[0].why, /incomplete/);
   const [l] = await f.cji3Lines('jda3');
-  await assert.rejects(f.matchLine(l.id, d.id, 'acc2'), /no project or payment month/);
-  // completed: Match again pays it, and it counts on the Payment Table
-  const draft = (await f.data()).entries.find(x => x.id === d.id);
+  await assert.rejects(f.matchLine(l.id, id, 'acc2'), /not approved yet/);
+  // completed, then approved: the waiting line pays it, and it counts on the Payment Table
+  const draft = (await f.data()).entries.find(x => x.id === id);
   await f.save('entry', { ...draft, projectId: 'pc', projectCode: 'CA', documentDate: '2026-09-01', month: '2026-09', amount: '1000', taxRate: '8' }, 'pm');
-  assert.equal((await f.matchCji3([l.id], 'acc2')).paid, 1);
+  assert.equal((await f.moveStage([id], 'to_be_paid', {}, 'lead')).cji3.paid, 1);
   assert.equal(ptRows([], (await f.data()).entries).reduce((t, r) => t + r.actualMinor, 0), 108000);
 });
