@@ -6,7 +6,7 @@
 //     pass the same check, and a record is never saved without its audit lines.
 //   - Nothing is ever removed: a delete only marks the record, so it can be restored.
 //   - Each change answers with the records as they now are, so a page can update without reloading everything.
-import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
+import { build, amounts, changes, refOf, live, invoiceKey, partnerKey, display, isMonth, DEFAULT_SETTINGS, STATUSES, STATUS_LABEL, BASE } from './core.js';
 import { toBps, fromBps, normRate, fmt } from './money.js';
 import { checkMove, applyMove, stageOf, unpaidStage, STAGE_LABEL, MOVES } from './workflow.js';
 import { readCji3, planCji3, lineId, GROUPS, candidatesFor, lineMyr, paidAgainst } from './cji3.js';
@@ -273,18 +273,22 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
   // Match CJI3 lines to invoices (cji3.js candidatesFor). One clear match: the line names its invoice,
   // and (the payment being the proof of approval) the invoice becomes Paid from whatever open stage it is
   // in; its stage history says by which line. One already Paid gets the line added to its list. No match
-  // or several: the line is left for a person to match. Returns how many of each.
+  // or several: the line is left for a person to match. An invoice with no project or payment month yet
+  // (one sent from the Microsoft List and not completed) is linked but not paid: Paid would drop out of
+  // every total. A reversal (lines netting below the invoice) takes a Paid invoice back to unpaid.
+  // Returns how many of each.
   async function matchCji3(lineIds, actor) {
     const ids = new Set(lineIds), at = now(), all = await store.list('cji3Lines');
-    // (a line linked but held as "not approved" before CJI3 became the approval is matched again)
-    const lines = all.filter(l => ids.has(l.id) && (!l.invoiceId || l.matchState === 'not_approved')), again = new Set(lines.map(l => l.id));
+    // (a line linked but held back, as "not approved" by the old rule or because its invoice was incomplete, is matched again)
+    const lines = all.filter(l => ids.has(l.id) && (!l.invoiceId || HELD.includes(l.matchState))), again = new Set(lines.map(l => l.id));
     const invoices = await store.list(COLL.entry);
-    const counts = { paid: 0, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, none: 0, ambiguous: 0 };
+    const counts = { paid: 0, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, incomplete: 0, none: 0, ambiguous: 0 };
     const lineWrites = new Map(), byInvoice = new Map(); // invoice id -> the new lines that point at it
     const write = (l, state, inv, extra = {}) => lineWrites.set(l.id, { coll: 'cji3Lines', id: l.id, data: { ...l, invoiceId: inv?.id || '', matchState: state, matchedBy: inv ? 'auto' : '', matchedAt: inv ? at : '', updatedAt: at, candidateIds: [], ...extra } });
     for (const l of lines) {
       const found = candidatesFor(l, invoices);
       if (found.length !== 1) { write(l, found.length ? 'ambiguous' : 'none', null, { candidateIds: found.length ? found.map(e => e.id) : [] }); continue; }
+      if (!complete(found[0])) { write(l, 'incomplete', found[0]); continue; }
       byInvoice.set(found[0].id, [...(byInvoice.get(found[0].id) || []), l]);
     }
     // The amount: every line of an invoice together (those already linked and the new ones) against what it
@@ -298,6 +302,8 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
       fresh.forEach(l => write(l, state, inv, { amountCheck: { lines: Number.isFinite(total) ? total : null, invoice: inv.grossMyrMinor } }));
       if (state === 'part_paid') earlier.forEach(x => write(x, 'part_paid', inv, { matchedBy: x.matchedBy, matchedAt: x.matchedAt, amountCheck: { lines: total, invoice: inv.grossMyrMinor } }));
       if (state === 'paid') await moveStage([invoiceId], 'paid', { byCji3: true, paidBy: allIds, note: `CJI3 line${allIds.length > 1 ? 's' : ''} ${allIds.join(', ')}` }, actor);
+      // a reversal: the lines now come to less than the invoice, so it is not paid any more
+      else if (paidAlready && state === 'part_paid') await moveStage([invoiceId], unpaidStage(inv), { byCji3: true, paidBy: [], note: `CJI3 lines ${allIds.join(', ')} come to less than the invoice (reversal or part payment)` }, actor);
       else if (paidAlready) await store.atomic(async read => { const cur = await read.get(COLL.entry, invoiceId); return { writes: cur ? [{ coll: COLL.entry, id: cur.id, data: stamp({ ...cur, paidBy: [...new Set([...(cur.paidBy || []), ...allIds])] }, actor, at) }] : [] }; });
       if (state === 'paid') earlier.forEach(x => write(x, 'paid', inv, { matchedBy: x.matchedBy, matchedAt: x.matchedAt }));
     }
@@ -305,11 +311,18 @@ export function createFinance(store, { now = () => new Date().toISOString() } = 
     for (const part of slices([...lineWrites.values()], 200)) await store.atomic(async () => ({ writes: part }));
     return counts;
   }
+  // Lines held back from paying their invoice; an invoice complete enough to be counted when Paid.
+  const HELD = ['not_approved', 'incomplete'];
+  const complete = inv => !!inv.projectId && isMonth(inv.month);
   // A person matches a line to an invoice (one of its candidates, or any invoice of its JDAs), or undoes a
   // match. Undoing the line that made an invoice Paid sends the invoice back to the stage it was in.
   async function matchLine(lineIdIn, invoiceId, actor) {
-    const l = await store.get('cji3Lines', lineIdIn), inv = invoiceId && await store.get(COLL.entry, invoiceId), at = now();
+    let l = await store.get('cji3Lines', lineIdIn);
+    const inv = invoiceId && await store.get(COLL.entry, invoiceId), at = now();
     if (!l) throw new FinanceError('That CJI3 line no longer exists.', null, 404);
+    if (invoiceId && inv && !complete(inv)) throw new FinanceError(`Invoice ${inv.invoiceNo || ''} has no project or payment month yet. Complete it in Invoice history (Edit), then match it.`);
+    // matched to another invoice before: that match is undone first, so one payment never pays two invoices
+    if (invoiceId && l.invoiceId && l.invoiceId !== invoiceId) { await matchLine(lineIdIn, '', actor); l = await store.get('cji3Lines', lineIdIn); }
     if (!invoiceId) {
       if (!l.invoiceId) return { line: l };
       const was = await store.get(COLL.entry, l.invoiceId), rest = (was?.paidBy || []).filter(id => id !== l.id);

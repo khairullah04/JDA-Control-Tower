@@ -191,11 +191,23 @@ JDA 3) and is uploaded again and again as payments are made one at a time.
   **Confirm invoice Paid** is the person's check. The lines table shows both amounts.
 - **Matching**: each new line's Reference is compared with the invoice numbers of its file's JDAs
   (ignoring case and spaces; CO Object Name narrows a number that bills several projects). One
-  match that is To Be Paid or Sent to PD → the invoice becomes **Paid**, with the line recorded on it;
-  one already Paid → the line is added to it; one not yet approved → linked and flagged, not moved;
-  none or several → left for a person: **Match…** picks the invoice, **Undo match** takes it back
-  (an invoice made Paid by that line returns to To Be Paid), **Match again** tries the unmatched lines
-  against the invoices there are now.
+  match → the invoice becomes **Paid** from whatever open stage it is in (the payment is the proof of
+  approval), with the line recorded on it; one already Paid → the line is added to it; none or several
+  → left for a person: **Match…** picks the invoice, **Undo match** takes it back (the invoice returns
+  to the stage it was in), **Match again** tries the unmatched lines against the invoices there are now.
+- **An invoice with no project or payment month** (one sent from the Microsoft List and not yet
+  completed) is linked but **not** made Paid: it would count nowhere. Complete it (Invoice history →
+  Edit), then **Match again**. Matching it by hand is refused until then.
+- **Reversals**: when the lines of a Paid invoice come to less than it (a negative reversal line, for
+  instance), the invoice goes back to the stage it was in, and stops counting as paid.
+- **Matching a line to another invoice** undoes its first match, so one payment never pays two invoices.
+- **Who**: with `ROLE_ACCOUNTANT2` set, only those people may upload a CJI3 file (the preview is open
+  to all), match, undo or Match again.
+- **Old tracker invoices** (Bring over old tracker invoices) keep their status once, before the
+  bringing-over is marked done; an old Paid one comes over as approved and waits for its CJI3 line.
+  Any other import starts at Received.
+- **Demo mode** (`app-config.json`) is off on `main` (a test checks it); on, every tracker page shows a
+  "Demo mode" banner.
 - **Which project a line is**: today, from the invoice it matches. Assigning lines by WBS Element
   (a WBS → JDA/project list) is not built yet.
 - **Payment Tables per file**: the tabs **JDA 1 + JDA 2 (CJI3 file)** and **JDA 3 (CJI3 file)** show

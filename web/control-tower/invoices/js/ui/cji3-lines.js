@@ -13,8 +13,8 @@ import { loadCtx, storageNotice, options, dialog, exportButtons, exportSheet } f
 
 const views = {};
 const viewFor = g => views[g] ||= { show: 'all', q: '' };
-const SHOW = [['all', 'All lines'], ['open', 'Not matched'], ['check', 'Amount to check or part paid'], ['matched', 'Matched']];
-const CHECK = ['part_paid', 'amount_differs'];
+const SHOW = [['all', 'All lines'], ['open', 'Not matched'], ['check', 'To check: amount, part paid or invoice incomplete'], ['matched', 'Matched']];
+const CHECK = ['part_paid', 'amount_differs', 'incomplete'];
 const when = iso => iso ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 const num = (minor, cur) => minor == null ? '' : { n: fmt(minor, cur, true) };
 
@@ -69,7 +69,7 @@ export async function renderCji3Lines(groupId = 'jda12') {
         <td class="num mono">${esc(l.currency)} ${esc(fmt(l.valueTranMinor, l.currency))}</td><td class="num mono">${esc(l.valueCoAreaMinor == null ? '' : fmt(l.valueCoAreaMinor))}</td>
         <td>${inv ? `<b>${esc(inv.invoiceNo)}</b> <small class="legend">${esc(inv.jdaName)} / ${esc(inv.projectCode)} · ${esc(STAGE_LABEL[stageOf(inv)])}</small><br>` : ''}<span class="st ${['paid', 'linked', 'manual'].includes(l.matchState) ? 'paid' : 'pending'}">${esc(MATCH_LABEL[l.matchState] || (l.invoiceId ? 'Matched' : 'Not matched'))}</span>
           ${inv ? `<small class="legend cj-amounts">Line ${esc(lineMyr(l) == null ? '—' : fmt(lineMyr(l)))} · invoice ${esc(fmt(inv.grossMyrMinor))}${l.amountCheck?.lines != null && l.amountCheck.lines !== lineMyr(l) ? ` · all its lines ${esc(fmt(l.amountCheck.lines))}` : ''}</small>` : ''}
-          ${['part_paid', 'amount_differs'].includes(l.matchState) && inv && ['to_be_paid', 'sent_to_pd'].includes(stageOf(inv)) ? `<button type="button" class="primary btn-sm" data-confirm="${esc(l.id)}">Confirm invoice Paid</button>` : ''}
+          ${['part_paid', 'amount_differs'].includes(l.matchState) && inv && stageOf(inv) !== 'paid' && inv.projectId && /^\d{4}-\d{2}$/.test(inv.month || '') ? `<button type="button" class="primary btn-sm" data-confirm="${esc(l.id)}">Confirm invoice Paid</button>` : ''}
           ${l.invoiceId ? `<button type="button" class="ghost btn-sm" data-unmatch="${esc(l.id)}">Undo match</button>` : `<button type="button" class="primary btn-sm" data-match="${esc(l.id)}">Match…</button>`}</td></tr>`; }).join('')
         || `<tr><td colspan="9">${lines.length ? 'No lines match these filters.' : 'No lines yet. Upload this file above.'}</td></tr>`}
     </table>`;
@@ -92,7 +92,7 @@ export async function renderCji3Lines(groupId = 'jda12') {
     }
   });
   $('#cj-rematch')?.addEventListener('click', async () => {
-    try { const c = await finance.rematch(group); say(`${c.paid} line(s) made their invoice Paid, ${c.part_paid} part payment(s), ${c.amount_differs} with an amount to check, ${c.linked} added to paid invoices, ${c.none + c.ambiguous} still to match.`); setTimeout(ctx.refresh, 1500); }
+    try { const c = await finance.rematch(group); say(`${c.paid} line(s) made their invoice Paid, ${c.part_paid} part payment(s), ${c.amount_differs} with an amount to check, ${c.linked} added to paid invoices, ${c.incomplete ?? 0} waiting for their invoice to be completed, ${c.none + c.ambiguous} still to match.`); setTimeout(ctx.refresh, 1500); }
     catch (e) { say(e.message); }
   });
   page.querySelectorAll('[data-export]').forEach(b => b.onclick = () => exportSheet(`CJI3 ${GROUPS[group].label}`, sheetOf(shown(), byId), b.dataset.export));

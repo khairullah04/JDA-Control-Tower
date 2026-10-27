@@ -200,3 +200,16 @@ proof of approval and marks them Paid.
 - [x] Access only once verified, on the server and in firestore.rules; ALLOWED_EMAILS kept for exceptions only.
 - [ ] Owner, Firebase console: Password policy and Email enumeration protection on; edit the email templates' sender name if wanted.
 - [ ] Owner: publish the updated firestore.rules (needs the key).
+
+# Review batch 1: Critical fixes (reviews/REVIEW.md, 2026-10-27)
+
+- [x] Demo mode off on main, a banner whenever it is on, and a test that main ships it off (UI-01, SWE-01, ACC-03, TL-01, PL-01, JDAL-05, JDAM-01).
+- [x] "migrated" imports: once only, and never Paid (SEC-01, SWE-03).
+- [x] CJI3 upload, match, undo and Match again limited to ROLE_ACCOUNTANT2 when set (SEC-02 in part; who gets which role waits on the access decision, SEC-03).
+- [x] Re-matching a line undoes its first match (SWE-02, LOG-04).
+- [x] Reversals take a Paid invoice back to unpaid (ACC-01, LOG-02).
+- [x] Invoices with no project or payment month are linked, not paid, until completed (LOG-01, ACC-02, JDAL-03).
+- [x] Activity lines only in the signer's own name (SEC-06 in part; the rules still need publishing).
+- [x] CJI3 payments: Confirm invoice Paid shown for any unpaid, complete invoice (UI-02 in part).
+- [ ] Waiting on owner decisions: Lead approval recorded (JDAL-01), roles and sign-up access (SEC-03), tolerance cap and paid amount (LOG-03, ACC-06).
+- [ ] Owner: publish firebase/firestore.rules (PL-02).

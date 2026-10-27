@@ -119,3 +119,27 @@ test('segregation of duties: whoever validated an invoice as PM cannot approve i
   const other = await call('/api/finance/entries/stage', { method: 'POST', body: { ids: [id], to: 'to_be_paid' }, as: 'rahman' });
   assert.equal(other.body.changed, 1);
 });
+
+test('CJI3 upload and matching are Accountant 2\'s when that role is filled in; a "migrated" import never brings in Paid, and only once (SEC-01, SEC-02)', async () => {
+  const { rolesFromEnv } = await import('./routes/finance.js');
+  const app = express(), fin = createFinance(memoryStore());
+  app.use(express.json());
+  app.use('/api', (req, res, next) => { req.user = { name: req.headers['x-test-user'], email: `${req.headers['x-test-user']}@jda.app` }; next(); });
+  app.use('/api/finance', financeRoutes(fin, 'memory', { roles: rolesFromEnv({ ROLE_ACCOUNTANT2: 'acc2@jda.app' }) }));
+  const srv = app.listen(0), at = `http://localhost:${srv.address().port}`;
+  const post = async (path, body, who) => { const r = await fetch(at + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Test-User': who }, body: JSON.stringify(body) }); return { status: r.status, body: await r.json() }; };
+  try {
+    for (const [path, body] of [['/api/finance/cji3/import', { group: 'jda3', sheets: [] }], ['/api/finance/cji3/match', { lineId: 'x', invoiceId: 'y' }], ['/api/finance/cji3/rematch', { group: 'jda3' }]]) {
+      const r = await post(path, body, 'aina');
+      assert.deepEqual([r.status, r.body.error], [403, 'Only the Accountant 2 may do this.'], path);
+    }
+    assert.notEqual((await post('/api/finance/cji3/rematch', { group: 'jda3' }, 'acc2')).status, 403);
+    // a forged "migrated" import: Paid becomes approved, so a CJI3 line is still needed
+    const out = await post('/api/finance/entries/import', { inputs: [{ ...invoice, invoiceNo: 'IN-MIG', source: 'migrated', status: 'paid' }] }, 'aina');
+    assert.equal(out.status, 200);
+    assert.equal((await fin.data()).entries.find(e => e.invoiceNo === 'IN-MIG').status, 'approved');
+    await fin.saveSettings({ migratedAt: '2026-10-27T00:00:00Z' }, 'admin');
+    const again = await post('/api/finance/entries/import', { inputs: [{ ...invoice, invoiceNo: 'IN-MIG2', source: 'migrated', status: 'approved' }] }, 'aina');
+    assert.equal(again.status, 409);
+  } finally { srv.close(); }
+});
