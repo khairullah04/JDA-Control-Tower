@@ -104,7 +104,7 @@ test('the approval roles: an empty list is open to anyone; a filled one only to 
     await post('/api/finance/entries/stage', { ids: [id], to: 'with_pm' }, 'aina');                    // Accountant 1: open to all
     await post('/api/finance/entries/stage', { ids: [id], to: 'pending_lead' }, 'aina');               // PM: open to all
     const refused = await post('/api/finance/entries/stage', { ids: [id], to: 'to_be_paid' }, 'aina'); // Lead: only lead@jda.app
-    assert.match(refused.refused[0].why, /Only the Project Lead/);
+    assert.match(refused.refused[0].why, /Only the Project Manager or Project Lead/);   // approving: either list
     const ok = await post('/api/finance/entries/stage', { ids: [id], to: 'to_be_paid' }, 'lead');
     assert.equal(ok.changed, 1);
   } finally { srv.close(); }

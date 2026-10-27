@@ -1,7 +1,8 @@
 // Invoice history (#/cji3[/<jda>]): every invoice there has been, whatever became of it (paid, pending,
 // approved, rejected), newest first. Filter by JDA, by that JDA's partners and by status, search, and
 // sort or filter any column from its heading. Each invoice's History says who did what and when.
-// Nothing is added here: invoices come from the Microsoft List (Approvals) and are paid by CJI3 lines.
+// Nothing is added here: invoices come from the Microsoft List (Approvals). Approve is done here, by hand
+// (Pending -> Approved); Paid comes only from a CJI3 line, and a line waiting for approval pays at once.
 // Edit stays, to complete what the List does not give (project, dates).
 import { $, esc } from './dom.js';
 import { state, CONTEXT_ROWS } from './state.js';
@@ -14,7 +15,7 @@ import { entrySheet } from '../finance/sheets.js';
 import { loadCtx, storageNotice, monthLabel, statusBadge, dialog, openRecord, openAudit, exportButtons, exportSheet, options } from './finance-ui.js';
 import { bringOverOldRecords } from './finance-io.js';
 import { openColumnFilter, filterHeading } from './column-filter.js';
-import { stageOf, STAGE_LABEL } from '../finance/workflow.js';
+import { stageOf, STAGE_LABEL, checkMove } from '../finance/workflow.js';
 
 const view = { q: '', partner: '', status: '', cols: {}, sort: 'when', dir: -1 }; // kept while the page redraws
 const when = e => e.stageAt || e.updatedAt || e.createdAt || '';
@@ -68,7 +69,7 @@ export async function renderCji3(jdaId = '') {
         <td>${esc(e.jdaName)}</td><td>${esc(e.projectCode)}</td><td>${esc(e.partner)}</td>
         <td class="num mono">${e.netMinor == null ? '' : esc(money(e.netMinor, e.currency))}</td><td class="num mono">${esc(fmt(e.grossMyrMinor))}</td>
         <td title="${esc(STAGE_LABEL[stageOf(e)])}">${statusBadge(e.status)}</td>
-        <td class="actions"><button type="button" class="ghost btn-sm" data-history="${esc(e.id)}">History</button><button type="button" class="ghost btn-sm" data-edit="${esc(e.id)}">Edit</button></td></tr>`).join('')
+        <td class="actions">${!checkMove(e, 'to_be_paid') ? `<button type="button" class="primary btn-sm" data-approve="${esc(e.id)}">Approve</button>` : ''}${stageOf(e) === 'to_be_paid' ? `<button type="button" class="ghost btn-sm" data-unapprove="${esc(e.id)}">Undo approval</button>` : ''}<button type="button" class="ghost btn-sm" data-history="${esc(e.id)}">History</button><button type="button" class="ghost btn-sm" data-edit="${esc(e.id)}">Edit</button></td></tr>`).join('')
         || `<tr><td colspan="${COLS.length + 1}">${all.length ? 'No invoices match these filters.' : 'No invoices yet. They arrive from the Microsoft List (Approvals).'}</td></tr>`}
       ${list.length ? `<tr class="reg-total"><td colspan="7">${list.length} invoice${list.length === 1 ? '' : 's'} · paid ${esc(taxed('paid'))} MYR taxed</td><td class="num mono"><b>${esc(taxed())}</b></td><td colspan="2"></td></tr>` : ''}
     </table>`;
@@ -99,7 +100,29 @@ export async function renderCji3(jdaId = '') {
     if (d.col) openCol(e.target.closest('button'));
     if (d.edit) openRecord('entry', ctx, { record: find(d.edit) });
     if (d.history) openAudit(`History of invoice ${find(d.history)?.invoiceNo || ''}`, d.history);
+    if (d.approve) decide(find(d.approve), 'to_be_paid');
+    if (d.unapprove) decide(find(d.unapprove), 'pending_lead');
   };
+
+  // Approve (Pending -> Approved), or undo an approval (with a reason). Confirmed first, kept in History.
+  function decide(e, to) {
+    const approving = to === 'to_be_paid';
+    const d = dialog(`<form><h3>${approving ? 'Approve' : 'Undo approval of'} invoice ${esc(e.invoiceNo || '')}</h3>
+      <p class="legend">${esc(e.partner)} · ${esc(money(e.netMinor, e.currency))} · ${esc(e.jdaName)} ${esc(e.projectCode || '')}</p>
+      <p>${approving ? 'It becomes <b>Approved</b>. It becomes Paid only when a CJI3 line shows the payment (at once, if one is already waiting).' : 'It goes back to <b>Pending</b>.'}</p>
+      <label>${approving ? 'Note (optional), e.g. who approved it and where' : 'Why (required)'}<textarea name="note" rows="2" ${approving ? '' : 'required'}></textarea></label>
+      <p class="msg" id="dec-msg"></p>
+      <div class="row"><button type="button" class="ghost" id="cancel">Cancel</button><button class="primary">${approving ? 'Approve' : 'Undo approval'}</button></div></form>`);
+    $('#cancel', d).onclick = () => d.close();
+    $('form', d).onsubmit = async ev => {
+      ev.preventDefault();
+      try {
+        const out = await finance.moveStage([e.id], to, ev.target.elements.note.value.trim());
+        if (out.refused?.length) { $('#dec-msg', d).textContent = out.refused[0].why; return; }
+        d.close(); ctx.refresh();
+      } catch (err) { $('#dec-msg', d).textContent = err.message; }
+    };
+  }
 
   state.page = 'cji3';
   // The assistant gets the totals of what is in view, and row by row only the first CONTEXT_ROWS on screen.

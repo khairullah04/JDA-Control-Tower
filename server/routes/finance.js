@@ -53,8 +53,9 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   // ends of the money path: whoever validated an invoice as PM cannot also approve it as Project Lead.
   // (Not checked with sign-in off, on one's own computer, where everyone is the same "local" user.)
   const may = req => (move, record) => {
-    const role = move && roleFor(move), list = roles[role] || [], me = String(req.user?.email || '').toLowerCase();
-    if (role && list.length && !list.includes(me)) return `Only the ${ROLES[role]} may do this (${move.action}).`;
+    const role = move && roleFor(move), me = String(req.user?.email || '').toLowerCase();
+    const list = role === 'approver' ? [...(roles.pm || []), ...(roles.lead || [])] : roles[role] || [];
+    if (role && list.length && !list.includes(me)) return `Only the ${role === 'approver' ? 'Project Manager or Project Lead' : ROLES[role]} may do this (${move.action}).`;
     if (move?.from === 'pending_lead' && move.to === 'to_be_paid' && me !== 'local@sign-in-off' && record?.stageBy && record.stageBy === actor(req))
       return 'You validated this invoice, so someone else has to approve it.';
     return '';

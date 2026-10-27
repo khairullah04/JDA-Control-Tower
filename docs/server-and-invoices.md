@@ -105,21 +105,22 @@ Nothing is added there: CJI3 payments shows the payment lines, and the Payment T
 - **Who sees it**: invoices and payments are for people signed in to the JDA Control Tower only.
   Every finance request is checked by the server, and the person's name goes into the audit log.
 
-### Invoice approval (Approvals, `#/approvals`)
+### Invoice approval: Pending → Approved → Paid
 
-Approval happens **outside the system**, by email, from the Microsoft List. **Approvals** in the sidebar
-opens the List for one JDA (the same view as under each JDA's graphs, below): the PM pulls the List,
-ticks invoices and generates the approval-request email to the Project Lead. The invoices go into the
-register and wait as **Pending Lead approval** (Received → With PM → Pending Lead). There are no
-approve or reject buttons: the **CJI3 payment line is the proof of approval**, and matching one marks
-the invoice **Paid**, whatever open stage it is in. Undoing the match puts it back in the stage it was
-in. The stages and moves are in `web/control-tower/invoices/js/finance/workflow.js`; the server refuses
-any other move, and every move is kept in the invoice's history (`financeStages`) and the audit log.
+Three steps (owner, 2026-10-27):
 
-```
-Received ─► With PM ─► Pending Lead ─┐
-   (older: Sent to PD, To Be Paid) ──┴─► Paid (a CJI3 line; undone, it goes back)
-```
+- **Pending**: the invoice is in. It came from the Microsoft List (Approvals in the sidebar: the PM
+  pulls the List, ticks invoices and generates the approval-request email to the Project Lead), from an
+  import, or was entered by hand. Its stages are Received, With PM and Pending Lead approval.
+- **Approved**: done **by hand**, because nothing outside can tell that a payment was approved.
+  **Approve** is on each pending row of Invoice history; **Undo approval** (with a reason) takes it back
+  to Pending. With `ROLE_PM` or `ROLE_LEAD` set, only those people may approve; empty, anyone signed in.
+- **Paid**: only when a CJI3 line shows the payment, and only for an approved invoice. A line that
+  arrives for an invoice not yet approved is held ("not approved yet") and pays it the moment it is
+  approved.
+
+The stages and moves are in `web/control-tower/invoices/js/finance/workflow.js`; the server refuses any
+other move, and every move is kept in the invoice's history (`financeStages`) and the audit log.
 
 - **The Payment Tables show paid invoices only**: an invoice is on them once a CJI3 payment line is
   matched to it (that is the only way an invoice becomes Paid). Pending ones are in the Microsoft List
@@ -129,8 +130,10 @@ Received ─► With PM ─► Pending Lead ─┐
   their stage from their status. **There is no way to set a status by hand**: the register shows it
   read-only (its stage on hover), the invoice form has no status field, imported
   invoices always start at Received, and the server refuses all of these.
-- **Roles**: `ROLE_PM` in `server/.env` (comma-separated emails) limits who may email invoices to the
-  Lead from the List; left empty (as now), anyone signed in may.
+- **Roles**: everyone signed in may use everything (owner, 2026-10-27), except where a role list is filled
+  in (`server/.env`, comma-separated emails): `ROLE_PM` (email invoices to the Lead from the List),
+  `ROLE_PM` and `ROLE_LEAD` (Approve), `ROLE_ACCOUNTANT2` (CJI3 upload and matching). Which functions
+  belong to PMs and Project Leads only is still to be settled.
 
 ### Invoices from the Microsoft List (a JDA's tracker page, under the graphs)
 
@@ -191,8 +194,8 @@ JDA 3) and is uploaded again and again as payments are made one at a time.
   **Confirm invoice Paid** is the person's check. The lines table shows both amounts.
 - **Matching**: each new line's Reference is compared with the invoice numbers of its file's JDAs
   (ignoring case and spaces; CO Object Name narrows a number that bills several projects). One
-  match → the invoice becomes **Paid** from whatever open stage it is in (the payment is the proof of
-  approval), with the line recorded on it; one already Paid → the line is added to it; none or several
+  match → an approved invoice becomes **Paid**, with the line recorded on it; one not approved yet is
+  linked and held, and paid when it is approved; one already Paid → the line is added to it; none or several
   → left for a person: **Match…** picks the invoice, **Undo match** takes it back (the invoice returns
   to the stage it was in), **Match again** tries the unmatched lines against the invoices there are now.
 - **An invoice with no project or payment month** (one sent from the Microsoft List and not yet

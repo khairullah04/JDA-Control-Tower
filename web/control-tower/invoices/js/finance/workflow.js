@@ -1,17 +1,16 @@
 // The stages an invoice goes through, and the moves allowed between them. Pure functions, shared by
 // the browser and the server (which refuses any move that is not here).
 //
-// Approval happens outside the system: the PM emails invoices from the Microsoft List to the Project
-// Lead (Received → With PM → Pending Lead), and the payment line in CJI3 is the proof that they were
-// approved: matching one marks the invoice Paid from whatever open stage it is in. Invoices entered
-// before this (Sent to PD, To Be Paid) and the moves between the older stages are kept for them.
-//
-//   Received ─► With PM ─► Pending Lead ─┐
-//      (older: Sent to PD, To Be Paid) ──┴─► Paid (shown by a CJI3 line; undone, it goes back)
+// Three steps, as the owner set them (2026-10-27):
+//   Pending   the invoice is in (from the Microsoft List, an import, or by hand): Received, With PM,
+//             Pending Lead approval
+//   Approved  a person approves it (Approve: To Be Paid). Nothing can tell from outside that a payment
+//             was approved, so this is always done by hand; it can be undone, with a reason.
+//   Paid      only when a CJI3 line shows the payment. A line for an invoice not yet approved is held,
+//             and pays it the moment it is approved.
 //
 // The register's own `status` (pending / approved / paid / rejected) is what the Payment Table reads,
-// so it is worked out from the stage and never set on its own: the Payment Table's figures and rules
-// do not change.
+// so it is worked out from the stage and never set on its own.
 
 export const STAGES = ['received', 'with_pm', 'pending_lead', 'sent_to_pd', 'to_be_paid', 'paid', 'rejected'];
 export const STAGE_LABEL = {
@@ -21,26 +20,34 @@ export const STAGE_LABEL = {
 // Every move a person may make: from, to, what the button says, and whether a note is required.
 // Paid is reached by matching a CJI3 line (`by: 'cji3'`), never by a button; a wrong match is undone
 // back to the stage the invoice was in (`paidFrom`).
+// The stages a CJI3 line may pay: approved ones only.
+export const PAYABLE = ['to_be_paid', 'sent_to_pd'];
 export const MOVES = [
   { from: 'received', to: 'sent_to_pd', action: 'Route 1: send direct to PD', route: 'direct' },
   { from: 'received', to: 'with_pm', action: 'Route 2: send to PM for validation', route: 'validation' },
   { from: 'with_pm', to: 'pending_lead', action: 'Validated: send to Project Lead' },
   { from: 'with_pm', to: 'received', action: 'Return to intake', note: true },
-  { from: 'pending_lead', to: 'to_be_paid', action: 'Approve: To Be Paid' },
+  { from: 'received', to: 'to_be_paid', action: 'Approve' },
+  { from: 'with_pm', to: 'to_be_paid', action: 'Approve' },
+  { from: 'pending_lead', to: 'to_be_paid', action: 'Approve' },
+  { from: 'to_be_paid', to: 'pending_lead', action: 'Undo approval', note: true },
   { from: 'pending_lead', to: 'rejected', action: 'Reject', note: true },
   { from: 'pending_lead', to: 'with_pm', action: 'Return to PM', note: true },
   { from: 'rejected', to: 'pending_lead', action: 'Restore from archive', note: true },
-  ...OPEN().map(from => ({ from, to: 'paid', action: 'Paid (CJI3)', by: 'cji3' })),
+  ...PAYABLE.map(from => ({ from, to: 'paid', action: 'Paid (CJI3)', by: 'cji3' })),
   ...OPEN().map(to => ({ from: 'paid', to, action: 'Undo the CJI3 match', by: 'cji3' }))
 ];
 function OPEN() { return ['received', 'with_pm', 'pending_lead', 'sent_to_pd', 'to_be_paid']; }
+export const isApproved = entry => PAYABLE.includes(stageOf(entry));
 // Where an invoice goes back to when the CJI3 match that paid it is undone: the stage it was in, or
 // (paid before this was recorded) To Be Paid, or Sent to PD on Route 1.
 export const unpaidStage = entry => OPEN().includes(entry?.paidFrom) ? entry.paidFrom : routeOf(entry) === 'direct' ? 'sent_to_pd' : 'to_be_paid';
 
 // Who makes each move. Until the role lists are filled in (server/.env, ROLE_*), anyone signed in may.
 export const ROLES = { accountant1: 'Accountant 1', pm: 'Project Manager', lead: 'Project Lead', accountant2: 'Accountant 2' };
-export const roleFor = move => move.by === 'cji3' ? 'accountant2' : { received: 'accountant1', with_pm: 'pm', pending_lead: 'lead', rejected: 'lead' }[move.from];
+// Approving (and undoing it) is the Project Manager's or the Project Lead's: either list may.
+export const roleFor = move => move.by === 'cji3' ? 'accountant2' : move.to === 'to_be_paid' || move.from === 'to_be_paid' ? 'approver'
+  : { received: 'accountant1', with_pm: 'pm', pending_lead: 'lead', rejected: 'lead' }[move.from];
 
 // What the Payment Table sees for each stage.
 const STATUS_OF = { received: 'pending', with_pm: 'pending', pending_lead: 'pending', sent_to_pd: 'approved', to_be_paid: 'approved', paid: 'paid', rejected: 'rejected' };
