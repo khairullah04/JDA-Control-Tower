@@ -31,6 +31,8 @@ export const MOVES = [
   { from: 'with_pm', to: 'to_be_paid', action: 'Approve' },
   { from: 'pending_lead', to: 'to_be_paid', action: 'Approve' },
   { from: 'to_be_paid', to: 'pending_lead', action: 'Undo approval', note: true },
+  { from: 'received', to: 'rejected', action: 'Reject', note: true },
+  { from: 'with_pm', to: 'rejected', action: 'Reject', note: true },
   { from: 'pending_lead', to: 'rejected', action: 'Reject', note: true },
   { from: 'pending_lead', to: 'with_pm', action: 'Return to PM', note: true },
   { from: 'rejected', to: 'pending_lead', action: 'Restore from archive', note: true },
@@ -46,7 +48,7 @@ export const unpaidStage = entry => OPEN().includes(entry?.paidFrom) ? entry.pai
 // Who makes each move. Until the role lists are filled in (server/.env, ROLE_*), anyone signed in may.
 export const ROLES = { accountant1: 'Accountant 1', pm: 'Project Manager', lead: 'Project Lead', accountant2: 'Accountant 2' };
 // Approving (and undoing it) is the Project Manager's or the Project Lead's: either list may.
-export const roleFor = move => move.by === 'cji3' ? 'accountant2' : move.to === 'to_be_paid' || move.from === 'to_be_paid' ? 'approver'
+export const roleFor = move => move.by === 'cji3' ? 'accountant2' : ['to_be_paid', 'rejected'].includes(move.to) || ['to_be_paid', 'rejected'].includes(move.from) ? 'approver'
   : { received: 'accountant1', with_pm: 'pm', pending_lead: 'lead', rejected: 'lead' }[move.from];
 
 // What the Payment Table sees for each stage.

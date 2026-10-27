@@ -181,17 +181,19 @@ test("a CJI3 file's Payment Table (JDA 1 + JDA 2) is exactly JDA 1's rows and JD
   assert.ok(combined.every(r => r.jdaId !== 'j3'));
 });
 
-test('matching checks the amount: equal pays, a part payment waits for the rest, too much is left for a person', async () => {
+test('matching checks the amount to the sen: equal pays, a part payment waits for the rest, any other difference is left for a person', async () => {
   const f = createFinance(memoryStore(), { now: () => '2026-10-20T01:00:00Z' });
   const approve = async no => { const e = await f.save('entry', inv(no), 'a'); await f.moveStage([e.id], 'sent_to_pd', {}, 'a'); return e.id; }; // RM 1,000 + 8% = RM 1,080.00
-  const [even, part, over] = [await approve('INV-A'), await approve('INV-B'), await approve('INV-C')];
+  const [even, part, over, near] = [await approve('INV-A'), await approve('INV-B'), await approve('INV-C'), await approve('INV-D')];
   const up = (...rows) => f.importCji3({ group: 'jda3', fileName: 'x.xlsx', sheets: file(...rows) }, 'acc2');
-  const first = await up(line({ Reference: 'INV-A', 'Val/COArea Crcy': '1,080.50' }),                // 50 sen out: within RM 1
+  const first = await up(line({ Reference: 'INV-A', 'Val/COArea Crcy': '1,080.00' }),                // exactly the invoice
+    line({ Reference: 'INV-D', 'Val/COArea Crcy': '1,080.50' }),                                       // 50 sen out: no tolerance
     line({ Reference: 'INV-B', 'Value TranCurr': '500', 'Val/COArea Crcy': '540.00' }),               // half
     line({ Reference: 'INV-C', 'Value TranCurr': '2000', 'Val/COArea Crcy': '2,160.00' }));            // twice
-  assert.deepEqual([first.match.paid, first.match.part_paid, first.match.amount_differs], [1, 1, 1]);
+  assert.deepEqual([first.match.paid, first.match.part_paid, first.match.amount_differs], [1, 1, 2]);
   const status = async () => Object.fromEntries((await f.data()).entries.map(e => [e.invoiceNo, e.status]));
-  assert.deepEqual(await status(), { 'INV-A': 'paid', 'INV-B': 'approved', 'INV-C': 'approved' });
+  assert.deepEqual(await status(), { 'INV-A': 'paid', 'INV-B': 'approved', 'INV-C': 'approved', 'INV-D': 'approved' });
+  assert.equal(near.length > 0, true);
   await up(line({ Reference: 'INV-B', 'Value TranCurr': '500', 'Val/COArea Crcy': '540.00', 'Posting Date': '10/01/2026' })); // the rest
   assert.equal((await status())['INV-B'], 'paid');
   const b = (await f.data()).entries.find(e => e.invoiceNo === 'INV-B');

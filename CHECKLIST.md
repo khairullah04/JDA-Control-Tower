@@ -221,10 +221,10 @@ proof of approval and marks them Paid.
   - [x] CJI3 pays only approved invoices; a line for an unapproved one is held and pays it when it is approved.
   - [x] A hand match ("Match…", "Confirm invoice Paid") is refused for an unapproved invoice.
   - [x] Approving limited to ROLE_PM + ROLE_LEAD when set.
-  - [ ] Reject: kept in the rules, no button yet (owner to say whether wanted).
+  - [x] Reject (from any pending stage, with a reason) and Restore, on Invoice history (owner: yes, 2026-10-27).
 - **Who can do what (SEC-03, PL-03):** everyone signed in may do everything; some functions will be PM / Project Lead only (to be discussed). Self sign-up stays.
 - **Per-JDA access (SEC-04, JDAL-06):** not wanted. Closed.
 - **Tax and forex (ACC-09, ACC-10, ACC-06):** taken from the CJI3 extraction. [ ] To build: paid amount, tax and MYR from the CJI3 lines.
 - **Hosting (SWE-08, PL-07, TL-02, TL-04):** stay on Vercel. [ ] To build: pictures and Microsoft sign-ins kept in Firebase, not on disk; vercel.json.
 - **Ask AI (SEC-17, PL-13):** will move to another model: **enhancement, later.**
-- [ ] Still open: the CJI3 amount tolerance cap (LOG-03, ACC-05, PL-06).
+- [x] CJI3 amount tolerance (LOG-03, ACC-05, PL-06, JDAL-17): **none** (owner, 2026-10-27). Paid only when the lines equal the invoice to the sen; any difference waits for "Confirm invoice Paid".

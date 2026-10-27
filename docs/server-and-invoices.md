@@ -114,7 +114,9 @@ Three steps (owner, 2026-10-27):
   import, or was entered by hand. Its stages are Received, With PM and Pending Lead approval.
 - **Approved**: done **by hand**, because nothing outside can tell that a payment was approved.
   **Approve** is on each pending row of Invoice history; **Undo approval** (with a reason) takes it back
-  to Pending. With `ROLE_PM` or `ROLE_LEAD` set, only those people may approve; empty, anyone signed in.
+  to Pending. **Reject** (with a reason) takes a pending invoice out: it stops counting and no CJI3 line
+  pays it; **Restore** brings it back to Pending. With `ROLE_PM` or `ROLE_LEAD` set, only those people may
+  approve, reject or restore; empty, anyone signed in.
 - **Paid**: only when a CJI3 line shows the payment, and only for an approved invoice. A line that
   arrives for an invoice not yet approved is held ("not approved yet") and pays it the moment it is
   approved.
@@ -189,7 +191,7 @@ JDA 3) and is uploaded again and again as payments are made one at a time.
 - **Log**: every upload (file, who, when, rows, added, skipped, updated, not readable, matched) is kept
   in `cji3Imports` and listed under Uploads.
 - **Amounts are checked**: a line's Val/COArea Crcy (MYR, tax included) is compared with the invoice's
-  taxed MYR, all of the invoice's lines together. Within RM 1 or 0.5%: Paid. Less: **Part payment**, Paid
+  taxed MYR, all of the invoice's lines together. Equal to the sen (no tolerance): Paid. Less: **Part payment**, Paid
   when the rest arrives. More, or a line with no MYR amount: linked and flagged (**Amount to check**);
   **Confirm invoice Paid** is the person's check. The lines table shows both amounts.
 - **Matching**: each new line's Reference is compared with the invoice numbers of its file's JDAs

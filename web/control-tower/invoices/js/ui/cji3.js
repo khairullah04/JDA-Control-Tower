@@ -69,7 +69,7 @@ export async function renderCji3(jdaId = '') {
         <td>${esc(e.jdaName)}</td><td>${esc(e.projectCode)}</td><td>${esc(e.partner)}</td>
         <td class="num mono">${e.netMinor == null ? '' : esc(money(e.netMinor, e.currency))}</td><td class="num mono">${esc(fmt(e.grossMyrMinor))}</td>
         <td title="${esc(STAGE_LABEL[stageOf(e)])}">${statusBadge(e.status)}</td>
-        <td class="actions">${!checkMove(e, 'to_be_paid') ? `<button type="button" class="primary btn-sm" data-approve="${esc(e.id)}">Approve</button>` : ''}${stageOf(e) === 'to_be_paid' ? `<button type="button" class="ghost btn-sm" data-unapprove="${esc(e.id)}">Undo approval</button>` : ''}<button type="button" class="ghost btn-sm" data-history="${esc(e.id)}">History</button><button type="button" class="ghost btn-sm" data-edit="${esc(e.id)}">Edit</button></td></tr>`).join('')
+        <td class="actions">${!checkMove(e, 'to_be_paid') ? `<button type="button" class="primary btn-sm" data-approve="${esc(e.id)}">Approve</button>` : ''}${!checkMove(e, 'rejected', { note: 'x' }) ? `<button type="button" class="ghost btn-sm" data-reject="${esc(e.id)}">Reject</button>` : ''}${stageOf(e) === 'to_be_paid' ? `<button type="button" class="ghost btn-sm" data-unapprove="${esc(e.id)}">Undo approval</button>` : ''}${stageOf(e) === 'rejected' ? `<button type="button" class="ghost btn-sm" data-restore="${esc(e.id)}">Restore</button>` : ''}<button type="button" class="ghost btn-sm" data-history="${esc(e.id)}">History</button><button type="button" class="ghost btn-sm" data-edit="${esc(e.id)}">Edit</button></td></tr>`).join('')
         || `<tr><td colspan="${COLS.length + 1}">${all.length ? 'No invoices match these filters.' : 'No invoices yet. They arrive from the Microsoft List (Approvals).'}</td></tr>`}
       ${list.length ? `<tr class="reg-total"><td colspan="7">${list.length} invoice${list.length === 1 ? '' : 's'} · paid ${esc(taxed('paid'))} MYR taxed</td><td class="num mono"><b>${esc(taxed())}</b></td><td colspan="2"></td></tr>` : ''}
     </table>`;
@@ -102,17 +102,26 @@ export async function renderCji3(jdaId = '') {
     if (d.history) openAudit(`History of invoice ${find(d.history)?.invoiceNo || ''}`, d.history);
     if (d.approve) decide(find(d.approve), 'to_be_paid');
     if (d.unapprove) decide(find(d.unapprove), 'pending_lead');
+    if (d.reject) decide(find(d.reject), 'rejected');
+    if (d.restore) decide(find(d.restore), 'pending_lead', 'restore');
   };
 
-  // Approve (Pending -> Approved), or undo an approval (with a reason). Confirmed first, kept in History.
-  function decide(e, to) {
-    const approving = to === 'to_be_paid';
-    const d = dialog(`<form><h3>${approving ? 'Approve' : 'Undo approval of'} invoice ${esc(e.invoiceNo || '')}</h3>
+  // Approve (Pending -> Approved), Reject, undo an approval, or restore a rejected invoice to Pending.
+  // Every one but Approve needs a reason. Confirmed first, kept in History.
+  const DECIDE = {
+    to_be_paid: ['Approve', 'It becomes <b>Approved</b>. It becomes Paid only when a CJI3 line shows the payment (at once, if one is already waiting).'],
+    rejected: ['Reject', 'It becomes <b>Rejected</b>: it stops counting, and a CJI3 line will not pay it. It can be restored later.'],
+    pending_lead: ['Undo approval', 'It goes back to <b>Pending</b>.'],
+    restore: ['Restore', 'It goes back to <b>Pending</b>.']
+  };
+  function decide(e, to, kind = to) {
+    const [verb, what] = DECIDE[kind], approving = to === 'to_be_paid';
+    const d = dialog(`<form><h3>${esc(verb)} invoice ${esc(e.invoiceNo || '')}</h3>
       <p class="legend">${esc(e.partner)} · ${esc(money(e.netMinor, e.currency))} · ${esc(e.jdaName)} ${esc(e.projectCode || '')}</p>
-      <p>${approving ? 'It becomes <b>Approved</b>. It becomes Paid only when a CJI3 line shows the payment (at once, if one is already waiting).' : 'It goes back to <b>Pending</b>.'}</p>
+      <p>${what}</p>
       <label>${approving ? 'Note (optional), e.g. who approved it and where' : 'Why (required)'}<textarea name="note" rows="2" ${approving ? '' : 'required'}></textarea></label>
       <p class="msg" id="dec-msg"></p>
-      <div class="row"><button type="button" class="ghost" id="cancel">Cancel</button><button class="primary">${approving ? 'Approve' : 'Undo approval'}</button></div></form>`);
+      <div class="row"><button type="button" class="ghost" id="cancel">Cancel</button><button class="primary">${esc(verb)}</button></div></form>`);
     $('#cancel', d).onclick = () => d.close();
     $('form', d).onsubmit = async ev => {
       ev.preventDefault();

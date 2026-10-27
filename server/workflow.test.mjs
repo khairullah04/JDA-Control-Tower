@@ -113,3 +113,14 @@ test('the register: the old status buttons still work, and the stage is then rea
   const rec = (await f.data()).entries[0];
   assert.deepEqual([rec.status, 'stage' in rec, stageOf(rec)], ['pending', false, 'received']);
 });
+
+test('Reject from any pending stage needs a reason, and a rejected invoice can be restored to Pending; it is never paid', () => {
+  for (const stages of [[], [['with_pm']], [['with_pm'], ['pending_lead']]]) {
+    const e = walk(inv(), ...stages);
+    assert.match(checkMove(e, 'rejected'), /Say why/);
+    assert.equal(checkMove(e, 'rejected', { note: 'Wrong partner' }), '');
+  }
+  const rejected = walk(inv(), ['rejected', { note: 'Wrong partner' }]);
+  assert.deepEqual([rejected.status, checkMove(rejected, 'paid', { byCji3: true }) !== '', checkMove(rejected, 'pending_lead', { note: 'Corrected' })], ['rejected', true, '']);
+  assert.notEqual(checkMove(walk(inv(), ['to_be_paid']), 'rejected', { note: 'x' }), '');           // an approved one: undo the approval first
+});
