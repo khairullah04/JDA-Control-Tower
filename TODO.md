@@ -97,6 +97,15 @@ Finding IDs refer to `reviews/REVIEW.md`.
 - [ ] Overdue invoices; a warning before a sanctioned amount is exceeded; committed spend shown (UI-04, JDAL-10, JDAL-11).
 - [ ] Keyboard and screen-reader fixes; plain labels instead of jargon; the remaining Minor and Nit findings.
 
+## Tech stack overhaul (new repository)
+
+See `FUTURE_PLAN.md`. The current code stays as the reference; the new repo starts from it.
+
+- [x] Stack chosen and checked against official docs: Next.js + TypeScript, Postgres (PGlite now) + Drizzle, Auth.js (Entra ID later), adapters for every outside service.
+- [ ] You: download this repository as a zip and create the new repository.
+- [ ] You: ask IT and your manager about Power Automate Premium, Copilot Credits, Vercel Pro (or Azure), and whether finance data may live on outside clouds.
+- [ ] Claude: build steps 1–8 of `FUTURE_PLAN.md` in the new repository.
+
 ## Later (enhancements)
 
 - [ ] Ask AI on another model.
@@ -113,6 +122,8 @@ Finding IDs refer to `reviews/REVIEW.md`.
 ## Change log
 
 Newest first. Each line: date, what changed, branch (merged into `main` or not yet).
+
+- 2026-10-27: FUTURE_PLAN.md (the tech stack overhaul, checked against official docs) and its TODO section. (`fix/batch-2-approval`, not merged)
 
 - 2026-10-27: TODO.md tracking rule added; Change log started. (`fix/batch-2-approval`, not merged)
 - 2026-10-27: TODO.md created. (`fix/batch-2-approval`, not merged)
