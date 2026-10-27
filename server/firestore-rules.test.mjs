@@ -16,7 +16,7 @@ test('no catch-all: a collection not named is closed', () => {
 test('only these collections are open to browsers, and only to people on the access list', () => {
   assert.deepEqual(Object.keys(opened).sort(), ['activity', 'invoices', 'jdaReports', 'jdas', 'meta', 'processedFiles', 'projects', 'scope']);
   for (const [name, r] of Object.entries(opened)) assert.equal(r.when, 'onAccessList()', name);
-  assert.deepEqual([opened.activity.what, opened.processedFiles.what, opened.invoices.what, opened.jdaReports.what], [['create', 'read'], ['create', 'read'], ['read'], ['read']]);
+  assert.deepEqual([opened.activity.what, opened.processedFiles.what, opened.invoices.what, opened.jdaReports.what], [['read'], ['create', 'read'], ['read'], ['read']]);
 });
 
 test('the server-only collections are never named, so they stay closed', () => {
@@ -28,4 +28,8 @@ test('a verified @petronas.com address is let in by the rules; an unverified one
   assert.match(fn, /request\.auth\.token\.email_verified == true/);
   const re = new RegExp(fn.match(/matches\('([^']+)'\)/)[1]);
   assert.deepEqual(['a@petronas.com', 'a@petronas.com.evil.io', 'a@xpetronas.com', 'a@sub.petronas.com'].map(e => re.test(e)), [true, false, false, false]);
+});
+
+test('an activity line can only be added in the signer\'s own name (SEC-06)', () => {
+  assert.match(rules, /match \/activity\/\{doc\} \{ allow read: if onAccessList\(\); allow create: if onAccessList\(\) && request\.resource\.data\.by == request\.auth\.token\.email\.split\('@'\)\[0\]; \}/);
 });

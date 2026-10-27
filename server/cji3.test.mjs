@@ -81,6 +81,7 @@ import express from 'express';
 import financeRoutes from './routes/finance.js';
 import { createFinance, memoryStore } from '../web/control-tower/invoices/js/finance/service.js';
 import { stageOf } from '../web/control-tower/invoices/js/finance/workflow.js';
+import { paymentTable as ptRows } from '../web/control-tower/invoices/js/finance/core.js';
 import { toCsv } from '../web/control-tower/invoices/js/finance/sheets.js';
 
 test('uploads over the register: a preview saves nothing; each upload is logged; updates are audited', async () => {
@@ -131,7 +132,7 @@ test('matching: the CJI3 line is the approval, so an invoice at any open stage b
   const out = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(
     line({ Reference: 'inv-ca-101' }), line({ Reference: 'INV-CA-102' }), line({ Reference: 'INV-CA-103' }),
     line({ Reference: 'INV-CA-104', 'CO Object Name': '' }), line({ Reference: 'INV-CA-104', 'CO Object Name': 'CB', 'Value TranCurr': '500' }), line({ Reference: 'NOPE-1' })) }, 'acc2');
-  assert.deepEqual(out.match, { paid: 4, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, none: 1, ambiguous: 1 }); // INV-CA-103 (only Received) and INV-CA-104 for CB are paid too
+  assert.deepEqual(out.match, { paid: 4, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, incomplete: 0, none: 1, ambiguous: 1 }); // INV-CA-103 (only Received) and INV-CA-104 for CB are paid too
   const { entries } = await f.data(), get = id => entries.find(e => e.id === id);
   assert.deepEqual([get(approved.id).status, get(direct.id).status, get(fresh.id).status, get(twinB.id).status], ['paid', 'paid', 'paid', 'paid']);
   const lines = await f.cji3Lines('jda3'), byRef = (r, co) => lines.find(l => l.reference === r && (co === undefined || l.coObject === co));
@@ -140,7 +141,7 @@ test('matching: the CJI3 line is the approval, so an invoice at any open stage b
   assert.ok((await f.stageHistory(approved.id)).some(h => h.to === 'paid' && h.byCji3));
   // the same file again: nothing new, nothing matched twice
   const again = await f.importCji3({ group: 'jda3', fileName: 'sep.xlsx', sheets: file(line({ Reference: 'inv-ca-101' })) }, 'acc2');
-  assert.deepEqual([again.added, again.match], [0, { paid: 0, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, none: 0, ambiguous: 0 }]);
+  assert.deepEqual([again.added, again.match], [0, { paid: 0, linked: 0, part_paid: 0, amount_differs: 0, not_approved: 0, incomplete: 0, none: 0, ambiguous: 0 }]);
 });
 
 test('matching by hand, and undoing it sends the invoice back to its queue', async () => {
@@ -216,4 +217,44 @@ test('the List replaces Approvals: an emailed invoice is paid by its CJI3 line; 
   await store.atomic(async () => ({ writes: [{ coll: 'cji3Lines', id: held.id, data: { ...held, reference: 'INV-CA-202', invoiceId: old.id, matchState: 'not_approved' } }] }));
   assert.equal((await g.matchCji3([held.id], 'acc2')).paid, 1);
   assert.equal((await g.data()).entries.find(x => x.id === old.id).status, 'paid');
+});
+
+/* ---------- Batch 1 fixes (reviews/REVIEW.md) ---------- */
+test('a reversal line takes a Paid invoice back to unpaid, and its amount stops counting (ACC-01, LOG-02)', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-27T01:00:00Z' });
+  const e = await f.save('entry', inv('INV-CA-301'), 'a');
+  await f.moveStage([e.id], 'with_pm', {}, 'pm'); await f.moveStage([e.id], 'pending_lead', {}, 'pm');
+  await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-CA-301' })) }, 'acc2');
+  assert.equal((await f.data()).entries.find(x => x.id === e.id).status, 'paid');
+  const out = await f.importCji3({ group: 'jda3', fileName: 'nov.xlsx', sheets: file(line({ Reference: 'INV-CA-301', 'Val/COArea Crcy': '-1080', 'Value TranCurr': '-1080', 'Posting Date': '2026-11-02' })) }, 'acc2');
+  assert.ok(out.match.part_paid >= 1);                                               // the reversal, and the line it cancels
+  const rec = (await f.data()).entries.find(x => x.id === e.id);
+  assert.deepEqual([stageOf(rec), rec.status], ['pending_lead', 'pending']);
+  assert.equal(ptRows([], (await f.data()).entries).reduce((t, r) => t + r.actualMinor, 0), 0);
+});
+
+test('matching a line to another invoice undoes the first match, so one payment never pays two invoices (SWE-02, LOG-04)', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-27T01:00:00Z' });
+  const a = await f.save('entry', inv('INV-CA-401'), 'a'), b = await f.save('entry', inv('INV-CA-402'), 'a');
+  await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-CA-401' })) }, 'acc2');
+  const [l] = await f.cji3Lines('jda3');
+  await f.matchLine(l.id, b.id, 'acc2');
+  const { entries } = await f.data(), get = id => entries.find(x => x.id === id);
+  assert.deepEqual([get(a.id).status, get(b.id).status], ['pending', 'paid']);
+});
+
+test('an invoice with no project or payment month (a List draft) is linked, not paid, until completed (LOG-01, ACC-02)', async () => {
+  const f = createFinance(memoryStore(), { now: () => '2026-10-27T01:00:00Z' });
+  await f.saveListPull({ items: [{ key: 'k1', invoiceNo: 'INV-L-1', partner: 'IBM', amountMinor: 100000, amountText: '1000', currency: 'MYR', proofs: [] }], mapping: {} }, 'pm');
+  const { sent } = await f.sendListToLead({ jdaId: 'j3', jdaName: 'JDA 3', keys: ['k1'] }, 'pm'), d = { id: sent[0].id };
+  const out = await f.importCji3({ group: 'jda3', fileName: 'oct.xlsx', sheets: file(line({ Reference: 'INV-L-1' })) }, 'acc2');
+  assert.equal(out.match.incomplete, 1);
+  assert.equal((await f.data()).entries.find(x => x.id === d.id).status, 'pending');
+  const [l] = await f.cji3Lines('jda3');
+  await assert.rejects(f.matchLine(l.id, d.id, 'acc2'), /no project or payment month/);
+  // completed: Match again pays it, and it counts on the Payment Table
+  const draft = (await f.data()).entries.find(x => x.id === d.id);
+  await f.save('entry', { ...draft, projectId: 'pc', projectCode: 'CA', documentDate: '2026-09-01', month: '2026-09', amount: '1000', taxRate: '8' }, 'pm');
+  assert.equal((await f.matchCji3([l.id], 'acc2')).paid, 1);
+  assert.equal(ptRows([], (await f.data()).entries).reduce((t, r) => t + r.actualMinor, 0), 108000);
 });

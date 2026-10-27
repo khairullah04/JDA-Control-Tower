@@ -59,20 +59,27 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
       return 'You validated this invoice, so someone else has to approve it.';
     return '';
   };
+  // A role's own work (the role's people, when its list is filled in): CJI3 uploads and matching are
+  // Accountant 2's, since a match is what makes an invoice Paid.
+  const needRole = (req, role) => {
+    const list = roles[role] || [], me = String(req.user?.email || '').toLowerCase();
+    if (list.length && !list.includes(me)) throw Object.assign(new Error(`Only the ${ROLES[role]} may do this.`), { status: 403 });
+  };
   router.post('/entries/stage', run(req => finance.moveStage(ids(req), String(req.body?.to || ''), { note: String(req.body?.note || ''), may: may(req) }, actor(req))));
   router.get('/stages', run(req => finance.stageHistory(String(req.query.entityId || ''))));
 
   // CJI3 lines: upload one of the two files (the server reads the .xlsx or .csv), with a preview first
   // (`dryRun`); the lines stored; the log of past uploads.
   router.post('/cji3/import', run(async req => {
+    if (req.body?.dryRun !== true) needRole(req, 'accountant2');
     const b = req.body || {}, sheets = b.fileBase64 ? await readSheets(String(b.fileName), Buffer.from(String(b.fileBase64), 'base64')) : b.sheets;
     return finance.importCji3({ group: String(b.group || ''), fileName: String(b.fileName || ''), sheets }, actor(req), { dryRun: b.dryRun === true });
   }));
   router.get('/cji3/lines', run(req => finance.cji3Lines(String(req.query.group || ''))));
   // Match a line to an invoice by hand (`invoiceId`), or undo its match (no `invoiceId`); match again
   // every line of a file not yet matched (after new invoices have come in).
-  router.post('/cji3/match', run(req => finance.matchLine(String(req.body?.lineId || ''), String(req.body?.invoiceId || ''), actor(req))));
-  router.post('/cji3/rematch', run(async req => finance.matchCji3((await finance.cji3Lines(String(req.body?.group || ''))).filter(l => !l.invoiceId || l.matchState === 'not_approved').map(l => l.id), actor(req))));
+  router.post('/cji3/match', run(req => needRole(req, 'accountant2') ?? finance.matchLine(String(req.body?.lineId || ''), String(req.body?.invoiceId || ''), actor(req))));
+  router.post('/cji3/rematch', run(async req => needRole(req, 'accountant2') ?? finance.matchCji3((await finance.cji3Lines(String(req.body?.group || ''))).filter(l => !l.invoiceId || ['not_approved', 'incomplete'].includes(l.matchState)).map(l => l.id), actor(req))));
   router.get('/cji3/imports', run(() => finance.cji3Imports()));
   // The Microsoft List (invoices before approval): what was last pulled and its mapping, and whether the
   // person is signed in to Microsoft; the sign-in (a device code, no IT setup) and sign-out; the rows, read
@@ -96,9 +103,17 @@ export default function financeRoutes(finance, storage, { roles = rolesFromEnv()
   router.post('/:kind/delete', run(req => finance.remove(kindOf(req), ids(req), actor(req))));
   router.post('/:kind/restore', run(req => finance.restore(kindOf(req), ids(req), actor(req))));
   router.post('/:kind/recalculate', run(req => finance.recalculate(kindOf(req), ids(req), req.body || {}, actor(req))));
-  // Imported invoices start at Received, whatever the sheet says; only records brought over once from the
-  // old tracker (source 'migrated') keep the status they had there.
-  const imported = req => (Array.isArray(req.body?.inputs) ? req.body.inputs : []).map(i => kindOf(req) === 'entry' && i?.source !== 'migrated' ? { ...noHandStatus(i), status: 'pending' } : i);
-  router.post('/:kind/import', run(req => finance.importRecords(kindOf(req), imported(req), actor(req), { dryRun: req.body?.dryRun === true, duplicates: req.body?.duplicates === 'add' ? 'add' : 'skip' })));
+  // Imported invoices start at Received, whatever the sheet says. Records brought over from the old tracker
+  // (source 'migrated') keep their status, but only once (before the bringing-over is marked done), and
+  // never Paid: Paid comes from a CJI3 line, so an old paid invoice comes over as approved and waits for it.
+  const imported = async req => {
+    const inputs = Array.isArray(req.body?.inputs) ? req.body.inputs : [];
+    if (kindOf(req) !== 'entry') return inputs;
+    const migrating = inputs.some(i => i?.source === 'migrated');
+    if (migrating && (await finance.data()).settings?.migratedAt) throw Object.assign(new Error('The old tracker\'s invoices have already been brought over.'), { status: 409 });
+    return inputs.map(i => i?.source !== 'migrated' ? { ...noHandStatus(i), status: 'pending' }
+      : { ...noHandStatus(i), source: 'migrated', status: ['pending', 'approved', 'rejected'].includes(i.status) ? i.status : i.status === 'paid' ? 'approved' : 'pending' });
+  };
+  router.post('/:kind/import', run(async req => finance.importRecords(kindOf(req), await imported(req), actor(req), { dryRun: req.body?.dryRun === true, duplicates: req.body?.duplicates === 'add' ? 'add' : 'skip' })));
   return router;
 }

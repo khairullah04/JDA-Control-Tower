@@ -23,7 +23,8 @@ service cloud.firestore {
     match /projects/{doc} { allow read, write: if onAccessList(); }
     match /meta/{doc} { allow read, write: if onAccessList(); }
     // The tracker's change log: read, and added to; a line is never changed or removed.
-    match /activity/{doc} { allow read, create: if onAccessList(); }
+    // A new line must be in the signer's own name (the part of their address before @, as the tracker writes it).
+    match /activity/{doc} { allow read: if onAccessList(); allow create: if onAccessList() && request.resource.data.by == request.auth.token.email.split('@')[0]; }
     // The invoice Drive sync (run in the browser): which Drive files it has read. Added to, never changed.
     match /processedFiles/{doc} { allow read, create: if onAccessList(); }
     // The old tracker's invoices and WBS items: read once, to bring them into the register.
