@@ -99,12 +99,12 @@ Finding IDs refer to `reviews/REVIEW.md`.
 
 ## Tech stack overhaul (new repository)
 
-See `FUTURE_PLAN.md`. The current code stays as the reference; the new repo starts from it.
+See `FUTURE_PLAN.md` (revised 2026-10-28: Firebase stays, Vercel for testing only, live on Firebase App Hosting). The current code stays as the reference; the new repo starts from it.
 
-- [x] Stack chosen and checked against official docs: Next.js + TypeScript, Postgres (PGlite now) + Drizzle, Auth.js (Entra ID later), adapters for every outside service.
+- [x] Stack chosen and checked against official docs: Next.js + TypeScript, Firebase (Firestore written only by the server, Auth, Storage, Emulator Suite, App Hosting for live), Vercel previews for testing, adapters for Microsoft and AI.
 - [ ] You: download this repository as a zip and create the new repository.
-- [ ] You: ask IT and your manager about Power Automate Premium, Copilot Credits, Vercel Pro (or Azure), and whether finance data may live on outside clouds.
-- [ ] Claude: build steps 1–8 of `FUTURE_PLAN.md` in the new repository.
+- [ ] You: ask IT and your manager about Firebase Blaze (for going live), Power Automate Premium + Copilot Credits (for AI Builder), the Entra app registration, and whether finance data may live on Google Cloud.
+- [ ] Claude: build steps 1–9 of `FUTURE_PLAN.md` in the new repository.
 
 ## Later (enhancements)
 
@@ -122,6 +122,8 @@ See `FUTURE_PLAN.md`. The current code stays as the reference; the new repo star
 ## Change log
 
 Newest first. Each line: date, what changed, branch (merged into `main` or not yet).
+
+- 2026-10-28: FUTURE_PLAN.md revised: Firebase stays (Firestore server-only writes, Auth with Microsoft sign-in later, Storage, Emulator Suite), Vercel for testing only, live on Firebase App Hosting; costs and sources updated. (`docs/future-plan-firebase`, not merged)
 
 - 2026-10-27: FUTURE_PLAN.md (the tech stack overhaul, checked against official docs) and its TODO section. (`fix/batch-2-approval`, not merged)
 
